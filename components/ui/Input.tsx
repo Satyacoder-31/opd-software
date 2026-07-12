@@ -7,16 +7,17 @@ import {
 import { cn } from "@/lib/utils";
 
 type InputProps = React.ComponentProps<typeof ShadcnInput> & {
-  label: string;
+  label?: string;
   error?: string;
 };
 
 export function Input({ label, error, className, id, ...props }: InputProps) {
-  const inputId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const inputId =
+    id ?? (label ? label.toLowerCase().replace(/\s+/g, "-") : undefined);
 
   return (
     <Field data-invalid={!!error || undefined}>
-      <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+      {label ? <FieldLabel htmlFor={inputId}>{label}</FieldLabel> : null}
       <ShadcnInput
         id={inputId}
         className={cn("h-11", className)}

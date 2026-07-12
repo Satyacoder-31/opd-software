@@ -50,9 +50,7 @@
 
   /* Bold sky-blue section washes (MyFitnessPal-style banding) */
   .tint-hero {
-    background:
-      radial-gradient(ellipse 90% 70% at 50% -10%, rgb(26 133 200 / 0.28), transparent 55%),
-      linear-gradient(180deg, #c8e6f7 0%, #e3f2fb 42%, #f7fafd 100%);
+    background-color: #c8e6f7;
   }
 
   .tint-band {
@@ -64,14 +62,11 @@
   }
 
   .tint-soft {
-    background:
-      linear-gradient(180deg, rgb(212 234 248 / 0.85), rgb(236 243 249 / 0.9));
+    background-color: var(--color-surface-tint);
   }
 
   .tint-page {
-    background:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgb(26 133 200 / 0.18), transparent 55%),
-      linear-gradient(180deg, #d9edf8 0%, var(--color-surface) 45%, var(--color-surface) 100%);
+    background-color: var(--color-surface);
   }
 
   .navigation-progress-bar {

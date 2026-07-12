@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeftIcon } from "lucide-react";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { cn } from "@/lib/utils";
 
 type AuthShellProps = {
@@ -29,9 +30,9 @@ export function AuthShell({
         )}
       >
         <div className="border-b border-border px-6 py-6 md:px-8 md:py-8">
-          <p className="font-display text-sm font-semibold text-primary">
-            Medyx
-          </p>
+          <Link href="/" aria-label="Medyx home" className="inline-block">
+            <BrandLogo size="sm" priority />
+          </Link>
           {backHref ? (
             <Link
               href={backHref}

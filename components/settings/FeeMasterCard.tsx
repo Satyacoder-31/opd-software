@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { IndianRupeeIcon, PlusIcon } from "lucide-react";
 import {
   createFeeItem,
   setFeeItemActive,
 } from "@/actions/fees";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Banner } from "@/components/ui/Banner";
 import { usePendingAction } from "@/hooks/usePendingAction";
@@ -63,8 +65,13 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
     <div className="space-y-4">
       <ul className="space-y-3">
         {items.length === 0 && (
-          <li className="text-sm text-muted-foreground">
-            No fee items yet. Add consultation and procedure fees below.
+          <li>
+            <EmptyState
+              icon={IndianRupeeIcon}
+              title="No fee items yet"
+              description="Add consultation and procedure fees below."
+              compact
+            />
           </li>
         )}
         {items.map((item) => (
@@ -116,6 +123,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
         />
         <div className="flex items-end">
           <Button type="submit" loading={pending}>
+            <PlusIcon data-icon="inline-start" />
             Add fee
           </Button>
         </div>

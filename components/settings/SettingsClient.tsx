@@ -7,29 +7,21 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { ClinicProfile } from "@/components/settings/ClinicProfile";
 import { ClinicProfileActions } from "@/components/settings/ClinicProfileActions";
-import { FeeMasterCard } from "@/components/settings/FeeMasterCard";
 import { StaffList } from "@/components/settings/StaffList";
 import type { Clinic, User } from "@prisma/client";
-
-type FeeRow = {
-  id: string;
-  name: string;
-  amount: number;
-  isActive: boolean;
-};
 
 type SettingsClientProps = {
   clinic: Clinic;
   staff: User[];
   currentUserId: string;
-  feeItems: FeeRow[];
+  feeItemCount: number;
 };
 
 export function SettingsClient({
   clinic,
   staff,
   currentUserId,
-  feeItems,
+  feeItemCount,
 }: SettingsClientProps) {
   const router = useRouter();
 
@@ -68,8 +60,20 @@ export function SettingsClient({
       </Card>
 
       <Card title="Fee master" flush className="border-b border-border">
-        <div className="px-5 py-5">
-          <FeeMasterCard initialItems={feeItems} />
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-5">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {feeItemCount} fee item{feeItemCount === 1 ? "" : "s"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Consultation and procedure fees used in billing
+            </p>
+          </div>
+          <Link href="/settings/fees">
+            <Button type="button" size="sm">
+              Manage fees
+            </Button>
+          </Link>
         </div>
       </Card>
 

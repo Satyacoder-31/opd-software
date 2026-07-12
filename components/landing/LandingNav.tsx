@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const navLinks = [
   { href: "#features", label: "Features" },
@@ -16,8 +17,8 @@ export function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-primary/15 bg-[#e8f4fb]/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="font-display text-xl font-semibold text-primary">
-          Medyx
+        <Link href="/" aria-label="Medyx home" className="shrink-0">
+          <BrandLogo size="sm" priority />
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex" aria-label="Main">

@@ -2,9 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import {
+  BanknoteIcon,
+  DownloadIcon,
+  StethoscopeIcon,
+} from "lucide-react";
 import { exportDailyReportCsv, type DailyReport } from "@/actions/reports";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { DataExportCard } from "@/components/reports/DataExportCard";
@@ -85,6 +91,7 @@ export function DailyReportClient({ report }: DailyReportClientProps) {
               onClick={handleExport}
               loading={isPending("export")}
             >
+              <DownloadIcon data-icon="inline-start" />
               Export CSV
             </Button>
           </div>
@@ -145,9 +152,12 @@ export function DailyReportClient({ report }: DailyReportClientProps) {
         <Card title="Payment mode split" flush className="bg-card">
           <div className="px-5 py-5">
             {report.collections.byPaymentMode.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No paid invoices for this date.
-              </p>
+              <EmptyState
+                icon={BanknoteIcon}
+                title="No paid invoices"
+                description="No collections recorded for this date."
+                compact
+              />
             ) : (
               <ul className="divide-y divide-border">
                 {report.collections.byPaymentMode.map((row) => (
@@ -176,9 +186,12 @@ export function DailyReportClient({ report }: DailyReportClientProps) {
         <Card title="Doctor-wise visits" flush className="bg-card">
           <div className="px-5 py-5">
             {report.byDoctor.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No consultations recorded for this date.
-              </p>
+              <EmptyState
+                icon={StethoscopeIcon}
+                title="No consultations"
+                description="No doctor visits recorded for this date."
+                compact
+              />
             ) : (
               <ul className="divide-y divide-border">
                 {report.byDoctor.map((row) => (

@@ -2,7 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { FilterIcon, ScrollTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
@@ -171,22 +173,25 @@ export function AuditLogViewer({
             />
           </div>
           <div className="mt-4">
-            <Button
-              type="button"
-              onClick={() => applyFilters(1)}
-              loading={pending}
-            >
-              Apply filters
-            </Button>
+              <Button
+                type="button"
+                onClick={() => applyFilters(1)}
+                loading={pending}
+              >
+                <FilterIcon data-icon="inline-start" />
+                Apply filters
+              </Button>
           </div>
         </div>
       </Card>
 
       <Card title="Events" flush className="border-b border-border">
         {logs.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-muted-foreground">
-            No audit events match these filters.
-          </p>
+          <EmptyState
+            icon={ScrollTextIcon}
+            title="No matching events"
+            description="Try adjusting the filters to see audit activity."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">

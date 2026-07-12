@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppointmentStatus } from "@prisma/client";
 import {
+  CheckCircle2Icon,
+  ClipboardListIcon,
+  UsersIcon,
+} from "lucide-react";
+import {
   getCompletedQueue,
   getQueue,
   updateAppointmentStatus,
@@ -12,6 +17,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { Select } from "@/components/ui/Select";
 import { cn, formatPhone } from "@/lib/utils";
@@ -176,9 +182,18 @@ export function QueueBoard({
               Waiting ({waiting.length})
             </h2>
             {waiting.length === 0 ? (
-              <p className="bg-card px-6 py-8 text-muted-foreground md:px-8">
-                No patients waiting. Add one from Patients.
-              </p>
+              <EmptyState
+                icon={UsersIcon}
+                title="No patients waiting"
+                description={
+                  <>
+                    Add someone from{" "}
+                    <Link href="/patients">Patients</Link> to get the queue
+                    moving.
+                  </>
+                }
+                className="bg-card"
+              />
             ) : (
               <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
                 {waiting.map((item) => (
@@ -197,9 +212,12 @@ export function QueueBoard({
       ) : (
         <section aria-label="Completed" className="border-b border-border">
           {completed.length === 0 ? (
-            <p className="bg-card px-6 py-8 text-muted-foreground md:px-8">
-              No completed visits yet today.
-            </p>
+            <EmptyState
+              icon={CheckCircle2Icon}
+              title="No completed visits yet"
+              description="Finished consultations will show up here for today."
+              className="bg-card"
+            />
           ) : (
             <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
               {completed.map((item) => (
@@ -275,6 +293,7 @@ function QueueCard({
                 onClick={() => onStatus(item.id, AppointmentStatus.in_progress)}
                 loading={loading}
               >
+                <ClipboardListIcon data-icon="inline-start" />
                 Start consultation
               </Button>
             )}

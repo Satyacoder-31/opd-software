@@ -1,5 +1,6 @@
 import {
   Card as ShadcnCard,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -10,10 +11,22 @@ type CardProps = {
   children: React.ReactNode;
   className?: string;
   title?: string;
+  actions?: React.ReactNode;
   flush?: boolean;
+  /** Show a bottom border under the header. Defaults to true when flush. */
+  headerBorder?: boolean;
 };
 
-export function Card({ children, className, title, flush }: CardProps) {
+export function Card({
+  children,
+  className,
+  title,
+  actions,
+  flush,
+  headerBorder,
+}: CardProps) {
+  const showHeaderBorder = headerBorder ?? !!flush;
+
   return (
     <ShadcnCard
       className={cn(
@@ -26,12 +39,14 @@ export function Card({ children, className, title, flush }: CardProps) {
         <CardHeader
           className={cn(
             "font-display",
-            flush && "border-b border-border px-5 py-4"
+            flush && "px-5 py-4",
+            showHeaderBorder && "border-b border-border"
           )}
         >
           <CardTitle className="font-display text-lg font-semibold">
             {title}
           </CardTitle>
+          {actions ? <CardAction>{actions}</CardAction> : null}
         </CardHeader>
       )}
       <CardContent

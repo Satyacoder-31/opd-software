@@ -1,5 +1,7 @@
+import { PillIcon } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { DetailRow } from "@/components/ui/DetailRow";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   medicineFilled,
   medicineSummary,
@@ -29,9 +31,12 @@ export function PrescriptionProfile({
   return (
     <div>
       {filledMedicines.length === 0 ? (
-        <p className="border-b border-border px-4 py-4 text-sm text-muted-foreground">
-          No medicines prescribed yet.
-        </p>
+        <EmptyState
+          icon={PillIcon}
+          title="No medicines prescribed yet"
+          description="Medicines added during consultation will appear here."
+          compact
+        />
       ) : (
         filledMedicines.map((med, index) => (
           <CollapsibleSection

@@ -2,31 +2,47 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type NavLinkProps = {
   href: string;
   label: string;
+  icon?: LucideIcon;
 };
 
-function NavLinkLabel({ label }: { label: string }) {
+function NavLinkLabel({
+  label,
+  icon: Icon,
+}: {
+  label: string;
+  icon?: LucideIcon;
+}) {
   const { pending } = useLinkStatus();
 
   return (
     <>
-      <span
-        aria-hidden
-        className={cn(
-          "inline-block size-3 shrink-0 rounded-full border-2 border-current/30 border-t-current transition-opacity duration-150",
-          pending ? "animate-spin opacity-100" : "opacity-0"
-        )}
-      />
+      {Icon ? (
+        <Icon
+          aria-hidden
+          className={cn(
+            "size-4 shrink-0 transition-opacity duration-150",
+            pending && "opacity-70"
+          )}
+        />
+      ) : null}
       <span className={cn(pending && "opacity-70")}>{label}</span>
+      {pending ? (
+        <span
+          aria-hidden
+          className="ml-auto inline-block size-3 shrink-0 animate-spin rounded-full border-2 border-current/30 border-t-current"
+        />
+      ) : null}
     </>
   );
 }
 
-export function NavLink({ href, label }: NavLinkProps) {
+export function NavLink({ href, label, icon }: NavLinkProps) {
   const pathname = usePathname();
   const active = pathname === href || pathname.startsWith(`${href}/`);
 
@@ -43,7 +59,7 @@ export function NavLink({ href, label }: NavLinkProps) {
           : "text-ink hover:bg-surface-muted"
       )}
     >
-      <NavLinkLabel label={label} />
+      <NavLinkLabel label={label} icon={icon} />
     </Link>
   );
 }

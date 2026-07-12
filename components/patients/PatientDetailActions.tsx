@@ -4,6 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppointmentType } from "@prisma/client";
+import {
+  CalendarPlusIcon,
+  ListPlusIcon,
+  PencilIcon,
+  Rows3Icon,
+} from "lucide-react";
 import { createAppointment } from "@/actions/appointments";
 import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
@@ -91,21 +97,29 @@ export function PatientDetailActions({
       </div>
       <div className="flex flex-wrap gap-3">
         <Link href={`/patients/${patientId}/edit`}>
-          <Button variant="secondary">Edit details</Button>
+          <Button variant="secondary">
+            <PencilIcon data-icon="inline-start" />
+            Edit details
+          </Button>
         </Link>
         {showWalkinAdd && (
           <Button onClick={handleAddToQueue} loading={pending}>
+            <ListPlusIcon data-icon="inline-start" />
             Add to queue
           </Button>
         )}
         {showScheduleAdd && (
           <Button onClick={handleAddToQueue} loading={pending}>
+            <CalendarPlusIcon data-icon="inline-start" />
             Schedule visit
           </Button>
         )}
         {mode === "walkin" && alreadyInQueue && (
           <Link href="/queue">
-            <Button variant="secondary">View queue</Button>
+            <Button variant="secondary">
+              <Rows3Icon data-icon="inline-start" />
+              View queue
+            </Button>
           </Link>
         )}
       </div>

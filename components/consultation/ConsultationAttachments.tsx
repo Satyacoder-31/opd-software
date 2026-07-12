@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DownloadIcon, PaperclipIcon, Trash2Icon } from "lucide-react";
 import {
   deleteConsultationAttachment,
   getAttachmentDownloadUrl,
@@ -9,6 +10,7 @@ import {
 } from "@/actions/attachments";
 import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { usePendingAction } from "@/hooks/usePendingAction";
 
 type AttachmentRow = Awaited<
@@ -115,7 +117,12 @@ export function ConsultationAttachments({
       )}
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No attachments yet.</p>
+        <EmptyState
+          icon={PaperclipIcon}
+          title="No attachments yet"
+          description="Upload a PDF or image to keep with this visit."
+          compact
+        />
       ) : (
         <ul className="space-y-2">
           {items.map((item) => (
@@ -138,6 +145,7 @@ export function ConsultationAttachments({
                   loading={isPending(`dl-${item.id}`)}
                   onClick={() => handleDownload(item.id)}
                 >
+                  <DownloadIcon data-icon="inline-start" />
                   Open
                 </Button>
                 {!readOnly && (
@@ -148,6 +156,7 @@ export function ConsultationAttachments({
                     loading={isPending(`del-${item.id}`)}
                     onClick={() => handleDelete(item.id)}
                   >
+                    <Trash2Icon data-icon="inline-start" />
                     Delete
                   </Button>
                 )}

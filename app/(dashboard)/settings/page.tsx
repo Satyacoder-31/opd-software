@@ -19,12 +19,7 @@ export default async function SettingsPage() {
       clinic={clinic}
       staff={clinic.users}
       currentUserId={session.userId}
-      feeItems={feeItems.map((item) => ({
-        id: item.id,
-        name: item.name,
-        amount: Number(item.amount),
-        isActive: item.isActive,
-      }))}
+      feeItemCount={feeItems.length}
     />
   );
 }

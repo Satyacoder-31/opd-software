@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DownloadIcon } from "lucide-react";
 import {
   exportBillingCsv,
   exportPatientsCsv,
@@ -97,6 +98,7 @@ export function DataExportCard() {
             onClick={handlePatients}
             loading={isPending("patients")}
           >
+            <DownloadIcon data-icon="inline-start" />
             Export patients
           </Button>
           <Button
@@ -105,6 +107,7 @@ export function DataExportCard() {
             onClick={handleVisits}
             loading={isPending("visits")}
           >
+            <DownloadIcon data-icon="inline-start" />
             Export visits
           </Button>
           <Button
@@ -113,6 +116,7 @@ export function DataExportCard() {
             onClick={handleBilling}
             loading={isPending("billing")}
           >
+            <DownloadIcon data-icon="inline-start" />
             Export billing
           </Button>
         </div>

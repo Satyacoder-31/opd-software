@@ -1,5 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { LandingNav } from "./LandingNav";
 
 const features = [
@@ -209,7 +216,7 @@ export function LandingPage() {
                     className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-ink/20 to-transparent" />
+                  <div className="absolute inset-0 bg-ink/10" />
                 </div>
               </div>
               <div className="flex-1">
@@ -286,7 +293,7 @@ export function LandingPage() {
       {/* Final CTA */}
       <section className="bg-white py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-[#0e6aa3] px-8 py-16 text-center text-white shadow-xl shadow-primary/25 sm:px-16">
+          <div className="overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center text-white shadow-xl shadow-primary/25 sm:px-16">
             <h2 className="font-display text-3xl font-semibold sm:text-4xl">
               Starting is the hard part. We make it easy.
             </h2>
@@ -314,24 +321,34 @@ export function LandingPage() {
 
       {/* FAQ */}
       <section id="faq" className="border-t border-border tint-band py-20 sm:py-28">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <h2 className="text-center font-display text-3xl font-semibold text-ink sm:text-4xl">
-            Questions &amp; answers
-          </h2>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-semibold text-ink sm:text-4xl">
+              Questions &amp; answers
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Quick answers about getting started, the queue, and your data.
+            </p>
+          </div>
 
-          <dl className="mt-12 space-y-4">
-            {faqs.map((faq) => (
-              <div
-                key={faq.question}
-                className="rounded-2xl border border-border bg-white p-6"
-              >
-                <dt className="font-display text-lg font-semibold text-ink">
-                  {faq.question}
-                </dt>
-                <dd className="mt-3 text-muted-foreground">{faq.answer}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="mx-auto mt-14 max-w-3xl">
+            <Accordion className="rounded-2xl border border-border bg-white px-6">
+              {faqs.map((faq, i) => (
+                <AccordionItem
+                  key={faq.question}
+                  value={`faq-${i}`}
+                  className="border-border px-0 last:border-b-0"
+                >
+                  <AccordionTrigger className="py-5 font-display text-base font-semibold text-ink hover:no-underline sm:text-lg">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 text-base text-muted-foreground">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
         </div>
       </section>
 
@@ -340,10 +357,8 @@ export function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex flex-col items-center justify-between gap-8 sm:flex-row">
             <div>
-              <p className="font-display text-xl font-semibold text-white">
-                Medyx
-              </p>
-              <p className="mt-1 text-sm text-white/70">
+              <BrandLogo size="md" inverted />
+              <p className="mt-2 text-sm text-white/70">
                 OPD management for real clinics.
               </p>
             </div>

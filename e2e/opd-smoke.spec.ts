@@ -7,7 +7,7 @@ import { expect, test } from "@playwright/test";
 test.describe("public auth surfaces", () => {
   test("login page renders", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("heading", { name: "Medyx" })).toBeVisible();
+    await expect(page.getByText("Medyx", { exact: true }).first()).toBeVisible();
     await expect(page.locator('input[name="email"], input[type="email"]')).toBeVisible();
     await expect(page.locator('input[name="password"], input[type="password"]')).toBeVisible();
   });

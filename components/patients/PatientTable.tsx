@@ -3,11 +3,18 @@
 import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { Patient } from "@prisma/client";
+import {
+  ListPlusIcon,
+  SearchIcon,
+  UserRoundSearchIcon,
+  UsersIcon,
+} from "lucide-react";
 import { searchPatients, countPatients } from "@/actions/patients";
 import { createAppointment } from "@/actions/appointments";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatPhone } from "@/lib/utils";
 import { formatPatientAge } from "@/lib/date-utils";
 import { usePendingAction } from "@/hooks/usePendingAction";
@@ -111,14 +118,21 @@ export function PatientTable({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 px-5">
-        <Input
-          label="Search by name, phone, or MRN"
-          name="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Start typing…"
-        />
+      <div className="flex flex-col gap-4 px-5 pt-1">
+        <div className="relative">
+          <SearchIcon
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            name="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by name, phone, or MRN"
+            aria-label="Search by name, phone, or MRN"
+            className="pl-9"
+          />
+        </div>
 
         {searching && patients.length === 0 && (
           <p className="text-sm text-muted-foreground">Loading patients…</p>
@@ -132,12 +146,21 @@ export function PatientTable({
       </div>
 
       {patients.length === 0 && !searching ? (
-        <p className="px-5 pb-5 py-8 text-center text-muted-foreground">
-          No patients found.{" "}
-          <Link href="/patients/new" className="text-primary hover:underline">
-            Register your first patient
-          </Link>
-        </p>
+        <EmptyState
+          icon={query.trim() ? UserRoundSearchIcon : UsersIcon}
+          title={query.trim() ? "No patients match" : "No patients yet"}
+          description={
+            query.trim() ? (
+              "Try a different name, phone, or MRN."
+            ) : (
+              <>
+                Register your first patient to start managing visits.{" "}
+                <Link href="/patients/new">Register patient</Link>
+              </>
+            )
+          }
+          className="px-5 pb-5"
+        />
       ) : (
         <>
           <div className="overflow-x-auto border-t border-border">
@@ -191,6 +214,7 @@ export function PatientTable({
                                 aria-hidden
                               />
                             )}
+                            <ListPlusIcon className="size-3.5" aria-hidden />
                             Add to queue
                           </button>
                         )}
