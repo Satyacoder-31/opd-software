@@ -99,7 +99,11 @@ export async function signup(
         },
       };
     }
-    return { success: false, error: message };
+    logger.warn("signup_auth_failed", { email, error: message });
+    return {
+      success: false,
+      error: "Could not create the account. Please try again.",
+    };
   }
 
   try {
@@ -181,7 +185,7 @@ export async function login(
     logger.warn("login_failed", { email, error: error.message });
     return {
       success: false,
-      error: error.message,
+      error: "Invalid email or password.",
       fieldErrors: { email: "Invalid email or password" },
     };
   }
@@ -273,7 +277,10 @@ export async function updatePassword(
       userId: user.id,
       error: error.message,
     });
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: "Could not update password. Request a new reset link and try again.",
+    };
   }
 
   return { success: true };
@@ -319,8 +326,8 @@ export async function inviteStaff(
   if (existing) {
     return {
       success: false,
-      error: "A user with this email already exists.",
-      fieldErrors: { email: "This email is already on your staff list." },
+      error: "This email cannot be invited.",
+      fieldErrors: { email: "This email cannot be invited." },
     };
   }
 
@@ -349,7 +356,11 @@ export async function inviteStaff(
 
   if (error) {
     await prisma.user.delete({ where: { id: pendingUser.id } });
-    return { success: false, error: error.message };
+    logger.warn("invite_failed", { email, error: error.message });
+    return {
+      success: false,
+      error: "Could not send the invite. Please try again.",
+    };
   }
 
   if (inviteData.user) {

@@ -26,6 +26,7 @@ export function useAppointmentRealtime(
     const supabase = createClient();
     const today = todayDateString();
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
+    let lastStatus: RealtimeConnectionStatus = "disconnected";
 
     function startFallbackPoll() {
       if (fallbackInterval || document.hidden) return;
@@ -60,12 +61,15 @@ export function useAppointmentRealtime(
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
+          lastStatus = "connected";
           onStatusChangeRef.current?.("connected");
           stopFallbackPoll();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          lastStatus = "error";
           onStatusChangeRef.current?.("error");
           startFallbackPoll();
         } else if (status === "CLOSED") {
+          lastStatus = "disconnected";
           onStatusChangeRef.current?.("disconnected");
         }
       });
@@ -75,6 +79,9 @@ export function useAppointmentRealtime(
         stopFallbackPoll();
       } else {
         onChangeRef.current();
+        if (lastStatus === "error" || lastStatus === "disconnected") {
+          startFallbackPoll();
+        }
       }
     }
 

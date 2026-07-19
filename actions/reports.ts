@@ -4,25 +4,16 @@ import { InvoiceStatus, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSessionUser, roleAllowed } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { clinicTodayDate, parseLocalDateInput } from "@/lib/date-utils";
 
 const REPORT_ROLES: Role[] = [Role.admin, Role.receptionist];
 
-function parseReportDate(dateStr?: string): Date {
+function parseReportDate(dateStr?: string): Date | null {
   const raw = dateStr?.trim();
-  const match = raw?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) {
-    const date = new Date(
-      Number(match[1]),
-      Number(match[2]) - 1,
-      Number(match[3])
-    );
-    date.setHours(0, 0, 0, 0);
-    return date;
-  }
+  if (!raw) return clinicTodayDate();
 
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return now;
+  const parsed = parseLocalDateInput(raw);
+  return parsed;
 }
 
 function formatDateKey(date: Date): string {
@@ -60,6 +51,8 @@ export async function getDailyReport(dateStr?: string): Promise<DailyReport | nu
   if (!roleAllowed(session, REPORT_ROLES)) return null;
 
   const queueDate = parseReportDate(dateStr);
+  if (!queueDate) return null;
+
   const dateKey = formatDateKey(queueDate);
 
   const appointments = await prisma.appointment.findMany({

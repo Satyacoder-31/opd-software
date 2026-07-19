@@ -5,6 +5,7 @@ import { updateDoctorCredentials } from "@/actions/prescriptions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { DetailRow } from "@/components/ui/DetailRow";
+import { Banner } from "@/components/ui/Banner";
 import type { StaffMember } from "@/components/settings/SettingsClient";
 import { usePendingAction } from "@/hooks/usePendingAction";
 
@@ -25,7 +26,7 @@ export function DoctorStaffCard({ doctor }: DoctorStaffCardProps) {
     void run(async () => {
       const result = await updateDoctorCredentials(doctor.id, formData);
       if (result.success) {
-        setMessage({ type: "success", text: "Credentials saved" });
+        setMessage({ type: "success", text: "Credentials saved." });
         setEditing(false);
         return;
       }
@@ -45,6 +46,14 @@ export function DoctorStaffCard({ doctor }: DoctorStaffCardProps) {
         </span>
         <span className="capitalize text-muted-foreground">{doctor.role}</span>
       </div>
+
+      {message && (
+        <div className="mt-3">
+          <Banner variant={message.type === "success" ? "success" : "error"}>
+            {message.text}
+          </Banner>
+        </div>
+      )}
 
       {editing ? (
         <form
@@ -81,18 +90,6 @@ export function DoctorStaffCard({ doctor }: DoctorStaffCardProps) {
             <Button type="submit" size="sm" variant="secondary" loading={pending}>
               Save credentials
             </Button>
-            {message && (
-              <span
-                className={
-                  message.type === "success"
-                    ? "text-sm text-success"
-                    : "text-sm text-danger"
-                }
-                role="status"
-              >
-                {message.text}
-              </span>
-            )}
           </div>
         </form>
       ) : (
@@ -112,7 +109,10 @@ export function DoctorStaffCard({ doctor }: DoctorStaffCardProps) {
               type="button"
               size="sm"
               variant="secondary"
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                setMessage(null);
+                setEditing(true);
+              }}
             >
               Edit credentials
             </Button>

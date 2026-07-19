@@ -47,6 +47,7 @@ export function PatientTable({
   } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const skipInitialSearch = useRef(true);
+  const searchGeneration = useRef(0);
 
   useEffect(() => {
     setPatients(initialPatients);
@@ -65,14 +66,22 @@ export function PatientTable({
 
   const runSearch = useCallback(
     (q: string, nextSkip: number, append: boolean) => {
+      const generation = ++searchGeneration.current;
       startSearch(async () => {
-        const [results, count] = await Promise.all([
-          searchPatients(q, nextSkip, PATIENT_PAGE_SIZE),
-          countPatients(q),
-        ]);
-        setTotal(count);
-        setSkip(nextSkip);
-        setPatients((prev) => (append ? [...prev, ...results] : results));
+        try {
+          const [results, count] = await Promise.all([
+            searchPatients(q, nextSkip, PATIENT_PAGE_SIZE),
+            countPatients(q),
+          ]);
+          if (generation !== searchGeneration.current) return;
+          setTotal(count);
+          setSkip(nextSkip);
+          setPatients((prev) => (append ? [...prev, ...results] : results));
+        } finally {
+          if (generation === searchGeneration.current) {
+            setLoadingMore(false);
+          }
+        }
       });
     },
     []
@@ -84,17 +93,30 @@ export function PatientTable({
       return;
     }
 
+    setLoadingMore(false);
     runSearch(debouncedQuery, 0, false);
   }, [debouncedQuery, runSearch]);
 
   function handleLoadMore() {
+    if (searching || loadingMore) return;
     const nextSkip = skip + PATIENT_PAGE_SIZE;
     setLoadingMore(true);
+    const generation = ++searchGeneration.current;
     startSearch(async () => {
-      const results = await searchPatients(debouncedQuery, nextSkip, PATIENT_PAGE_SIZE);
-      setPatients((prev) => [...prev, ...results]);
-      setSkip(nextSkip);
-      setLoadingMore(false);
+      try {
+        const results = await searchPatients(
+          debouncedQuery,
+          nextSkip,
+          PATIENT_PAGE_SIZE
+        );
+        if (generation !== searchGeneration.current) return;
+        setPatients((prev) => [...prev, ...results]);
+        setSkip(nextSkip);
+      } finally {
+        if (generation === searchGeneration.current) {
+          setLoadingMore(false);
+        }
+      }
     });
   }
 
@@ -164,7 +186,7 @@ export function PatientTable({
       ) : (
         <>
           <div className="overflow-x-auto border-t border-border">
-            <table className="w-full text-sm">
+            <table className="w-full whitespace-nowrap text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface-muted text-left">
                   <th className="px-4 py-3 font-medium text-muted-foreground">MRN</th>
@@ -185,7 +207,7 @@ export function PatientTable({
                     <td className="px-4 py-3">{formatPhone(patient.phone)}</td>
                     <td className="px-4 py-3">{formatPatientAge(patient) ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-3 whitespace-nowrap">
                         <Link
                           href={`/patients/${patient.id}`}
                           className="text-primary hover:underline"
@@ -205,7 +227,7 @@ export function PatientTable({
                             type="button"
                             onClick={() => handleAddToQueue(patient.id)}
                             disabled={isQueuePending(patient.id)}
-                            className="inline-flex items-center gap-1.5 text-primary hover:underline disabled:opacity-50"
+                            className="inline-flex shrink-0 items-center gap-1.5 text-primary hover:underline disabled:opacity-50"
                             aria-busy={isQueuePending(patient.id) || undefined}
                           >
                             {isQueuePending(patient.id) && (

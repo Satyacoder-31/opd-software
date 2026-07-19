@@ -10,7 +10,7 @@ import {
 } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
-import { parseLocalDateTimeInput } from "@/lib/date-utils";
+import { parseLocalDateTimeInput, clinicTodayDate } from "@/lib/date-utils";
 import {
   appointmentTransitionError,
   canSetAppointmentStatus,
@@ -23,9 +23,7 @@ const QUEUE_ROLES: Role[] = [Role.admin, Role.doctor, Role.receptionist];
 const CLINICAL_ROLES: Role[] = [Role.admin, Role.doctor];
 
 function todayDate(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return clinicTodayDate();
 }
 
 function dateOnly(date: Date): Date {

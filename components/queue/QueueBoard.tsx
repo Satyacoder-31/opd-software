@@ -23,7 +23,7 @@ import { Banner } from "@/components/ui/Banner";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { Select } from "@/components/ui/Select";
 import { cn, formatPhone } from "@/lib/utils";
-import { formatPatientAge } from "@/lib/date-utils";
+import { formatClinicTime, formatPatientAge } from "@/lib/date-utils";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import {
   useAppointmentRealtime,
@@ -301,11 +301,7 @@ function QueueCard({
           </p>
           {item.type === "scheduled" && item.scheduledAt && (
             <p className="mt-1 text-xs text-primary">
-              Scheduled{" "}
-              {new Date(item.scheduledAt).toLocaleTimeString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              Scheduled {formatClinicTime(item.scheduledAt)}
             </p>
           )}
           {item.consultation?.doctor && (

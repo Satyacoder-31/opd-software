@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
@@ -8,8 +8,13 @@ export function NavigationProgress() {
   const pathname = usePathname();
   const [active, setActive] = useState(false);
   const [visible, setVisible] = useState(false);
+  const showTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
+    if (showTimeoutRef.current != null) {
+      window.clearTimeout(showTimeoutRef.current);
+      showTimeoutRef.current = null;
+    }
     setActive(false);
     setVisible(false);
   }, [pathname]);
@@ -32,12 +37,23 @@ export function NavigationProgress() {
       const targetPath = href.split(/[?#]/)[0];
       if (targetPath && targetPath !== pathname) {
         setActive(true);
-        window.setTimeout(() => setVisible(true), 120);
+        if (showTimeoutRef.current != null) {
+          window.clearTimeout(showTimeoutRef.current);
+        }
+        showTimeoutRef.current = window.setTimeout(() => {
+          setVisible(true);
+          showTimeoutRef.current = null;
+        }, 120);
       }
     };
 
     document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      if (showTimeoutRef.current != null) {
+        window.clearTimeout(showTimeoutRef.current);
+      }
+    };
   }, [pathname]);
 
   if (!active) return null;

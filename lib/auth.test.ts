@@ -40,7 +40,7 @@ function makeAuthUser(
     user_metadata: {
       name: overrides?.name ?? "Dr. Patel",
     },
-  } as User;
+  } as unknown as User;
 }
 
 describe("roleAllowed", () => {

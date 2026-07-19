@@ -89,6 +89,8 @@ export function ConsultationForm({
   >("idle");
   const { isPending, run } = usePendingAction<"save" | "submit" | "amend">();
   const autosaveInFlight = useRef(false);
+  const isDirty = useRef(false);
+  const skipDirtyMark = useRef(true);
 
   const formData = useMemo(
     () => ({
@@ -133,6 +135,8 @@ export function ConsultationForm({
   }, [getPayload]);
 
   const autosaveDraft = useCallback(async () => {
+    if (!isDirty.current) return;
+
     if (autosaveInFlight.current || typeof navigator !== "undefined" && !navigator.onLine) {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         setAutosaveStatus("offline");
@@ -152,6 +156,7 @@ export function ConsultationForm({
       });
 
       if (result.success) {
+        isDirty.current = false;
         setAutosaveStatus("saved");
       } else {
         setAutosaveStatus("idle");
@@ -164,14 +169,23 @@ export function ConsultationForm({
   }, [consultationId, getPayload, validateForm]);
 
   useEffect(() => {
+    if (skipDirtyMark.current) {
+      skipDirtyMark.current = false;
+      return;
+    }
+    isDirty.current = true;
+  }, [formData]);
+
+  useEffect(() => {
     if (isAmendMode) return;
+    if (!isDirty.current) return;
 
     const timer = setTimeout(() => {
       void autosaveDraft();
     }, AUTOSAVE_MS);
 
     return () => clearTimeout(timer);
-  }, [autosaveDraft, isAmendMode]);
+  }, [autosaveDraft, isAmendMode, formData]);
 
   useEffect(() => {
     if (isAmendMode) return;

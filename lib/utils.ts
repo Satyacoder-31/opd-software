@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { todayDateStringInClinic } from "@/lib/date-utils"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -24,13 +25,10 @@ export function formatPhone(phone: string): string {
 }
 
 export function statusLabel(status: string): string {
-  return status.replace("_", " ");
+  return status.replaceAll("_", " ");
 }
 
+/** Clinic calendar "today" (Asia/Kolkata), not the server/browser local TZ. */
 export function todayDateString(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return todayDateStringInClinic();
 }
