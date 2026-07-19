@@ -1,27 +1,6 @@
-import type { SessionUser } from "@/lib/types";
-
+/**
+ * Legacy identity header name.
+ * Middleware always strips this from inbound requests. Session identity is
+ * resolved only via verified Supabase auth + DB in lib/auth.ts.
+ */
 export const SESSION_HEADER = "x-session-user";
-
-export function encodeSessionHeader(session: SessionUser): string {
-  return btoa(JSON.stringify(session));
-}
-
-export function decodeSessionHeader(value: string): SessionUser | null {
-  try {
-    const session = JSON.parse(atob(value)) as SessionUser;
-
-    if (
-      !session?.userId ||
-      !session?.clinicId ||
-      !session?.role ||
-      !session?.email ||
-      !session?.name
-    ) {
-      return null;
-    }
-
-    return session;
-  } catch {
-    return null;
-  }
-}

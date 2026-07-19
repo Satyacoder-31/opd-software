@@ -8,14 +8,20 @@ import { prisma } from "@/lib/db";
 import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { renderReceiptPdf } from "@/lib/pdf";
-import { validateReason } from "@/lib/validation";
+import { validateBillingInput, validateReason } from "@/lib/validation";
 import type { ActionResult, LineItem, VoidActionResult } from "@/lib/types";
 
 const BILLING_ROLES: Role[] = [Role.admin, Role.receptionist];
 
 const lineItemSchema = z.object({
   description: z.string().min(1),
-  amount: z.number().positive(),
+  amount: z.number().positive().finite(),
+});
+
+const invoiceInputSchema = z.object({
+  lineItems: z.array(lineItemSchema).nullable(),
+  amount: z.number().positive().finite().optional(),
+  taxRate: z.number().min(0).max(100).finite().nullable().optional(),
 });
 
 export async function getBillingContext(consultationId: string) {
@@ -61,6 +67,11 @@ export async function createOrUpdateInvoice(
   const session = await requireSessionUser();
   if (!roleAllowed(session, BILLING_ROLES)) return permissionDenied();
 
+  const parsed = invoiceInputSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, error: "Invalid billing details." };
+  }
+
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
     include: { invoice: true },
@@ -77,18 +88,36 @@ export async function createOrUpdateInvoice(
     };
   }
 
-  if (data.lineItems) {
-    const validated = z.array(lineItemSchema).safeParse(data.lineItems);
-    if (!validated.success) {
-      return { success: false, error: "Invalid line items." };
-    }
+  const mode = parsed.data.lineItems && parsed.data.lineItems.length > 0
+    ? "itemized"
+    : "flat";
+
+  const lineItems = parsed.data.lineItems;
+  const taxableAmount =
+    mode === "itemized" && lineItems
+      ? Math.round(lineItems.reduce((sum, item) => sum + item.amount, 0) * 100) /
+        100
+      : parsed.data.amount;
+
+  if (taxableAmount == null || !Number.isFinite(taxableAmount)) {
+    return { success: false, error: "Enter a valid amount." };
+  }
+
+  const billingCheck = validateBillingInput({
+    mode,
+    total: taxableAmount,
+    lineItems: lineItems ?? [],
+  });
+  if (!billingCheck.ok) {
+    return { success: false, error: billingCheck.error };
   }
 
   const taxRate =
-    data.taxRate != null && Number.isFinite(data.taxRate) && data.taxRate > 0
-      ? data.taxRate
+    parsed.data.taxRate != null &&
+    Number.isFinite(parsed.data.taxRate) &&
+    parsed.data.taxRate > 0
+      ? parsed.data.taxRate
       : 0;
-  const taxableAmount = data.amount;
   const taxAmount = Math.round(taxableAmount * taxRate) / 100;
   const totalAmount = Math.round((taxableAmount + taxAmount) * 100) / 100;
 
@@ -99,7 +128,7 @@ export async function createOrUpdateInvoice(
     create: {
       clinicId: session.clinicId,
       consultationId,
-      lineItems: data.lineItems ?? undefined,
+      lineItems: lineItems ?? undefined,
       amount: new Decimal(totalAmount),
       taxableAmount: new Decimal(taxableAmount),
       taxRate: taxRate > 0 ? new Decimal(taxRate) : null,
@@ -107,7 +136,7 @@ export async function createOrUpdateInvoice(
       createdById: session.userId,
     },
     update: {
-      lineItems: data.lineItems ?? undefined,
+      lineItems: lineItems ?? undefined,
       amount: new Decimal(totalAmount),
       taxableAmount: new Decimal(taxableAmount),
       taxRate: taxRate > 0 ? new Decimal(taxRate) : null,
@@ -141,6 +170,10 @@ export async function markInvoicePaid(
   const session = await requireSessionUser();
   if (!roleAllowed(session, BILLING_ROLES)) return permissionDenied();
 
+  if (!Object.values(PaymentMode).includes(paymentMode)) {
+    return { success: false, error: "Select a valid payment mode." };
+  }
+
   const invoice = await prisma.invoice.findFirst({
     where: { consultationId, clinicId: session.clinicId },
   });
@@ -162,27 +195,49 @@ export async function markInvoicePaid(
 
   const year = new Date().getFullYear();
   const assigned = await prisma.$transaction(async (tx) => {
+    const paid = await tx.invoice.updateMany({
+      where: {
+        id: invoice.id,
+        clinicId: session.clinicId,
+        status: InvoiceStatus.draft,
+      },
+      data: {
+        status: InvoiceStatus.paid,
+        paymentMode,
+        updatedById: session.userId,
+      },
+    });
+
+    if (paid.count === 0) {
+      return null;
+    }
+
+    if (invoice.invoiceNumber) {
+      return invoice.invoiceNumber;
+    }
+
     const clinic = await tx.clinic.update({
       where: { id: session.clinicId },
       data: { nextInvoiceSeq: { increment: 1 } },
       select: { nextInvoiceSeq: true },
     });
     const seq = clinic.nextInvoiceSeq - 1;
-    const invoiceNumber =
-      invoice.invoiceNumber ?? `INV-${year}-${String(seq).padStart(4, "0")}`;
+    const invoiceNumber = `INV-${year}-${String(seq).padStart(4, "0")}`;
 
-    await tx.invoice.updateMany({
-      where: { id: invoice.id, clinicId: session.clinicId },
-      data: {
-        status: InvoiceStatus.paid,
-        paymentMode,
-        invoiceNumber,
-        updatedById: session.userId,
-      },
+    await tx.invoice.update({
+      where: { id: invoice.id },
+      data: { invoiceNumber },
     });
 
     return invoiceNumber;
   });
+
+  if (!assigned) {
+    return {
+      success: false,
+      error: "Invoice was already paid or changed. Refresh and try again.",
+    };
+  }
 
   await logAudit({
     clinicId: session.clinicId,
@@ -221,8 +276,12 @@ export async function voidInvoice(
     return { success: false, error: "Invoice is already voided." };
   }
 
-  await prisma.invoice.updateMany({
-    where: { id: invoice.id, clinicId: session.clinicId },
+  const voided = await prisma.invoice.updateMany({
+    where: {
+      id: invoice.id,
+      clinicId: session.clinicId,
+      status: { not: InvoiceStatus.void },
+    },
     data: {
       status: InvoiceStatus.void,
       voidReason: reasonCheck.reason,
@@ -231,6 +290,10 @@ export async function voidInvoice(
       updatedById: session.userId,
     },
   });
+
+  if (voided.count === 0) {
+    return { success: false, error: "Invoice is already voided." };
+  }
 
   await logAudit({
     clinicId: session.clinicId,
@@ -270,7 +333,9 @@ export async function generateReceiptPdf(
     where: { id: session.clinicId },
   });
 
-  const lineItems = invoice.lineItems as LineItem[] | null;
+  const lineItems = Array.isArray(invoice.lineItems)
+    ? (invoice.lineItems as LineItem[])
+    : null;
   const amount = Number(invoice.amount);
   const taxableAmount =
     invoice.taxableAmount != null ? Number(invoice.taxableAmount) : amount;

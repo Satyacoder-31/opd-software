@@ -7,6 +7,7 @@ import { AppointmentStatus } from "@prisma/client";
 import {
   CheckCircle2Icon,
   ClipboardListIcon,
+  EyeIcon,
   UsersIcon,
 } from "lucide-react";
 import {
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Banner } from "@/components/ui/Banner";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { Select } from "@/components/ui/Select";
 import { cn, formatPhone } from "@/lib/utils";
@@ -52,7 +54,9 @@ export function QueueBoard({
   defaultDoctorId,
 }: QueueBoardProps) {
   const router = useRouter();
-  const [tab, setTab] = useState<"active" | "completed">("active");
+  const [tab, setTab] = useState<"waiting" | "in_progress" | "completed">(
+    "waiting"
+  );
   const [queue, setQueue] = useState(initialQueue);
   const [completed, setCompleted] = useState(initialCompleted);
   const [selectedDoctorId, setSelectedDoctorId] = useState(
@@ -61,6 +65,7 @@ export function QueueBoard({
   const { isPending, run } = usePendingAction<string>();
   const [connectionStatus, setConnectionStatus] =
     useState<RealtimeConnectionStatus>("disconnected");
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -83,6 +88,7 @@ export function QueueBoard({
   }, [initialCompleted]);
 
   function handleStatus(id: string, status: AppointmentStatus) {
+    setActionError(null);
     void run(async () => {
       const result = await updateAppointmentStatus(
         id,
@@ -92,6 +98,7 @@ export function QueueBoard({
           : undefined
       );
       if (!result.success) {
+        setActionError(result.error);
         return;
       }
       if (result.data.consultationId) {
@@ -110,7 +117,9 @@ export function QueueBoard({
       ? "Live updates"
       : connectionStatus === "error"
         ? "Reconnecting…"
-        : "Connecting…";
+        : connectionStatus === "disconnected"
+          ? "Disconnected"
+          : "Connecting…";
 
   return (
     <PageShell>
@@ -122,10 +131,18 @@ export function QueueBoard({
             <Button
               type="button"
               size="sm"
-              variant={tab === "active" ? "primary" : "secondary"}
-              onClick={() => setTab("active")}
+              variant={tab === "waiting" ? "primary" : "secondary"}
+              onClick={() => setTab("waiting")}
             >
-              Active
+              Waiting ({waiting.length})
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={tab === "in_progress" ? "primary" : "secondary"}
+              onClick={() => setTab("in_progress")}
+            >
+              In consultation ({inProgress.length})
             </Button>
             <Button
               type="button"
@@ -139,13 +156,21 @@ export function QueueBoard({
         }
       />
 
-      {tab === "active" && canStartConsultation && canPickDoctor && doctors.length > 0 && (
+      {actionError && (
+        <div className="px-5 pb-2 md:px-8">
+          <Banner variant="error">{actionError}</Banner>
+        </div>
+      )}
+
+      {tab === "waiting" && canStartConsultation && canPickDoctor && doctors.length > 0 && (
         <Card title="Assign doctor when starting" flush className="border-y border-border">
-          <div className="px-5 py-4">
+          <div className="px-6 py-5 md:px-8">
             <Select
               label="Doctor"
               name="doctorId"
               value={selectedDoctorId}
+              className="px-4 py-6"
+              optionClassName="py-3"
               onChange={(e) => setSelectedDoctorId(e.target.value)}
               options={doctors.map((doctor) => ({
                 value: doctor.id,
@@ -156,60 +181,63 @@ export function QueueBoard({
         </Card>
       )}
 
-      {tab === "active" ? (
-        <>
-          {inProgress.length > 0 && (
-            <section aria-label="In consultation" className="border-b border-border">
-              <h2 className="border-b border-border px-6 py-3 text-sm font-medium uppercase tracking-wide text-muted-foreground md:px-8">
-                In consultation
-              </h2>
-              <div className="grid gap-px bg-border md:grid-cols-2">
-                {inProgress.map((item) => (
-                  <QueueCard
-                    key={item.id}
-                    item={item}
-                    onStatus={handleStatus}
-                    canStart={canStartConsultation}
-                    isPending={isPending}
-                  />
-                ))}
-              </div>
-            </section>
+      {tab === "waiting" && (
+        <section aria-label="Waiting" className="border-b border-border">
+          {waiting.length === 0 ? (
+            <EmptyState
+              icon={UsersIcon}
+              title="No patients waiting"
+              description={
+                <>
+                  Add someone from{" "}
+                  <Link href="/patients">Patients</Link> to get the queue
+                  moving.
+                </>
+              }
+              className="bg-card"
+            />
+          ) : (
+            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
+              {waiting.map((item) => (
+                <QueueCard
+                  key={item.id}
+                  item={item}
+                  onStatus={handleStatus}
+                  canStart={canStartConsultation}
+                  isPending={isPending}
+                />
+              ))}
+            </div>
           )}
+        </section>
+      )}
 
-          <section aria-label="Waiting" className="border-b border-border">
-            <h2 className="border-b border-border px-6 py-3 text-sm font-medium uppercase tracking-wide text-muted-foreground md:px-8">
-              Waiting ({waiting.length})
-            </h2>
-            {waiting.length === 0 ? (
-              <EmptyState
-                icon={UsersIcon}
-                title="No patients waiting"
-                description={
-                  <>
-                    Add someone from{" "}
-                    <Link href="/patients">Patients</Link> to get the queue
-                    moving.
-                  </>
-                }
-                className="bg-card"
-              />
-            ) : (
-              <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
-                {waiting.map((item) => (
-                  <QueueCard
-                    key={item.id}
-                    item={item}
-                    onStatus={handleStatus}
-                    canStart={canStartConsultation}
-                    isPending={isPending}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </>
-      ) : (
+      {tab === "in_progress" && (
+        <section aria-label="In consultation" className="border-b border-border">
+          {inProgress.length === 0 ? (
+            <EmptyState
+              icon={ClipboardListIcon}
+              title="No consultations in progress"
+              description="Start a consultation from the Waiting tab to see it here."
+              className="bg-card"
+            />
+          ) : (
+            <div className="grid gap-px bg-border md:grid-cols-2">
+              {inProgress.map((item) => (
+                <QueueCard
+                  key={item.id}
+                  item={item}
+                  onStatus={handleStatus}
+                  canStart={canStartConsultation}
+                  isPending={isPending}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === "completed" && (
         <section aria-label="Completed" className="border-b border-border">
           {completed.length === 0 ? (
             <EmptyState
@@ -299,19 +327,25 @@ function QueueCard({
             )}
             {item.status === "in_progress" && item.consultation && (
               <>
-                <Link
-                  href={`/consultations/${item.consultation.id}`}
-                  className="inline-flex h-9 items-center rounded-lg border border-border bg-white px-3 text-sm font-medium text-ink hover:bg-surface-muted"
-                >
-                  Open
+                <Link href={`/consultations/${item.consultation.id}`}>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="border-primary/45 bg-primary/20 text-primary hover:bg-primary/30 hover:text-primary"
+                  >
+                    <EyeIcon data-icon="inline-start" />
+                    <span className="font-semibold">Open</span>
+                  </Button>
                 </Link>
                 <Button
                   size="sm"
                   variant="secondary"
+                  className="bg-success/50 text-[#0f5132] hover:bg-success/30 hover:text-success"
                   onClick={() => onStatus(item.id, AppointmentStatus.done)}
                   loading={loading}
                 >
-                  Mark done
+                  <CheckCircle2Icon data-icon="inline-start" />
+                  <span className="font-semibold">Mark done</span>
                 </Button>
               </>
             )}

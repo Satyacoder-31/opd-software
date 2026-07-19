@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
 import { DoctorStaffCard } from "@/components/settings/DoctorStaffCard";
 import { usePendingAction } from "@/hooks/usePendingAction";
-import type { User } from "@prisma/client";
+import type { StaffMember } from "@/components/settings/SettingsClient";
 
 type StaffListProps = {
-  staff: User[];
+  staff: StaffMember[];
   currentUserId: string;
 };
 
@@ -74,7 +74,7 @@ function StaffActiveToggle({
   pending,
   onToggle,
 }: {
-  user: User;
+  user: StaffMember;
   currentUserId: string;
   pending: boolean;
   onToggle: (userId: string, isActive: boolean) => void;

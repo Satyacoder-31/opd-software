@@ -132,7 +132,7 @@ model AuditLog {
   createdAt    DateTime    @default(now())
 
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  actor  User   @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  actor  User   @relation(fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([clinicId, createdAt])
   @@index([resourceType, resourceId])

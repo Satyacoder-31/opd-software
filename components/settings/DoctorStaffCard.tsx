@@ -5,11 +5,11 @@ import { updateDoctorCredentials } from "@/actions/prescriptions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { DetailRow } from "@/components/ui/DetailRow";
-import type { User } from "@prisma/client";
+import type { StaffMember } from "@/components/settings/SettingsClient";
 import { usePendingAction } from "@/hooks/usePendingAction";
 
 type DoctorStaffCardProps = {
-  doctor: User;
+  doctor: StaffMember;
 };
 
 export function DoctorStaffCard({ doctor }: DoctorStaffCardProps) {

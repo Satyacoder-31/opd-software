@@ -65,6 +65,12 @@ export async function savePrescription(
   let amendmentReasonValue: string | undefined;
 
   if (!isActive) {
+    if (consultation.appointment.status !== "done") {
+      return {
+        success: false,
+        error: "Only finalized consultations can be amended.",
+      };
+    }
     const reasonCheck = validateReason(meta?.amendmentReason, "Amendment reason");
     if (!reasonCheck.ok) {
       return { success: false, error: reasonCheck.error };
@@ -82,35 +88,39 @@ export async function savePrescription(
     return { success: false, error: "Invalid prescription details." };
   }
 
-  const prescription = await prisma.prescription.upsert({
-    where: { consultationId },
-    create: {
-      clinicId: session.clinicId,
-      consultationId,
-      medicines: validated.data,
-      advice: validatedMeta.data.advice?.trim() || null,
-      followUp: validatedMeta.data.followUp?.trim() || null,
-      createdById: session.userId,
-    },
-    update: {
-      medicines: validated.data,
-      advice: validatedMeta.data.advice?.trim() || null,
-      followUp: validatedMeta.data.followUp?.trim() || null,
-      updatedById: session.userId,
-    },
-  });
-
-  if (amendmentReasonValue) {
-    await prisma.consultation.updateMany({
-      where: { id: consultationId, clinicId: session.clinicId },
-      data: {
-        amendmentReason: amendmentReasonValue,
-        amendedAt: new Date(),
-        amendedById: session.userId,
+  const prescription = await prisma.$transaction(async (tx) => {
+    const upserted = await tx.prescription.upsert({
+      where: { consultationId },
+      create: {
+        clinicId: session.clinicId,
+        consultationId,
+        medicines: validated.data,
+        advice: validatedMeta.data.advice?.trim() || null,
+        followUp: validatedMeta.data.followUp?.trim() || null,
+        createdById: session.userId,
+      },
+      update: {
+        medicines: validated.data,
+        advice: validatedMeta.data.advice?.trim() || null,
+        followUp: validatedMeta.data.followUp?.trim() || null,
         updatedById: session.userId,
       },
     });
-  }
+
+    if (amendmentReasonValue) {
+      await tx.consultation.updateMany({
+        where: { id: consultationId, clinicId: session.clinicId },
+        data: {
+          amendmentReason: amendmentReasonValue,
+          amendedAt: new Date(),
+          amendedById: session.userId,
+          updatedById: session.userId,
+        },
+      });
+    }
+
+    return upserted;
+  });
 
   await logAudit({
     clinicId: session.clinicId,

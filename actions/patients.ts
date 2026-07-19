@@ -1,15 +1,25 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Gender } from "@prisma/client";
+import { Gender, Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireSessionUser } from "@/lib/auth";
+import {
+  permissionDenied,
+  requireSessionUser,
+  roleAllowed,
+} from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { zodFieldErrors } from "@/lib/form-utils";
 import { logger } from "@/lib/logger";
 import { ageFromDob, parseLocalDateInput } from "@/lib/date-utils";
+import {
+  clampPagination,
+  DEFAULT_PATIENT_PAGE_SIZE,
+} from "@/lib/pagination";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
+
+const PATIENT_ROLES: Role[] = [Role.admin, Role.doctor, Role.receptionist];
 
 const patientSchema = z.object({
   name: z.string().min(2),
@@ -73,6 +83,7 @@ export async function createPatient(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, PATIENT_ROLES)) return permissionDenied();
 
   const parsed = parsePatientForm(formData);
 
@@ -126,9 +137,16 @@ export async function createPatient(
         error: error instanceof Error ? error.message : String(error),
       });
 
+      if (isUniqueConstraintError(error)) {
+        return {
+          success: false,
+          error: "Patient with this phone number may already exist.",
+        };
+      }
+
       return {
         success: false,
-        error: "Patient with this phone number may already exist.",
+        error: "Could not create patient. Please try again.",
       };
     }
   }
@@ -141,6 +159,7 @@ export async function updatePatient(
   formData: FormData
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, PATIENT_ROLES)) return permissionDenied();
 
   const parsed = parsePatientForm(formData);
 
@@ -191,33 +210,46 @@ export async function updatePatient(
     revalidatePath("/patients");
     revalidatePath(`/patients/${id}`);
     return { success: true };
-  } catch {
+  } catch (error) {
+    logger.warn("update_patient_failed", {
+      clinicId: session.clinicId,
+      patientId: id,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, error: "Failed to update patient." };
   }
 }
 
-export async function searchPatients(query: string, skip = 0, take = 50) {
+export async function searchPatients(
+  query: string,
+  skip = 0,
+  take = DEFAULT_PATIENT_PAGE_SIZE
+) {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, PATIENT_ROLES)) return [];
 
-  const patients = !query.trim()
+  const { skip: safeSkip, take: safeTake } = clampPagination(skip, take);
+  const trimmed = query.trim().slice(0, 100);
+
+  const patients = !trimmed
     ? await prisma.patient.findMany({
         where: { clinicId: session.clinicId },
         orderBy: { createdAt: "desc" },
-        skip,
-        take,
+        skip: safeSkip,
+        take: safeTake,
       })
     : await prisma.patient.findMany({
         where: {
           clinicId: session.clinicId,
           OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { phone: { contains: query } },
-            { mrn: { contains: query, mode: "insensitive" } },
+            { name: { contains: trimmed, mode: "insensitive" } },
+            { phone: { contains: trimmed } },
+            { mrn: { contains: trimmed, mode: "insensitive" } },
           ],
         },
         orderBy: { name: "asc" },
-        skip,
-        take,
+        skip: safeSkip,
+        take: safeTake,
       });
 
   await logAudit({
@@ -225,7 +257,7 @@ export async function searchPatients(query: string, skip = 0, take = 50) {
     actorId: session.userId,
     action: "read",
     resourceType: "patient",
-    metadata: { query: query.trim() || null, resultCount: patients.length },
+    metadata: { query: trimmed || null, resultCount: patients.length },
   });
 
   return patients;
@@ -233,8 +265,11 @@ export async function searchPatients(query: string, skip = 0, take = 50) {
 
 export async function countPatients(query: string) {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, PATIENT_ROLES)) return 0;
 
-  if (!query.trim()) {
+  const trimmed = query.trim().slice(0, 100);
+
+  if (!trimmed) {
     return prisma.patient.count({ where: { clinicId: session.clinicId } });
   }
 
@@ -242,9 +277,9 @@ export async function countPatients(query: string) {
     where: {
       clinicId: session.clinicId,
       OR: [
-        { name: { contains: query, mode: "insensitive" } },
-        { phone: { contains: query } },
-        { mrn: { contains: query, mode: "insensitive" } },
+        { name: { contains: trimmed, mode: "insensitive" } },
+        { phone: { contains: trimmed } },
+        { mrn: { contains: trimmed, mode: "insensitive" } },
       ],
     },
   });
@@ -252,6 +287,7 @@ export async function countPatients(query: string) {
 
 export async function getPatientById(id: string) {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, PATIENT_ROLES)) return null;
 
   const patient = await prisma.patient.findFirst({
     where: { id, clinicId: session.clinicId },
@@ -272,6 +308,7 @@ export async function getPatientById(id: string) {
 
 export async function getPatientHistory(patientId: string) {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, PATIENT_ROLES)) return null;
 
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, clinicId: session.clinicId },
@@ -311,8 +348,10 @@ export async function findPossibleDuplicatePatients(input: {
   excludeId?: string;
 }) {
   const session = await requireSessionUser();
-  const name = input.name.trim();
-  const phone = input.phone.trim();
+  if (!roleAllowed(session, PATIENT_ROLES)) return [];
+
+  const name = input.name.trim().slice(0, 100);
+  const phone = input.phone.trim().slice(0, 20);
 
   if (name.length < 2 && phone.length < 5) return [];
 

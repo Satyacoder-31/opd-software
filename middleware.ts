@@ -1,16 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { Role } from "@prisma/client";
 import { updateSession } from "@/lib/supabase/middleware";
-import {
-  encodeSessionHeader,
-  SESSION_HEADER,
-} from "@/lib/session-header";
+import { SESSION_HEADER } from "@/lib/session-header";
 
 const publicRoutes = [
   "/",
   "/login",
   "/signup",
   "/auth/callback",
+  "/api/health",
 ];
 
 const roleRoutes: Record<string, string[]> = {
@@ -26,22 +23,24 @@ function isPublicRoute(pathname: string): boolean {
   );
 }
 
-function withSessionHeader(
-  request: NextRequest,
-  response: NextResponse
-): NextResponse {
+/** Strip any client-supplied identity header before forwarding the request. */
+function stripIdentityHeader(request: NextRequest): Headers {
   const requestHeaders = new Headers(request.headers);
-  const session = response.headers.get(SESSION_HEADER);
+  requestHeaders.delete(SESSION_HEADER);
+  return requestHeaders;
+}
 
-  if (session) {
-    requestHeaders.set(SESSION_HEADER, session);
-  }
+function nextWithCleanHeaders(
+  request: NextRequest,
+  source: NextResponse
+): NextResponse {
+  const requestHeaders = stripIdentityHeader(request);
 
   const nextResponse = NextResponse.next({
     request: { headers: requestHeaders },
   });
 
-  for (const cookie of response.cookies.getAll()) {
+  for (const cookie of source.cookies.getAll()) {
     nextResponse.cookies.set(cookie);
   }
 
@@ -56,7 +55,9 @@ export async function middleware(request: NextRequest) {
 
   const isPublic = isPublicRoute(pathname);
 
-  if (isPublic) return response;
+  if (isPublic) {
+    return nextWithCleanHeaders(request, response);
+  }
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -64,6 +65,7 @@ export async function middleware(request: NextRequest) {
 
   const role = user.app_metadata?.role as string | undefined;
   const isActive = user.app_metadata?.isActive;
+  // Treat missing isActive as active for older tokens, but explicit false blocks.
   if (isActive === false) {
     return NextResponse.redirect(new URL("/login?deactivated=1", request.url));
   }
@@ -76,28 +78,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const appMeta = user.app_metadata as {
-    clinicId?: string;
-    role?: string;
-    userId?: string;
-  };
-  const userMeta = user.user_metadata as { name?: string };
-
-  const session =
-    appMeta.clinicId && appMeta.role && appMeta.userId && user.email && userMeta.name
-      ? {
-          userId: appMeta.userId,
-          clinicId: appMeta.clinicId,
-          role: appMeta.role as Role,
-          email: user.email,
-          name: userMeta.name,
-        }
-      : null;
-  if (session) {
-    response.headers.set(SESSION_HEADER, encodeSessionHeader(session));
-  }
-
-  return withSessionHeader(request, response);
+  return nextWithCleanHeaders(request, response);
 }
 
 export const config = {
@@ -112,5 +93,6 @@ export const config = {
     "/login",
     "/signup",
     "/auth/:path*",
+    "/api/:path*",
   ],
 };

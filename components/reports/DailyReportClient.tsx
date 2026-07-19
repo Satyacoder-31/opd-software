@@ -18,6 +18,7 @@ import { usePendingAction } from "@/hooks/usePendingAction";
 
 type DailyReportClientProps = {
   report: DailyReport;
+  canExportPatients?: boolean;
 };
 
 function formatInr(amount: number): string {
@@ -38,7 +39,10 @@ function downloadCsv(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function DailyReportClient({ report }: DailyReportClientProps) {
+export function DailyReportClient({
+  report,
+  canExportPatients = false,
+}: DailyReportClientProps) {
   const router = useRouter();
   const [date, setDate] = useState(report.date);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +223,7 @@ export function DailyReportClient({ report }: DailyReportClientProps) {
         </Card>
       </div>
 
-      <DataExportCard />
+      <DataExportCard canExportPatients={canExportPatients} />
     </PageShell>
   );
 }

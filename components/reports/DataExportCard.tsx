@@ -24,7 +24,11 @@ function downloadCsv(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function DataExportCard() {
+export function DataExportCard({
+  canExportPatients = false,
+}: {
+  canExportPatients?: boolean;
+}) {
   const [from, setFrom] = useState(todayDateString());
   const [to, setTo] = useState(todayDateString());
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +77,9 @@ export function DataExportCard() {
       <div className="space-y-4 px-5 py-5">
         <p className="text-sm text-muted-foreground">
           Download CSV exports for backup or accounting.
+          {canExportPatients
+            ? " Patient exports include clinical fields and are admin-only."
+            : " Patient list export is limited to clinic admins."}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
@@ -92,15 +99,17 @@ export function DataExportCard() {
         </div>
         {error && <Banner variant="error">{error}</Banner>}
         <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handlePatients}
-            loading={isPending("patients")}
-          >
-            <DownloadIcon data-icon="inline-start" />
-            Export patients
-          </Button>
+          {canExportPatients && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handlePatients}
+              loading={isPending("patients")}
+            >
+              <DownloadIcon data-icon="inline-start" />
+              Export patients
+            </Button>
+          )}
           <Button
             type="button"
             variant="secondary"

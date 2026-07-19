@@ -11,7 +11,9 @@ export function useServerActionForm<T = void>(
   action: (formData: FormData) => Promise<ActionResponse<T>>,
   options?: {
     initialValues?: Record<string, string>;
-    onSuccess?: (data: T extends void ? undefined : T) => void;
+    onSuccess?: (
+      data: T extends void ? undefined : T
+    ) => void | Promise<void>;
   }
 ) {
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function useServerActionForm<T = void>(
         return;
       }
       const data = "data" in result ? result.data : undefined;
-      options?.onSuccess?.(data as T extends void ? undefined : T);
+      await options?.onSuccess?.(data as T extends void ? undefined : T);
     });
   }
 
@@ -60,5 +62,6 @@ export function useServerActionForm<T = void>(
     values,
     setValue,
     setValues,
+    setError,
   };
 }

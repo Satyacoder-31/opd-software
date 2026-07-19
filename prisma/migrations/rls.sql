@@ -1,5 +1,12 @@
 -- Row-Level Security policies for multi-tenant clinic isolation
 -- Run after Prisma migrate: psql $DIRECT_URL -f prisma/migrations/rls.sql
+--
+-- IMPORTANT: These policies are optional defense-in-depth.
+-- Prisma typically connects as a privileged/owner role that bypasses RLS, and
+-- auth.uid() is only set when Supabase Auth JWT context is present.
+-- Application code MUST still filter every query by session.clinicId.
+-- To make RLS effective, use a non-owner DB role without BYPASSRLS and set
+-- the auth context per request/transaction.
 
 CREATE OR REPLACE FUNCTION auth_clinic_id() RETURNS text AS $$
   SELECT "clinicId" FROM "User"

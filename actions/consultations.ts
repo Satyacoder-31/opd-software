@@ -126,15 +126,12 @@ export async function submitConsultation(
   id: string,
   data: ConsultationClinicalData
 ): Promise<VoidActionResult> {
-  const result = await saveConsultation(id, data);
-  if (!result.success) return result;
-
   const session = await requireSessionUser();
   if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
 
   const consultation = await prisma.consultation.findFirst({
     where: { id, clinicId: session.clinicId },
-    include: { appointment: { select: { status: true } } },
+    include: { appointment: { select: { id: true, status: true } } },
   });
 
   if (!consultation) {
@@ -145,12 +142,51 @@ export async function submitConsultation(
     return { success: false, error: "This consultation is already finalized." };
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.appointment.updateMany({
-      where: { id: consultation.appointmentId, clinicId: session.clinicId },
+  const parsed = consultationClinicalSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: "Invalid consultation data.",
+      fieldErrors: zodFieldErrors(parsed.error),
+    };
+  }
+
+  const finalized = await prisma.$transaction(async (tx) => {
+    const statusUpdate = await tx.appointment.updateMany({
+      where: {
+        id: consultation.appointmentId,
+        clinicId: session.clinicId,
+        status: "in_progress",
+      },
       data: { status: "done" },
     });
+
+    if (statusUpdate.count === 0) {
+      return false;
+    }
+
+    await tx.consultation.updateMany({
+      where: { id, clinicId: session.clinicId },
+      data: {
+        chiefComplaint: parsed.data.chiefComplaint,
+        diagnosis: parsed.data.diagnosis,
+        notes: parsed.data.notes,
+        vitals: parsed.data.vitals ?? undefined,
+        clinicalPresentation: parsed.data.clinicalPresentation ?? undefined,
+        patientHistory: parsed.data.patientHistory ?? undefined,
+        examination: parsed.data.examination ?? undefined,
+        investigationResults: parsed.data.investigationResults ?? undefined,
+        medicalCertificate: parsed.data.medicalCertificate ?? undefined,
+        updatedById: session.userId,
+      },
+    });
+
+    return true;
   });
+
+  if (!finalized) {
+    return { success: false, error: "This consultation is already finalized." };
+  }
 
   await logAudit({
     clinicId: session.clinicId,

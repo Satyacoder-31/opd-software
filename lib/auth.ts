@@ -1,16 +1,12 @@
 import { cache } from "react";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 import type { SessionUser } from "@/lib/types";
-import {
-  decodeSessionHeader,
-  SESSION_HEADER,
-} from "@/lib/session-header";
 
 export const PENDING_AUTH_PREFIX = "pending:";
 
@@ -21,10 +17,15 @@ export function sessionFromAuthUser(user: User): SessionUser | null {
     clinicId?: string;
     role?: Role;
     userId?: string;
+    isActive?: boolean;
   };
   const userMeta = user.user_metadata as { name?: string };
 
   if (!appMeta.clinicId || !appMeta.role || !appMeta.userId || !user.email) {
+    return null;
+  }
+
+  if (appMeta.isActive === false) {
     return null;
   }
 
@@ -42,19 +43,69 @@ export function sessionFromAuthUser(user: User): SessionUser | null {
 
 async function syncAuthMetadata(
   supabaseAuthId: string,
-  session: Pick<SessionUser, "userId" | "clinicId" | "role" | "name">
+  session: Pick<SessionUser, "userId" | "clinicId" | "role" | "name"> & {
+    isActive?: boolean;
+  }
 ) {
-  const admin = createAdminClient();
-  await admin.auth.admin.updateUserById(supabaseAuthId, {
-    app_metadata: {
-      clinicId: session.clinicId,
-      role: session.role,
-      userId: session.userId,
-    },
-    user_metadata: {
-      name: session.name,
-    },
+  try {
+    const admin = createAdminClient();
+    await admin.auth.admin.updateUserById(supabaseAuthId, {
+      app_metadata: {
+        clinicId: session.clinicId,
+        role: session.role,
+        userId: session.userId,
+        isActive: session.isActive ?? true,
+      },
+      user_metadata: {
+        name: session.name,
+      },
+    });
+  } catch (error) {
+    logger.warn("sync_auth_metadata_failed", {
+      supabaseAuthId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * Resolve the session from a verified Supabase user + authoritative DB row.
+ * JWT metadata is treated as a hint only; isActive/role/clinic always come from DB when available.
+ */
+async function resolveSessionFromUser(user: User): Promise<SessionUser | null> {
+  const dbUser = await prisma.user.findUnique({
+    where: { supabaseAuthId: user.id },
   });
+
+  if (dbUser) {
+    if (!dbUser.isActive) return null;
+
+    const session: SessionUser = {
+      userId: dbUser.id,
+      clinicId: dbUser.clinicId,
+      role: dbUser.role,
+      email: dbUser.email,
+      name: dbUser.name,
+    };
+
+    const fromJwt = sessionFromAuthUser(user);
+    const metadataStale =
+      !fromJwt ||
+      fromJwt.userId !== session.userId ||
+      fromJwt.clinicId !== session.clinicId ||
+      fromJwt.role !== session.role ||
+      fromJwt.name !== session.name ||
+      user.app_metadata?.isActive === false;
+
+    if (metadataStale) {
+      await syncAuthMetadata(user.id, { ...session, isActive: true });
+    }
+
+    return session;
+  }
+
+  // Fallback for brand-new users whose DB row is still being claimed.
+  return sessionFromAuthUser(user);
 }
 
 async function loadSessionFromSupabase(): Promise<SessionUser | null> {
@@ -65,37 +116,14 @@ async function loadSessionFromSupabase(): Promise<SessionUser | null> {
 
   if (!user) return null;
 
-  const fromJwt = sessionFromAuthUser(user);
-  if (fromJwt) return fromJwt;
-
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseAuthId: user.id },
-  });
-
-  if (!dbUser) return null;
-
-  if (!dbUser.isActive) return null;
-
-  const session: SessionUser = {
-    userId: dbUser.id,
-    clinicId: dbUser.clinicId,
-    role: dbUser.role,
-    email: dbUser.email,
-    name: dbUser.name,
-  };
-
-  await syncAuthMetadata(user.id, session);
-  return session;
+  return resolveSessionFromUser(user);
 }
 
+/**
+ * Always resolves identity from the verified Supabase session + DB.
+ * Never trusts client-supplied session headers.
+ */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
-  const headerStore = await headers();
-  const encodedSession = headerStore.get(SESSION_HEADER);
-  if (encodedSession) {
-    const session = decodeSessionHeader(encodedSession);
-    if (session) return session;
-  }
-
   return loadSessionFromSupabase();
 });
 
@@ -127,31 +155,29 @@ export async function ensureUserFromAuth(): Promise<SessionUser | null> {
 
   if (!user?.email) return null;
 
-  const fromJwt = sessionFromAuthUser(user);
-  if (fromJwt) return fromJwt;
-
   let dbUser = await prisma.user.findUnique({
     where: { supabaseAuthId: user.id },
   });
 
   if (!dbUser) {
-    dbUser = await prisma.user.findFirst({
-      where: {
-        email: user.email,
-        supabaseAuthId: { startsWith: PENDING_AUTH_PREFIX },
-      },
-    });
+    dbUser = await prisma.$transaction(async (tx) => {
+      const pending = await tx.user.findFirst({
+        where: {
+          email: user.email!,
+          supabaseAuthId: { startsWith: PENDING_AUTH_PREFIX },
+        },
+      });
 
-    if (dbUser) {
-      dbUser = await prisma.user.update({
-        where: { id: dbUser.id },
+      if (!pending) return null;
+
+      return tx.user.update({
+        where: { id: pending.id },
         data: { supabaseAuthId: user.id },
       });
-    }
+    });
   }
 
   if (!dbUser) return null;
-
   if (!dbUser.isActive) return null;
 
   const session: SessionUser = {
@@ -162,7 +188,7 @@ export async function ensureUserFromAuth(): Promise<SessionUser | null> {
     name: dbUser.name,
   };
 
-  await syncAuthMetadata(user.id, session);
+  await syncAuthMetadata(user.id, { ...session, isActive: true });
   return session;
 }
 

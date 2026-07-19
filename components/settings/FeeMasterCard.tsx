@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IndianRupeeIcon, PlusIcon } from "lucide-react";
 import {
@@ -31,6 +31,10 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
   const [toggleError, setToggleError] = useState<string | null>(null);
   const { isPending, run } = usePendingAction<string>();
 
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
   const {
     handleSubmit,
     error,
@@ -40,8 +44,19 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
     setValue,
     setValues,
   } = useServerActionForm(createFeeItem, {
-    onSuccess: () => {
+    onSuccess: (data) => {
       setValues({});
+      if (data) {
+        setItems((prev) => [
+          {
+            id: data.id,
+            name: data.name,
+            amount: data.amount,
+            isActive: true,
+          },
+          ...prev,
+        ]);
+      }
       router.refresh();
     },
   });

@@ -23,10 +23,15 @@ type SelectProps = {
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   className?: string;
+  optionClassName?: string;
   id?: string;
   disabled?: boolean;
   required?: boolean;
+  allowClear?: boolean;
+  clearLabel?: string;
 };
+
+const CLEAR_VALUE = "__clear__";
 
 export function Select({
   label,
@@ -36,11 +41,16 @@ export function Select({
   value = "",
   onChange,
   className,
+  optionClassName,
   id,
   disabled,
   required,
+  allowClear = true,
+  clearLabel = "Select…",
 }: SelectProps) {
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const hasEmptyOption = options.some((opt) => opt.value === "");
+  const showClear = allowClear && (hasEmptyOption || !required);
 
   return (
     <Field data-invalid={!!error || undefined}>
@@ -51,8 +61,10 @@ export function Select({
         disabled={disabled}
         required={required}
         onValueChange={(nextValue) => {
+          const resolved =
+            nextValue === CLEAR_VALUE || nextValue == null ? "" : nextValue;
           onChange?.({
-            target: { name: name ?? "", value: nextValue ?? "" },
+            target: { name: name ?? "", value: resolved },
           } as React.ChangeEvent<HTMLSelectElement>);
         }}
       >
@@ -61,14 +73,23 @@ export function Select({
           className={cn("h-11 w-full", className)}
           aria-invalid={!!error || undefined}
         >
-          <SelectValue placeholder="Select…" />
+          <SelectValue placeholder={clearLabel} />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
+            {showClear && (
+              <SelectItem value={CLEAR_VALUE} className={optionClassName}>
+                {options.find((opt) => opt.value === "")?.label ?? clearLabel}
+              </SelectItem>
+            )}
             {options
               .filter((opt) => opt.value !== "")
               .map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
+                <SelectItem
+                  key={opt.value}
+                  value={opt.value}
+                  className={optionClassName}
+                >
                   {opt.label}
                 </SelectItem>
               ))}

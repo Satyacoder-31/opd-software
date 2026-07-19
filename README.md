@@ -31,6 +31,8 @@ Copy `.env.example` to `.env` and fill in values:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server-only; never expose to the client) |
 | `NEXT_PUBLIC_APP_URL` | App origin, e.g. `http://localhost:3000` |
+| `UPSTASH_REDIS_REST_URL` | Optional. Shared rate-limit store for multi-instance production |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional. Token for the Upstash Redis REST API |
 
 ### 3. Database
 
@@ -40,7 +42,16 @@ npx prisma generate
 npm run db:seed   # optional demo clinic + patients
 ```
 
-Optional Row-Level Security policies:
+### Tenant isolation (clinic data)
+
+**Primary boundary:** every server action scopes queries with `clinicId` from the verified session (`requireSessionUser()` → DB-backed user row). Identity is never taken from client-supplied headers.
+
+**Optional defense-in-depth:** Row-Level Security policies in `prisma/migrations/rls.sql`. These only help when:
+
+1. The app connects with a database role that does **not** bypass RLS (not the table owner / `postgres` superuser), and
+2. `auth.uid()` is available for the request (Supabase Auth JWT context).
+
+Today Prisma uses `DATABASE_URL` as a privileged pooler role, so **do not rely on RLS alone**. Prefer keeping strict `clinicId` filters in application code. If you enable RLS for an extra layer:
 
 ```bash
 psql "$DIRECT_URL" -f prisma/migrations/rls.sql

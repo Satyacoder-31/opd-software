@@ -35,7 +35,7 @@ export async function listFeeItems(activeOnly = true) {
 
 export async function createFeeItem(
   formData: FormData
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; name: string; amount: number }>> {
   const session = await requireSessionUser();
   if (!roleAllowed(session, ADMIN_ROLES)) return permissionDenied();
 
@@ -69,7 +69,14 @@ export async function createFeeItem(
   });
 
   revalidatePath("/settings");
-  return { success: true, data: { id: item.id } };
+  return {
+    success: true,
+    data: {
+      id: item.id,
+      name: item.name,
+      amount: Number(item.amount),
+    },
+  };
 }
 
 export async function updateFeeItem(

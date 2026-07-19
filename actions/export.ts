@@ -7,7 +7,10 @@ import { logAudit } from "@/lib/audit";
 import { parseLocalDateInput } from "@/lib/date-utils";
 import type { ActionResult } from "@/lib/types";
 
-const EXPORT_ROLES: Role[] = [Role.admin, Role.receptionist];
+const VISIT_BILLING_EXPORT_ROLES: Role[] = [Role.admin, Role.receptionist];
+const PATIENT_EXPORT_ROLES: Role[] = [Role.admin];
+const MAX_EXPORT_ROWS = 5_000;
+const MAX_EXPORT_RANGE_DAYS = 90;
 
 function csvEscape(value: string | number | null | undefined): string {
   const raw = value == null ? "" : String(value);
@@ -32,6 +35,11 @@ function parseRange(from?: string, to?: string): { from: Date; to: Date } | null
   const end = new Date(toDate);
   end.setHours(23, 59, 59, 999);
   if (end < fromDate) return null;
+
+  const rangeMs = end.getTime() - fromDate.getTime();
+  const maxMs = MAX_EXPORT_RANGE_DAYS * 24 * 60 * 60 * 1000;
+  if (rangeMs > maxMs) return null;
+
   return { from: fromDate, to: end };
 }
 
@@ -39,11 +47,12 @@ export async function exportPatientsCsv(): Promise<
   ActionResult<{ csv: string; filename: string }>
 > {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, EXPORT_ROLES)) return permissionDenied();
+  if (!roleAllowed(session, PATIENT_EXPORT_ROLES)) return permissionDenied();
 
   const patients = await prisma.patient.findMany({
     where: { clinicId: session.clinicId },
     orderBy: { createdAt: "desc" },
+    take: MAX_EXPORT_ROWS,
   });
 
   const csv = toCsv(
@@ -66,7 +75,7 @@ export async function exportPatientsCsv(): Promise<
     actorId: session.userId,
     action: "export",
     resourceType: "patient",
-    metadata: { count: patients.length },
+    metadata: { count: patients.length, capped: patients.length >= MAX_EXPORT_ROWS },
   });
 
   return {
@@ -80,11 +89,14 @@ export async function exportVisitsCsv(
   to: string
 ): Promise<ActionResult<{ csv: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, EXPORT_ROLES)) return permissionDenied();
+  if (!roleAllowed(session, VISIT_BILLING_EXPORT_ROLES)) return permissionDenied();
 
   const range = parseRange(from, to);
   if (!range) {
-    return { success: false, error: "Enter a valid from/to date range." };
+    return {
+      success: false,
+      error: `Enter a valid from/to date range of at most ${MAX_EXPORT_RANGE_DAYS} days.`,
+    };
   }
 
   const appointments = await prisma.appointment.findMany({
@@ -99,6 +111,7 @@ export async function exportVisitsCsv(
       },
     },
     orderBy: [{ queueDate: "asc" }, { tokenNumber: "asc" }],
+    take: MAX_EXPORT_ROWS,
   });
 
   const csv = toCsv(
@@ -134,11 +147,14 @@ export async function exportBillingCsv(
   to: string
 ): Promise<ActionResult<{ csv: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, EXPORT_ROLES)) return permissionDenied();
+  if (!roleAllowed(session, VISIT_BILLING_EXPORT_ROLES)) return permissionDenied();
 
   const range = parseRange(from, to);
   if (!range) {
-    return { success: false, error: "Enter a valid from/to date range." };
+    return {
+      success: false,
+      error: `Enter a valid from/to date range of at most ${MAX_EXPORT_RANGE_DAYS} days.`,
+    };
   }
 
   const invoices = await prisma.invoice.findMany({
@@ -155,6 +171,7 @@ export async function exportBillingCsv(
       },
     },
     orderBy: { createdAt: "asc" },
+    take: MAX_EXPORT_ROWS,
   });
 
   const csv = toCsv(

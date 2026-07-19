@@ -3,13 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { AppointmentStatus, AppointmentType, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSessionUser } from "@/lib/auth";
+import {
+  permissionDenied,
+  requireSessionUser,
+  roleAllowed,
+} from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { parseLocalDateTimeInput } from "@/lib/date-utils";
+import {
+  appointmentTransitionError,
+  canSetAppointmentStatus,
+  canTransitionAppointment,
+} from "@/lib/appointment-transitions";
 import type { ActionResult } from "@/lib/types";
 
-const MAX_TOKEN_RETRIES = 3;
+const MAX_TOKEN_RETRIES = 5;
+const QUEUE_ROLES: Role[] = [Role.admin, Role.doctor, Role.receptionist];
+const CLINICAL_ROLES: Role[] = [Role.admin, Role.doctor];
 
 function todayDate(): Date {
   const d = new Date();
@@ -32,20 +43,6 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-async function nextTokenNumber(
-  clinicId: string,
-  queueDate: Date
-): Promise<number> {
-  return prisma.$transaction(async (tx) => {
-    const last = await tx.appointment.findFirst({
-      where: { clinicId, queueDate },
-      orderBy: { tokenNumber: "desc" },
-      select: { tokenNumber: true },
-    });
-    return (last?.tokenNumber ?? 0) + 1;
-  });
-}
-
 export type CreateAppointmentInput = {
   patientId: string;
   type?: AppointmentType;
@@ -58,6 +55,7 @@ export async function createAppointment(
   scheduledAt?: Date
 ): Promise<ActionResult<{ id: string; tokenNumber: number }>> {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return permissionDenied();
 
   const input: CreateAppointmentInput =
     typeof patientIdOrInput === "string"
@@ -91,40 +89,51 @@ export async function createAppointment(
 
   const queueDate = scheduled ? dateOnly(scheduled) : todayDate();
 
-  const alreadyQueued = await prisma.appointment.findFirst({
-    where: {
-      clinicId: session.clinicId,
-      patientId: input.patientId,
-      queueDate,
-      status: {
-        in: [AppointmentStatus.waiting, AppointmentStatus.in_progress],
-      },
-    },
-    select: { id: true },
-  });
-
-  if (alreadyQueued) {
-    return {
-      success: false,
-      error: "Patient is already in the queue for that day.",
-    };
-  }
-
   for (let attempt = 0; attempt < MAX_TOKEN_RETRIES; attempt++) {
-    const tokenNumber = await nextTokenNumber(session.clinicId, queueDate);
-
     try {
-      const appointment = await prisma.appointment.create({
-        data: {
-          clinicId: session.clinicId,
-          patientId: input.patientId,
-          tokenNumber,
-          queueDate,
-          type: appointmentType,
-          scheduledAt: scheduled,
-          createdById: session.userId,
-        },
+      const appointment = await prisma.$transaction(async (tx) => {
+        const alreadyQueued = await tx.appointment.findFirst({
+          where: {
+            clinicId: session.clinicId,
+            patientId: input.patientId,
+            queueDate,
+            status: {
+              in: [AppointmentStatus.waiting, AppointmentStatus.in_progress],
+            },
+          },
+          select: { id: true },
+        });
+
+        if (alreadyQueued) {
+          return null;
+        }
+
+        const last = await tx.appointment.findFirst({
+          where: { clinicId: session.clinicId, queueDate },
+          orderBy: { tokenNumber: "desc" },
+          select: { tokenNumber: true },
+        });
+        const tokenNumber = (last?.tokenNumber ?? 0) + 1;
+
+        return tx.appointment.create({
+          data: {
+            clinicId: session.clinicId,
+            patientId: input.patientId,
+            tokenNumber,
+            queueDate,
+            type: appointmentType,
+            scheduledAt: scheduled,
+            createdById: session.userId,
+          },
+        });
       });
+
+      if (!appointment) {
+        return {
+          success: false,
+          error: "Patient is already in the queue for that day.",
+        };
+      }
 
       await logAudit({
         clinicId: session.clinicId,
@@ -146,6 +155,13 @@ export async function createAppointment(
         continue;
       }
 
+      if (isUniqueConstraintError(error)) {
+        return {
+          success: false,
+          error: "Patient is already in the queue for that day.",
+        };
+      }
+
       logger.warn("create_appointment_failed", {
         clinicId: session.clinicId,
         attempt,
@@ -161,6 +177,8 @@ export async function createAppointment(
 
 export async function getActiveQueuePatientIds(): Promise<string[]> {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+
   const queueDate = todayDate();
 
   const rows = await prisma.appointment.findMany({
@@ -180,6 +198,8 @@ export async function isPatientInActiveQueue(
   patientId: string
 ): Promise<boolean> {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return false;
+
   const queueDate = todayDate();
 
   const existing = await prisma.appointment.findFirst({
@@ -197,6 +217,8 @@ export async function isPatientInActiveQueue(
 
 export async function getQueue() {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+
   const queueDate = todayDate();
 
   return prisma.appointment.findMany({
@@ -226,6 +248,8 @@ export async function getQueue() {
 
 export async function getCompletedQueue() {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+
   const queueDate = todayDate();
 
   return prisma.appointment.findMany({
@@ -259,6 +283,8 @@ export async function getCompletedQueue() {
 
 export async function listClinicDoctors() {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+
   return prisma.user.findMany({
     where: {
       clinicId: session.clinicId,
@@ -276,6 +302,28 @@ export async function updateAppointmentStatus(
   doctorId?: string
 ): Promise<ActionResult<{ consultationId?: string }>> {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, QUEUE_ROLES)) return permissionDenied();
+
+  if (
+    status !== AppointmentStatus.waiting &&
+    status !== AppointmentStatus.in_progress &&
+    status !== AppointmentStatus.done
+  ) {
+    return { success: false, error: "Invalid appointment status." };
+  }
+
+  if (!canSetAppointmentStatus(session.role, status)) {
+    if (status === AppointmentStatus.in_progress) {
+      return { success: false, error: "Receptionists cannot start consultations." };
+    }
+    if (status === AppointmentStatus.done) {
+      return {
+        success: false,
+        error: "Only doctors or admins can finalize visits from the queue.",
+      };
+    }
+    return permissionDenied();
+  }
 
   const appointment = await prisma.appointment.findFirst({
     where: { id: appointmentId, clinicId: session.clinicId },
@@ -286,11 +334,11 @@ export async function updateAppointmentStatus(
     return { success: false, error: "Appointment not found." };
   }
 
-  if (
-    status === AppointmentStatus.in_progress &&
-    session.role === Role.receptionist
-  ) {
-    return { success: false, error: "Receptionists cannot start consultations." };
+  if (!canTransitionAppointment(appointment.status, status)) {
+    return {
+      success: false,
+      error: appointmentTransitionError(appointment.status, status),
+    };
   }
 
   let resolvedDoctorId: string | undefined;
@@ -311,27 +359,39 @@ export async function updateAppointmentStatus(
       }
       resolvedDoctorId = doctor.id;
     } else {
-      resolvedDoctorId =
-        (
-          await prisma.user.findFirst({
-            where: {
-              clinicId: session.clinicId,
-              role: Role.doctor,
-              isActive: true,
-            },
-            orderBy: { name: "asc" },
-          })
-        )?.id ?? session.userId;
+      const doctor = await prisma.user.findFirst({
+        where: {
+          clinicId: session.clinicId,
+          role: Role.doctor,
+          isActive: true,
+        },
+        orderBy: { name: "asc" },
+      });
+      if (!doctor) {
+        return {
+          success: false,
+          error: "No active doctor is available to assign this consultation.",
+        };
+      }
+      resolvedDoctorId = doctor.id;
     }
   }
 
-  let consultationId: string | undefined;
+  let consultationId: string | undefined = appointment.consultation?.id;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.appointment.updateMany({
-      where: { id: appointmentId, clinicId: session.clinicId },
+  const updated = await prisma.$transaction(async (tx) => {
+    const statusUpdate = await tx.appointment.updateMany({
+      where: {
+        id: appointmentId,
+        clinicId: session.clinicId,
+        status: appointment.status,
+      },
       data: { status },
     });
+
+    if (statusUpdate.count === 0) {
+      return { conflict: true as const };
+    }
 
     if (
       status === AppointmentStatus.in_progress &&
@@ -349,7 +409,16 @@ export async function updateAppointmentStatus(
       });
       consultationId = consultation.id;
     }
+
+    return { conflict: false as const };
   });
+
+  if (updated.conflict) {
+    return {
+      success: false,
+      error: "This appointment was updated by someone else. Refresh and try again.",
+    };
+  }
 
   await logAudit({
     clinicId: session.clinicId,
@@ -366,6 +435,7 @@ export async function updateAppointmentStatus(
 
 export async function getAppointmentById(id: string) {
   const session = await requireSessionUser();
+  if (!roleAllowed(session, [...QUEUE_ROLES, ...CLINICAL_ROLES])) return null;
 
   return prisma.appointment.findFirst({
     where: { id, clinicId: session.clinicId },

@@ -61,7 +61,7 @@ export async function savePrescriptionTemplate(input: {
   const template = await prisma.prescriptionTemplate.create({
     data: {
       clinicId: session.clinicId,
-      doctorId: session.role === Role.doctor ? session.userId : session.userId,
+      doctorId: session.role === Role.doctor ? session.userId : null,
       name: parsed.data.name.trim(),
       medicines: parsed.data.medicines,
       advice: parsed.data.advice ?? null,

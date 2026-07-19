@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import type { AuditAction, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { getClientIp } from "@/lib/rate-limit";
 
 export type AuditResourceType =
   | "patient"
@@ -44,10 +45,11 @@ export async function logAudit({
         action,
         resourceType,
         resourceId,
-        ipAddress:
-          headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-          headerStore.get("x-real-ip") ??
-          null,
+        ipAddress: getClientIp(
+          headerStore.get("x-forwarded-for"),
+          headerStore.get("x-real-ip"),
+          headerStore.get("x-vercel-forwarded-for")
+        ),
         userAgent: headerStore.get("user-agent"),
         metadata: metadata as Prisma.InputJsonValue | undefined,
       },

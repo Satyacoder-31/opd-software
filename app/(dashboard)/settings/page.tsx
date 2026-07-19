@@ -1,7 +1,7 @@
 import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { requireSessionUser } from "@/lib/auth";
-import { getClinicProfile } from "@/actions/auth";
+import { getClinicProfile, getStaffList } from "@/actions/auth";
 import { listFeeItems } from "@/actions/fees";
 import { SettingsClient } from "@/components/settings/SettingsClient";
 
@@ -9,15 +9,16 @@ export default async function SettingsPage() {
   const session = await requireSessionUser();
   if (session.role !== Role.admin) redirect("/queue");
 
-  const [clinic, feeItems] = await Promise.all([
+  const [clinic, staff, feeItems] = await Promise.all([
     getClinicProfile(),
+    getStaffList(),
     listFeeItems(false),
   ]);
 
   return (
     <SettingsClient
       clinic={clinic}
-      staff={clinic.users}
+      staff={staff}
       currentUserId={session.userId}
       feeItemCount={feeItems.length}
     />

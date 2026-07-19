@@ -8,11 +8,24 @@ import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { ClinicProfile } from "@/components/settings/ClinicProfile";
 import { ClinicProfileActions } from "@/components/settings/ClinicProfileActions";
 import { StaffList } from "@/components/settings/StaffList";
-import type { Clinic, User } from "@prisma/client";
+import type { Clinic, Role } from "@prisma/client";
+
+export type StaffMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  qualifications: string | null;
+  registrationNo: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  clinicId: string;
+};
 
 type SettingsClientProps = {
   clinic: Clinic;
-  staff: User[];
+  staff: StaffMember[];
   currentUserId: string;
   feeItemCount: number;
 };

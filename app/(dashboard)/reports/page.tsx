@@ -26,5 +26,10 @@ export default async function ReportsPage({ searchParams }: Props) {
 
   if (!report) redirect("/queue");
 
-  return <DailyReportClient report={report} />;
+  return (
+    <DailyReportClient
+      report={report}
+      canExportPatients={session.role === Role.admin}
+    />
+  );
 }

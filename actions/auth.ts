@@ -36,7 +36,8 @@ async function enforceAuthRateLimit(
   const headerStore = await headers();
   const ip = getClientIp(
     headerStore.get("x-forwarded-for"),
-    headerStore.get("x-real-ip")
+    headerStore.get("x-real-ip"),
+    headerStore.get("x-vercel-forwarded-for")
   );
   const limit = action === "login" ? 10 : 5;
   const result = rateLimit(`${action}:${ip}`, limit, 60_000);
@@ -436,8 +437,17 @@ const getCachedClinicProfile = unstable_cache(
   async (clinicId: string) => {
     return prisma.clinic.findUniqueOrThrow({
       where: { id: clinicId },
-      include: {
-        users: { orderBy: { createdAt: "asc" } },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        address: true,
+        gstin: true,
+        plan: true,
+        subscriptionStatus: true,
+        createdAt: true,
+        updatedAt: true,
+        nextInvoiceSeq: true,
       },
     });
   },
@@ -452,9 +462,25 @@ export async function getClinicProfile() {
 
 export async function getStaffList() {
   const session = await requireSessionUser();
+  if (session.role !== Role.admin) {
+    return [];
+  }
+
   return prisma.user.findMany({
     where: { clinicId: session.clinicId },
     orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      isActive: true,
+      qualifications: true,
+      registrationNo: true,
+      createdAt: true,
+      updatedAt: true,
+      clinicId: true,
+    },
   });
 }
 

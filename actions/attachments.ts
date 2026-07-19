@@ -6,18 +6,23 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { isConsultationEditable } from "@/lib/consultation-utils";
+import {
+  ALLOWED_ATTACHMENT_TYPES,
+  detectMimeType,
+  isAllowedAttachmentMime,
+  MAX_ATTACHMENT_BASE64_LENGTH,
+  MAX_ATTACHMENT_BYTES,
+} from "@/lib/file-type";
+import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
 
 const CLINICAL_ROLES: Role[] = [Role.admin, Role.doctor];
 const STORAGE_BUCKET = "consultation-attachments";
-const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED_TYPES = new Set([
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const MAX_BYTES = MAX_ATTACHMENT_BYTES;
+const MAX_BASE64_LENGTH = MAX_ATTACHMENT_BASE64_LENGTH;
+const ALLOWED_TYPES = ALLOWED_ATTACHMENT_TYPES;
 
 export async function listConsultationAttachments(consultationId: string) {
   const session = await requireSessionUser();
@@ -45,6 +50,10 @@ export async function uploadConsultationAttachment(input: {
   const session = await requireSessionUser();
   if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
 
+  if (!input.base64 || input.base64.length > MAX_BASE64_LENGTH) {
+    return { success: false, error: "File must be between 1 byte and 5 MB." };
+  }
+
   if (!ALLOWED_TYPES.has(input.mimeType)) {
     return {
       success: false,
@@ -57,54 +66,85 @@ export async function uploadConsultationAttachment(input: {
     return { success: false, error: "File must be between 1 byte and 5 MB." };
   }
 
+  const detected = detectMimeType(buffer);
+  if (!isAllowedAttachmentMime(input.mimeType, detected) || !detected) {
+    return {
+      success: false,
+      error: "File content does not match the declared file type.",
+    };
+  }
+
   const consultation = await prisma.consultation.findFirst({
     where: { id: input.consultationId, clinicId: session.clinicId },
-    select: { id: true },
+    include: { appointment: { select: { status: true } } },
   });
   if (!consultation) {
     return { success: false, error: "Consultation not found." };
   }
 
+  if (!isConsultationEditable(consultation.appointment.status)) {
+    return {
+      success: false,
+      error: "Attachments can only be added while the consultation is in progress.",
+    };
+  }
+
   const safeName = input.fileName.replace(/[^\w.\- ()]/g, "_").slice(0, 120);
-  const filePath = `${session.clinicId}/${input.consultationId}/${randomUUID()}-${safeName}`;
+  const storageKey = `${session.clinicId}/${input.consultationId}/${randomUUID()}`;
+  const filePath = storageKey;
 
   const admin = createAdminClient();
   const { error: uploadError } = await admin.storage
     .from(STORAGE_BUCKET)
     .upload(filePath, buffer, {
-      contentType: input.mimeType,
+      contentType: detected,
       upsert: false,
     });
 
   if (uploadError) {
+    logger.error("attachment_upload_failed", {
+      clinicId: session.clinicId,
+      consultationId: input.consultationId,
+      error: uploadError.message,
+    });
     return {
       success: false,
-      error: `Upload failed: ${uploadError.message}. Ensure the "${STORAGE_BUCKET}" storage bucket exists.`,
+      error: "Upload failed. Please try again.",
     };
   }
 
-  const attachment = await prisma.consultationAttachment.create({
-    data: {
+  try {
+    const attachment = await prisma.consultationAttachment.create({
+      data: {
+        clinicId: session.clinicId,
+        consultationId: input.consultationId,
+        fileName: safeName || "attachment",
+        filePath,
+        mimeType: detected,
+        sizeBytes: buffer.byteLength,
+        uploadedById: session.userId,
+      },
+    });
+
+    await logAudit({
+      clinicId: session.clinicId,
+      actorId: session.userId,
+      action: "create",
+      resourceType: "consultation_attachment",
+      resourceId: attachment.id,
+    });
+
+    revalidatePath(`/consultations/${input.consultationId}`);
+    return { success: true, data: { id: attachment.id } };
+  } catch (error) {
+    await admin.storage.from(STORAGE_BUCKET).remove([filePath]);
+    logger.error("attachment_db_create_failed", {
       clinicId: session.clinicId,
       consultationId: input.consultationId,
-      fileName: safeName || "attachment",
-      filePath,
-      mimeType: input.mimeType,
-      sizeBytes: buffer.byteLength,
-      uploadedById: session.userId,
-    },
-  });
-
-  await logAudit({
-    clinicId: session.clinicId,
-    actorId: session.userId,
-    action: "create",
-    resourceType: "consultation_attachment",
-    resourceId: attachment.id,
-  });
-
-  revalidatePath(`/consultations/${input.consultationId}`);
-  return { success: true, data: { id: attachment.id } };
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { success: false, error: "Upload failed. Please try again." };
+  }
 }
 
 export async function getAttachmentDownloadUrl(
@@ -123,10 +163,16 @@ export async function getAttachmentDownloadUrl(
   const admin = createAdminClient();
   const { data, error } = await admin.storage
     .from(STORAGE_BUCKET)
-    .createSignedUrl(attachment.filePath, 60 * 10);
+    .createSignedUrl(attachment.filePath, 60 * 10, {
+      download: attachment.fileName,
+    });
 
   if (error || !data?.signedUrl) {
-    return { success: false, error: error?.message ?? "Could not create download link." };
+    logger.error("attachment_signed_url_failed", {
+      attachmentId,
+      error: error?.message,
+    });
+    return { success: false, error: "Could not create download link." };
   }
 
   return {
@@ -143,13 +189,31 @@ export async function deleteConsultationAttachment(
 
   const attachment = await prisma.consultationAttachment.findFirst({
     where: { id: attachmentId, clinicId: session.clinicId },
+    include: { consultation: { include: { appointment: { select: { status: true } } } } },
   });
   if (!attachment) {
     return { success: false, error: "Attachment not found." };
   }
 
+  if (!isConsultationEditable(attachment.consultation.appointment.status)) {
+    return {
+      success: false,
+      error: "Attachments can only be removed while the consultation is in progress.",
+    };
+  }
+
   const admin = createAdminClient();
-  await admin.storage.from(STORAGE_BUCKET).remove([attachment.filePath]);
+  const { error: removeError } = await admin.storage
+    .from(STORAGE_BUCKET)
+    .remove([attachment.filePath]);
+
+  if (removeError) {
+    logger.error("attachment_storage_delete_failed", {
+      attachmentId,
+      error: removeError.message,
+    });
+    return { success: false, error: "Could not delete attachment. Please try again." };
+  }
 
   await prisma.consultationAttachment.delete({ where: { id: attachmentId } });
 

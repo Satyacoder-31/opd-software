@@ -204,12 +204,18 @@ function CreatePatientForm({
   onSuccess?: (patientId: string) => void;
 }) {
   const [addToQueue, setAddToQueue] = useState(true);
-  const { handleSubmit, error, fieldError, pending, values, setValue } =
+  const { handleSubmit, error, fieldError, pending, values, setValue, setError } =
     useServerActionForm(createPatient, {
       onSuccess: async (data) => {
         if (!data?.id) return;
         if (showQueueOption && addToQueue) {
-          await createAppointment(data.id);
+          const queueResult = await createAppointment(data.id);
+          if (!queueResult.success) {
+            setError(
+              `Patient saved, but could not add to queue: ${queueResult.error}`
+            );
+            return;
+          }
         }
         onSuccess?.(data.id);
       },
