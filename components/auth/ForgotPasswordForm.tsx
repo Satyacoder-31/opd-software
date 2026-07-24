@@ -23,7 +23,7 @@ export function ForgotPasswordForm() {
           inbox and spam folder.
         </Banner>
         <p className="text-sm text-muted-foreground">
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/login" className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70">
             Back to sign in
           </Link>
         </p>
@@ -52,7 +52,7 @@ export function ForgotPasswordForm() {
         Send reset link
       </Button>
       <p className="text-sm text-muted-foreground">
-        <Link href="/login" className="text-primary hover:underline">
+        <Link href="/login" className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70">
           Back to sign in
         </Link>
       </p>

@@ -1,14 +1,8 @@
-import { PillIcon } from "lucide-react";
-import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
-import { DetailRow } from "@/components/ui/DetailRow";
+import { faPills } from "@fortawesome/free-solid-svg-icons";
 import { EmptyState } from "@/components/ui/EmptyState";
-import {
-  medicineFilled,
-  medicineSummary,
-  medicineTitle,
-  textSectionSummary,
-} from "@/lib/prescription-utils";
+import { medicineTitle } from "@/lib/prescription-utils";
 import type { Medicine } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type PrescriptionProfileProps = {
   medicines: Medicine[];
@@ -21,6 +15,27 @@ function MultilineValue({ value }: { value?: string | null }) {
   return <span className="whitespace-pre-wrap">{value}</span>;
 }
 
+function CellValue({ value }: { value?: string | null }) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  return <>{trimmed}</>;
+}
+
+const MEDICINE_COLUMNS = [
+  { key: "index", label: "#" },
+  { key: "name", label: "Medicine" },
+  { key: "dosage", label: "Dosage" },
+  { key: "route", label: "Route" },
+  { key: "frequency", label: "Frequency" },
+  { key: "duration", label: "Duration" },
+  { key: "instructions", label: "Instructions" },
+] as const;
+
+const MEDICINE_ROW_GRID =
+  "grid grid-cols-[2rem_minmax(10rem,1.6fr)_minmax(5.5rem,0.8fr)_minmax(5rem,0.7fr)_minmax(7rem,1fr)_minmax(5rem,0.7fr)_minmax(8rem,1.2fr)] gap-x-3";
+
 export function PrescriptionProfile({
   medicines,
   advice,
@@ -29,60 +44,97 @@ export function PrescriptionProfile({
   const filledMedicines = medicines.filter((m) => m.name?.trim());
 
   return (
-    <div>
-      {filledMedicines.length === 0 ? (
-        <EmptyState
-          icon={PillIcon}
-          title="No medicines prescribed yet"
-          description="Medicines added during consultation will appear here."
-          compact
-        />
-      ) : (
-        filledMedicines.map((med, index) => (
-          <CollapsibleSection
-            key={index}
-            flush
-            contentClassName="px-4"
-            title={medicineTitle(med, index)}
-            summary={medicineSummary(med)}
-            filled={medicineFilled(med)}
-          >
-            <dl>
-              <DetailRow label="Dosage" value={med.dosage || "—"} />
-              <DetailRow label="Frequency" value={med.frequency || "—"} />
-              <DetailRow label="Duration" value={med.duration || "—"} />
-              <DetailRow
-                label="Instructions"
-                value={med.instructions?.trim() || "—"}
-              />
-            </dl>
-          </CollapsibleSection>
-        ))
-      )}
+    <div className="divide-y divide-border">
+      <section className="py-5">
+        <h3 className="px-5 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:px-6">
+          Medicines
+        </h3>
+        {filledMedicines.length === 0 ? (
+          <div className="mt-2 px-5 sm:px-6">
+            <EmptyState
+              icon={faPills}
+              title="No medicines prescribed"
+              description="Medicines added during consultation will appear here."
+              compact
+            />
+          </div>
+        ) : (
+          <div className="mt-3 overflow-x-auto scrollbar-hide">
+            <div
+              role="table"
+              aria-label="Prescribed medicines"
+              className="min-w-[44rem] text-sm"
+            >
+              <div
+                role="row"
+                className={cn(
+                  MEDICINE_ROW_GRID,
+                  "border-y border-border bg-surface-muted/60 px-5 py-2.5 text-xs font-medium text-muted-foreground sm:px-6"
+                )}
+              >
+                {MEDICINE_COLUMNS.map((column) => (
+                  <div key={column.key} role="columnheader">
+                    {column.label}
+                  </div>
+                ))}
+              </div>
 
-      <CollapsibleSection
-        flush
-        contentClassName="px-4"
-        title="Advice"
-        summary={textSectionSummary(advice)}
-        filled={!!advice?.trim()}
-      >
-        <p className="text-sm text-ink">
+              <div role="rowgroup" className="divide-y divide-border">
+                {filledMedicines.map((med, index) => (
+                  <div
+                    key={index}
+                    role="row"
+                    className={cn(MEDICINE_ROW_GRID, "px-5 py-3 sm:px-6")}
+                  >
+                    <div
+                      role="cell"
+                      className="tabular-nums text-muted-foreground"
+                    >
+                      {index + 1}
+                    </div>
+                    <div role="cell" className="min-w-0 font-medium text-ink">
+                      {medicineTitle(med, index)}
+                    </div>
+                    <div role="cell" className="text-ink">
+                      <CellValue value={med.dosage} />
+                    </div>
+                    <div role="cell" className="text-ink">
+                      <CellValue value={med.route} />
+                    </div>
+                    <div role="cell" className="text-ink">
+                      <CellValue value={med.frequency} />
+                    </div>
+                    <div role="cell" className="text-ink">
+                      <CellValue value={med.duration} />
+                    </div>
+                    <div role="cell" className="text-ink">
+                      <CellValue value={med.instructions} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="px-5 py-5 sm:px-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Advice
+        </h3>
+        <p className="mt-2 text-sm text-ink">
           <MultilineValue value={advice} />
         </p>
-      </CollapsibleSection>
+      </section>
 
-      <CollapsibleSection
-        flush
-        contentClassName="px-4"
-        title="Follow-up"
-        summary={textSectionSummary(followUp)}
-        filled={!!followUp?.trim()}
-      >
-        <p className="text-sm text-ink">
+      <section className="px-5 py-5 sm:px-6">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Follow-up
+        </h3>
+        <p className="mt-2 text-sm text-ink">
           <MultilineValue value={followUp} />
         </p>
-      </CollapsibleSection>
+      </section>
     </div>
   );
 }

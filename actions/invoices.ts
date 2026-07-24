@@ -1,17 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { InvoiceStatus, PaymentMode, Role } from "@prisma/client";
+import { AppointmentStatus, InvoiceStatus, PaymentMode } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { renderReceiptPdf } from "@/lib/pdf";
 import { validateBillingInput, validateReason } from "@/lib/validation";
+import { parseLocalDateInput, clinicTodayDate } from "@/lib/date-utils";
+import {
+  matchesBillingHubSearch,
+  matchesBillingHubStatus,
+  type BillingHubStatusFilter,
+} from "@/lib/billing-hub";
+import { can } from "@/lib/rbac";
 import type { ActionResult, LineItem, VoidActionResult } from "@/lib/types";
-
-const BILLING_ROLES: Role[] = [Role.admin, Role.receptionist];
 
 const lineItemSchema = z.object({
   description: z.string().min(1),
@@ -24,9 +29,140 @@ const invoiceInputSchema = z.object({
   taxRate: z.number().min(0).max(100).finite().nullable().optional(),
 });
 
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export type BillingHubRow = {
+  kind: "invoice" | "unbilled";
+  consultationId: string;
+  appointmentId: string;
+  patientId: string;
+  patientName: string;
+  patientMrn: string;
+  doctorName: string | null;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  invoiceStatus: InvoiceStatus | null;
+  amount: number | null;
+  paymentMode: PaymentMode | null;
+  queueDate: string;
+};
+
+export type ListBillingHubInput = {
+  date?: string;
+  status?: BillingHubStatusFilter;
+  q?: string;
+};
+
+export async function listBillingHub(
+  input: ListBillingHubInput = {}
+): Promise<{ date: string; rows: BillingHubRow[] } | null> {
+  const session = await requireSessionUser();
+  if (!can(session, "billing.read")) return null;
+
+  const queueDate =
+    (input.date?.trim()
+      ? parseLocalDateInput(input.date.trim())
+      : null) ?? clinicTodayDate();
+  const dateKey = formatDateKey(queueDate);
+  const statusFilter: BillingHubStatusFilter = input.status ?? "all";
+  const query = input.q ?? "";
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      clinicId: session.clinicId,
+      queueDate,
+      status: AppointmentStatus.done,
+    },
+    orderBy: { updatedAt: "desc" },
+    include: {
+      patient: { select: { id: true, name: true, mrn: true } },
+      consultation: {
+        include: {
+          doctor: { select: { name: true } },
+          invoice: true,
+        },
+      },
+    },
+  });
+
+  const rows: BillingHubRow[] = [];
+
+  for (const appointment of appointments) {
+    const consultation = appointment.consultation;
+    if (!consultation) continue;
+
+    const invoice = consultation.invoice;
+    const base = {
+      consultationId: consultation.id,
+      appointmentId: appointment.id,
+      patientId: appointment.patient.id,
+      patientName: appointment.patient.name,
+      patientMrn: appointment.patient.mrn,
+      doctorName: consultation.doctor?.name ?? null,
+      queueDate: dateKey,
+    };
+
+    if (!invoice) {
+      const row: BillingHubRow = {
+        ...base,
+        kind: "unbilled",
+        invoiceId: null,
+        invoiceNumber: null,
+        invoiceStatus: null,
+        amount: null,
+        paymentMode: null,
+      };
+      if (
+        matchesBillingHubStatus(row.kind, null, statusFilter) &&
+        matchesBillingHubSearch(row, query)
+      ) {
+        rows.push(row);
+      }
+      continue;
+    }
+
+    const row: BillingHubRow = {
+      ...base,
+      kind: "invoice",
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceStatus: invoice.status,
+      amount: Number(invoice.amount),
+      paymentMode: invoice.paymentMode,
+    };
+
+    if (
+      matchesBillingHubStatus(row.kind, row.invoiceStatus, statusFilter) &&
+      matchesBillingHubSearch(row, query)
+    ) {
+      rows.push(row);
+    }
+  }
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "read",
+    resourceType: "invoice",
+    metadata: {
+      hub: "billing",
+      date: dateKey,
+      status: statusFilter,
+      resultCount: rows.length,
+    },
+  });
+
+  return { date: dateKey, rows };
+}
+
 export async function getBillingContext(consultationId: string) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, BILLING_ROLES)) return null;
+  if (!can(session, "billing.read")) return null;
 
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
@@ -49,13 +185,6 @@ export async function getBillingContext(consultationId: string) {
   return consultation;
 }
 
-/** @deprecated Use getBillingContext */
-export async function getInvoiceByConsultation(consultationId: string) {
-  const context = await getBillingContext(consultationId);
-  if (!context?.invoice) return null;
-  return { ...context.invoice, consultation: context };
-}
-
 export async function createOrUpdateInvoice(
   consultationId: string,
   data: {
@@ -65,7 +194,7 @@ export async function createOrUpdateInvoice(
   }
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, BILLING_ROLES)) return permissionDenied();
+  if (!can(session, "billing.write")) return permissionDenied();
 
   const parsed = invoiceInputSchema.safeParse(data);
   if (!parsed.success) {
@@ -160,6 +289,9 @@ export async function createOrUpdateInvoice(
   });
 
   revalidatePath(`/billing/${consultationId}`);
+  revalidatePath("/billing");
+  revalidatePath("/reports");
+  revalidatePath("/reports/daily");
   return { success: true, data: { id: invoice.id } };
 }
 
@@ -168,7 +300,7 @@ export async function markInvoicePaid(
   paymentMode: PaymentMode
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, BILLING_ROLES)) return permissionDenied();
+  if (!can(session, "billing.write")) return permissionDenied();
 
   if (!Object.values(PaymentMode).includes(paymentMode)) {
     return { success: false, error: "Select a valid payment mode." };
@@ -249,6 +381,9 @@ export async function markInvoicePaid(
   });
 
   revalidatePath(`/billing/${consultationId}`);
+  revalidatePath("/billing");
+  revalidatePath("/reports");
+  revalidatePath("/reports/daily");
   return { success: true };
 }
 
@@ -257,7 +392,7 @@ export async function voidInvoice(
   reason: string
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, BILLING_ROLES)) return permissionDenied();
+  if (!can(session, "billing.write")) return permissionDenied();
 
   const reasonCheck = validateReason(reason, "Void reason");
   if (!reasonCheck.ok) {
@@ -309,6 +444,9 @@ export async function voidInvoice(
   });
 
   revalidatePath(`/billing/${consultationId}`);
+  revalidatePath("/billing");
+  revalidatePath("/reports");
+  revalidatePath("/reports/daily");
   return { success: true };
 }
 
@@ -316,7 +454,7 @@ export async function generateReceiptPdf(
   consultationId: string
 ): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, BILLING_ROLES)) return permissionDenied();
+  if (!can(session, "billing.write")) return permissionDenied();
 
   const invoice = await prisma.invoice.findFirst({
     where: { consultationId, clinicId: session.clinicId },

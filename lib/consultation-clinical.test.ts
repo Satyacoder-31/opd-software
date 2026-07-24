@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   consultationClinicalSchema,
+  formatVitalValue,
   hasMedicalCertificateContent,
 } from "@/lib/consultation-clinical";
 
@@ -21,6 +22,18 @@ describe("consultationClinicalSchema", () => {
     });
 
     expect(result.success).toBe(true);
+  });
+});
+
+describe("formatVitalValue", () => {
+  it("appends a unit when missing", () => {
+    expect(formatVitalValue("120/80", "mmHg")).toBe("120/80 mmHg");
+    expect(formatVitalValue("72", "bpm")).toBe("72 bpm");
+  });
+
+  it("does not duplicate an existing unit", () => {
+    expect(formatVitalValue("98.6°F", "°F")).toBe("98.6°F");
+    expect(formatVitalValue("98 %", "%")).toBe("98 %");
   });
 });
 

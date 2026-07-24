@@ -15,7 +15,6 @@ function formatGender(gender: Patient["gender"]) {
 export function PatientProfile({ patient }: PatientProfileProps) {
   return (
     <dl>
-      <DetailRow label="Full name" value={patient.name} />
       <DetailRow label="MRN" value={patient.mrn} />
       <DetailRow label="Phone" value={formatPhone(patient.phone)} />
       <DetailRow

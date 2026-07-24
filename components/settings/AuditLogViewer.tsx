@@ -2,14 +2,16 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
-import { FilterIcon, ScrollTextIcon } from "lucide-react";
+import { faFilter, faScroll } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import type { AuditAction, Role } from "@prisma/client";
+import { ROLE_LABELS } from "@/lib/rbac";
 
 type AuditLogRow = {
   id: string;
@@ -43,13 +45,13 @@ type AuditLogViewerProps = {
 };
 
 function formatWhen(value: Date | string): string {
-  return new Date(value).toLocaleString("en-IN", {
+  return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }).format(new Date(value));
 }
 
 function metadataSummary(metadata: unknown): string {
@@ -153,7 +155,7 @@ export function AuditLogViewer({
                 { value: "", label: "All staff" },
                 ...staff.map((member) => ({
                   value: member.id,
-                  label: `${member.name} (${member.role})`,
+                  label: `${member.name} (${ROLE_LABELS[member.role]})`,
                 })),
               ]}
             />
@@ -173,14 +175,14 @@ export function AuditLogViewer({
             />
           </div>
           <div className="mt-4">
-              <Button
-                type="button"
-                onClick={() => applyFilters(1)}
-                loading={pending}
-              >
-                <FilterIcon data-icon="inline-start" />
-                Apply filters
-              </Button>
+            <Button
+              type="button"
+              onClick={() => applyFilters(1)}
+              loading={pending}
+            >
+              <Icon icon={faFilter} data-icon="inline-start" />
+              Apply filters
+            </Button>
           </div>
         </div>
       </Card>
@@ -188,55 +190,98 @@ export function AuditLogViewer({
       <Card title="Events" flush className="border-b border-border">
         {logs.length === 0 ? (
           <EmptyState
-            icon={ScrollTextIcon}
+            icon={faScroll}
             title="No matching events"
             description="Try adjusting the filters to see audit activity."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-border bg-surface-muted/50 text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">When</th>
-                  <th className="px-4 py-3 font-medium">Actor</th>
-                  <th className="px-4 py-3 font-medium">Action</th>
-                  <th className="px-4 py-3 font-medium">Resource</th>
-                  <th className="px-4 py-3 font-medium">IP</th>
-                  <th className="px-4 py-3 font-medium">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr key={log.id} className="border-b border-border last:border-0">
-                    <td className="whitespace-nowrap px-4 py-3 text-ink">
-                      {formatWhen(log.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-ink">{log.actor.name}</div>
-                      <div className="text-xs capitalize text-muted-foreground">
-                        {log.actor.role}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 capitalize text-ink">{log.action}</td>
-                    <td className="px-4 py-3 text-ink">
-                      <div>{log.resourceType}</div>
-                      {log.resourceId ? (
-                        <div className="font-mono text-xs text-muted-foreground">
-                          {log.resourceId.slice(0, 8)}…
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {log.ipAddress ?? "—"}
-                    </td>
-                    <td className="max-w-xs truncate px-4 py-3 text-xs text-muted-foreground">
-                      {metadataSummary(log.metadata)}
-                    </td>
+          <>
+            <ul className="flex flex-col gap-3 p-5 sm:hidden">
+              {logs.map((log) => (
+                <li
+                  key={log.id}
+                  className="rounded-lg border border-border p-3 text-sm"
+                >
+                  <p className="font-medium text-ink">{log.actor.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {ROLE_LABELS[log.actor.role]} · {log.action} · {log.resourceType}
+                  </p>
+                  <p className="mt-2 tabular-nums text-muted-foreground">
+                    {formatWhen(log.createdAt)}
+                  </p>
+                  <p className="mt-1 break-words text-xs text-muted-foreground">
+                    {metadataSummary(log.metadata)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="min-w-full text-left text-sm">
+                <caption className="sr-only">
+                  Audit events for this clinic, page {page} of {totalPages || 1}
+                </caption>
+                <thead className="border-b border-border bg-surface-muted/50 text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      When
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Actor
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Action
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Resource
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      IP
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-medium">
+                      Details
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className="border-b border-border last:border-0"
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 tabular-nums text-ink">
+                        {formatWhen(log.createdAt)}
+                      </td>
+                      <td className="min-w-0 px-4 py-3">
+                        <div className="break-words font-medium text-ink">
+                          {log.actor.name}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {ROLE_LABELS[log.actor.role]}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 capitalize text-ink">
+                        {log.action}
+                      </td>
+                      <td className="min-w-0 px-4 py-3 text-ink">
+                        <div className="break-words">{log.resourceType}</div>
+                        {log.resourceId ? (
+                          <div className="font-mono text-xs text-muted-foreground">
+                            {log.resourceId.slice(0, 8)}…
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {log.ipAddress ?? "—"}
+                      </td>
+                      <td className="max-w-xs truncate px-4 py-3 text-xs text-muted-foreground">
+                        {metadataSummary(log.metadata)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
 
@@ -250,7 +295,7 @@ export function AuditLogViewer({
           >
             Previous
           </Button>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm tabular-nums text-muted-foreground">
             Page {page} of {totalPages}
           </p>
           <Button

@@ -109,7 +109,7 @@ export function SignupForm() {
       </Button>
       <p className="text-sm text-muted-foreground">
         Already registered?{" "}
-        <Link href="/login" className="text-primary hover:underline">
+        <Link href="/login" className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70">
           Sign in
         </Link>
       </p>

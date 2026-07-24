@@ -46,25 +46,48 @@ export function ClinicProfileForm({
       }}
       className="flex flex-col gap-4"
     >
-      <Input label="Clinic name" name="name" defaultValue={clinic.name} required />
-      <Input label="Phone" name="phone" defaultValue={clinic.phone} required />
-      <Input label="Address" name="address" defaultValue={clinic.address} required />
+      <Input
+        label="Clinic name"
+        name="name"
+        autoComplete="organization"
+        defaultValue={clinic.name}
+        required
+      />
+      <Input
+        label="Phone"
+        name="phone"
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel"
+        defaultValue={clinic.phone}
+        required
+      />
+      <Input
+        label="Address"
+        name="address"
+        autoComplete="street-address"
+        defaultValue={clinic.address}
+        required
+      />
       <Input
         label="GSTIN (optional)"
         name="gstin"
+        autoComplete="off"
+        spellCheck={false}
         defaultValue={clinic.gstin ?? ""}
-        placeholder="15-character GSTIN"
+        placeholder="15-character GSTIN…"
         maxLength={15}
       />
       {message && <Banner variant="error">{message.text}</Banner>}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap">
         {cancelHref && (
-          <Link
-            href={cancelHref}
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-ink hover:bg-surface-muted"
+          <Button
+            nativeButton={false}
+            render={<Link href={cancelHref} />}
+            variant="secondary"
           >
             Cancel
-          </Link>
+          </Button>
         )}
         <Button type="submit" loading={pending}>
           Save changes

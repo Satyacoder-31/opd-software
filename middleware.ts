@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { SESSION_HEADER } from "@/lib/session-header";
+import { rolesWith, type Permission } from "@/lib/rbac";
 
 const publicRoutes = [
   "/",
@@ -10,11 +11,12 @@ const publicRoutes = [
   "/api/health",
 ];
 
-const roleRoutes: Record<string, string[]> = {
-  "/settings": ["admin"],
-  "/reports": ["admin", "receptionist"],
-  "/consultations": ["admin", "doctor"],
-  "/billing": ["admin", "receptionist"],
+/** Route prefixes gated by RBAC permissions (JWT role is a hint; actions re-check DB). */
+const permissionRoutes: Record<string, Permission> = {
+  "/settings": "settings.access",
+  "/reports": "reports.read",
+  "/consultations": "consultations.read",
+  "/billing": "billing.read",
 };
 
 function isPublicRoute(pathname: string): boolean {
@@ -70,8 +72,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?deactivated=1", request.url));
   }
 
-  for (const [routePrefix, allowedRoles] of Object.entries(roleRoutes)) {
+  for (const [routePrefix, permission] of Object.entries(permissionRoutes)) {
     if (pathname.startsWith(routePrefix)) {
+      const allowedRoles = rolesWith(permission).map(String);
       if (!role || !allowedRoles.includes(role)) {
         return NextResponse.redirect(new URL("/queue", request.url));
       }

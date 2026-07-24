@@ -3,24 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { AppointmentStatus, AppointmentType, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import {
-  permissionDenied,
-  requireSessionUser,
-  roleAllowed,
-} from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
-import { parseLocalDateTimeInput, clinicTodayDate } from "@/lib/date-utils";
+import {
+  parseLocalDateTimeInput,
+  clinicTodayDate,
+} from "@/lib/date-utils";
 import {
   appointmentTransitionError,
   canSetAppointmentStatus,
   canTransitionAppointment,
+  isFrontDeskOutcome,
 } from "@/lib/appointment-transitions";
+import { can } from "@/lib/rbac";
 import type { ActionResult } from "@/lib/types";
 
 const MAX_TOKEN_RETRIES = 5;
-const QUEUE_ROLES: Role[] = [Role.admin, Role.doctor, Role.receptionist];
-const CLINICAL_ROLES: Role[] = [Role.admin, Role.doctor];
 
 function todayDate(): Date {
   return clinicTodayDate();
@@ -53,7 +52,7 @@ export async function createAppointment(
   scheduledAt?: Date
 ): Promise<ActionResult<{ id: string; tokenNumber: number }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return permissionDenied();
+  if (!can(session, "queue.manage")) return permissionDenied();
 
   const input: CreateAppointmentInput =
     typeof patientIdOrInput === "string"
@@ -175,7 +174,7 @@ export async function createAppointment(
 
 export async function getActiveQueuePatientIds(): Promise<string[]> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+  if (!can(session, "queue.read")) return [];
 
   const queueDate = todayDate();
 
@@ -196,7 +195,7 @@ export async function isPatientInActiveQueue(
   patientId: string
 ): Promise<boolean> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return false;
+  if (!can(session, "queue.read")) return false;
 
   const queueDate = todayDate();
 
@@ -215,7 +214,7 @@ export async function isPatientInActiveQueue(
 
 export async function getQueue() {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+  if (!can(session, "queue.read")) return [];
 
   const queueDate = todayDate();
 
@@ -246,7 +245,7 @@ export async function getQueue() {
 
 export async function getCompletedQueue() {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+  if (!can(session, "queue.read")) return [];
 
   const queueDate = todayDate();
 
@@ -281,7 +280,7 @@ export async function getCompletedQueue() {
 
 export async function listClinicDoctors() {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return [];
+  if (!can(session, "queue.read")) return [];
 
   return prisma.user.findMany({
     where: {
@@ -300,7 +299,11 @@ export async function updateAppointmentStatus(
   doctorId?: string
 ): Promise<ActionResult<{ consultationId?: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, QUEUE_ROLES)) return permissionDenied();
+  if (!can(session, "queue.manage")) return permissionDenied();
+
+  if (isFrontDeskOutcome(status)) {
+    return setAppointmentOutcome(appointmentId, status);
+  }
 
   if (
     status !== AppointmentStatus.waiting &&
@@ -310,15 +313,17 @@ export async function updateAppointmentStatus(
     return { success: false, error: "Invalid appointment status." };
   }
 
+  if (status === AppointmentStatus.done) {
+    return {
+      success: false,
+      error:
+        "Complete the visit from the consultation workspace so clinical notes and prescriptions are saved together.",
+    };
+  }
+
   if (!canSetAppointmentStatus(session.role, status)) {
     if (status === AppointmentStatus.in_progress) {
       return { success: false, error: "Receptionists cannot start consultations." };
-    }
-    if (status === AppointmentStatus.done) {
-      return {
-        success: false,
-        error: "Only doctors or admins can finalize visits from the queue.",
-      };
     }
     return permissionDenied();
   }
@@ -431,9 +436,70 @@ export async function updateAppointmentStatus(
   return { success: true, data: { consultationId } };
 }
 
+export async function setAppointmentOutcome(
+  appointmentId: string,
+  status: AppointmentStatus
+): Promise<ActionResult<{ consultationId?: string }>> {
+  const session = await requireSessionUser();
+  if (!can(session, "appointments.cancel")) return permissionDenied();
+
+  if (!isFrontDeskOutcome(status)) {
+    return { success: false, error: "Invalid appointment outcome." };
+  }
+
+  if (!canSetAppointmentStatus(session.role, status)) {
+    return permissionDenied();
+  }
+
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: appointmentId, clinicId: session.clinicId },
+    select: { id: true, status: true, patientId: true },
+  });
+
+  if (!appointment) {
+    return { success: false, error: "Appointment not found." };
+  }
+
+  if (!canTransitionAppointment(appointment.status, status)) {
+    return {
+      success: false,
+      error: appointmentTransitionError(appointment.status, status),
+    };
+  }
+
+  const updated = await prisma.appointment.updateMany({
+    where: {
+      id: appointmentId,
+      clinicId: session.clinicId,
+      status: appointment.status,
+    },
+    data: { status },
+  });
+
+  if (updated.count === 0) {
+    return {
+      success: false,
+      error: "This appointment was updated by someone else. Refresh and try again.",
+    };
+  }
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "appointment",
+    resourceId: appointmentId,
+    metadata: { status, outcome: status },
+  });
+
+  revalidatePath("/queue");
+  revalidatePath(`/patients/${appointment.patientId}`);
+  return { success: true, data: {} };
+}
+
 export async function getAppointmentById(id: string) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, [...QUEUE_ROLES, ...CLINICAL_ROLES])) return null;
+  if (!can(session, "queue.read")) return null;
 
   return prisma.appointment.findFirst({
     where: { id, clinicId: session.clinicId },

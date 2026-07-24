@@ -1,10 +1,22 @@
-import { cn } from "@/lib/utils"
-import { Loader2Icon } from "lucide-react"
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { Icon } from "@/components/ui/Icon";
+import { cn } from "@/lib/utils";
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+function Spinner({
+  className,
+  ...props
+}: Omit<React.ComponentProps<typeof Icon>, "icon">) {
   return (
-    <Loader2Icon data-slot="spinner" role="status" aria-label="Loading" className={cn("size-4 animate-spin", className)} {...props} />
-  )
+    <Icon
+      icon={faSpinner}
+      spin
+      data-slot="spinner"
+      role="status"
+      aria-label="Loading"
+      className={cn("size-4", className)}
+      {...props}
+    />
+  );
 }
 
-export { Spinner }
+export { Spinner };

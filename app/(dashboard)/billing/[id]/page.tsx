@@ -23,8 +23,8 @@ export default async function BillingPage({ params }: Props) {
       <PageHeader
         title="Billing"
         description={`${billing.patient.name} · ${billing.patient.mrn}`}
-        backHref={`/patients/${billing.patient.id}`}
-        backLabel="Back to patient"
+        backHref="/billing"
+        backLabel="Back to billing"
       />
 
       <Card title="Invoice" flush className="border-y border-border">

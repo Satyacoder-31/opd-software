@@ -17,7 +17,9 @@
   --color-surface: #f7fafd;
   --color-surface-muted: #ecf3f9;
   --color-surface-tint: #d4eaf8;
-  --color-surface-tint-strong: #b9dff4;
+  --color-surface-rich: #0d5a92;
+  --color-surface-deep: #083e68;
+  --color-surface-ochre: #a04d06;
   --color-primary: #1a85c8;
   --color-accent: #e09410;
   --color-accent-foreground: #8b5a08;
@@ -26,8 +28,17 @@
   --color-success: #178a5c;
   --color-destructive: var(--destructive);
   --color-border: #d6e3ee;
-  --font-display: "Fraunces", Georgia, serif;
-  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
+}
+
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {
@@ -48,25 +59,28 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   }
 
-  /* Bold sky-blue section washes (MyFitnessPal-style banding) */
+  /* Rich, saturated section bands — deep ocean blues + one warm ochre */
   .tint-hero {
-    background-color: #c8e6f7;
+    background-color: var(--color-surface-deep);
+    background-image: linear-gradient(
+      165deg,
+      #062f52 0%,
+      #0a4a7c 55%,
+      #0d5a92 100%
+    );
   }
 
   .tint-band {
-    background-color: var(--color-surface-tint);
+    background-color: var(--color-surface-rich);
   }
 
-  .tint-band-strong {
-    background-color: var(--color-surface-tint-strong);
+  .tint-band-warm {
+    background-color: var(--color-surface-ochre);
   }
 
+  /* Light functional wash for app working surfaces */
   .tint-soft {
     background-color: var(--color-surface-tint);
-  }
-
-  .tint-page {
-    background-color: var(--color-surface);
   }
 
   .navigation-progress-bar {

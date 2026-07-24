@@ -16,6 +16,65 @@ export const vitalsSchema = z.object({
   spo2: z.string().optional(),
 });
 
+export const VITAL_FIELDS = [
+  {
+    key: "bp",
+    label: "BP",
+    unit: "mmHg",
+    placeholder: "120/80",
+  },
+  {
+    key: "pulse",
+    label: "Pulse",
+    unit: "bpm",
+    placeholder: "72",
+  },
+  {
+    key: "temp",
+    label: "Temp",
+    unit: "°F",
+    placeholder: "98.6",
+  },
+  {
+    key: "weight",
+    label: "Weight",
+    unit: "kg",
+    placeholder: "70",
+  },
+  {
+    key: "spo2",
+    label: "SpO₂",
+    unit: "%",
+    placeholder: "98",
+  },
+] as const satisfies ReadonlyArray<{
+  key: keyof Vitals;
+  label: string;
+  unit: string;
+  placeholder: string;
+}>;
+
+export type VitalFieldKey = (typeof VITAL_FIELDS)[number]["key"];
+
+/** Append a unit when the stored value does not already include one. */
+export function formatVitalValue(
+  value: string | undefined | null,
+  unit: string
+): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+
+  const compactValue = trimmed.replace(/\s+/g, "").toLowerCase();
+  const compactUnit = unit.replace(/\s+/g, "").toLowerCase();
+  if (compactValue.includes(compactUnit)) return trimmed;
+
+  return `${trimmed} ${unit}`;
+}
+
+export function vitalFieldLabel(label: string, unit: string): string {
+  return `${label} (${unit})`;
+}
+
 export const clinicalPresentationSchema = z.object({
   historyOfPresentIllness: z.string().optional(),
   onset: z.string().optional(),

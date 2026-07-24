@@ -1,8 +1,9 @@
 "use server";
 
-import { Role, type AuditAction, type Prisma } from "@prisma/client";
+import { type AuditAction, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSessionUser, roleAllowed } from "@/lib/auth";
+import { requireSessionUser } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 
 const AUDIT_PAGE_SIZE = 50;
 
@@ -17,7 +18,7 @@ export type AuditLogFilters = {
 
 export async function getAuditLogs(filters: AuditLogFilters = {}) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, [Role.admin])) return null;
+  if (!can(session, "audit.read")) return null;
 
   const page = Math.max(1, filters.page ?? 1);
   const skip = (page - 1) * AUDIT_PAGE_SIZE;

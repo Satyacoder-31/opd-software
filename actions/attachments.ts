@@ -2,9 +2,8 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { isConsultationEditable } from "@/lib/consultation-utils";
 import {
@@ -15,10 +14,10 @@ import {
   MAX_ATTACHMENT_BYTES,
 } from "@/lib/file-type";
 import { logger } from "@/lib/logger";
+import { can } from "@/lib/rbac";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
 
-const CLINICAL_ROLES: Role[] = [Role.admin, Role.doctor];
 const STORAGE_BUCKET = "consultation-attachments";
 const MAX_BYTES = MAX_ATTACHMENT_BYTES;
 const MAX_BASE64_LENGTH = MAX_ATTACHMENT_BASE64_LENGTH;
@@ -26,7 +25,7 @@ const ALLOWED_TYPES = ALLOWED_ATTACHMENT_TYPES;
 
 export async function listConsultationAttachments(consultationId: string) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, CLINICAL_ROLES)) return [];
+  if (!can(session, "attachments.manage")) return [];
 
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
@@ -48,7 +47,7 @@ export async function uploadConsultationAttachment(input: {
   base64: string;
 }): Promise<ActionResult<{ id: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
+  if (!can(session, "attachments.manage")) return permissionDenied();
 
   if (!input.base64 || input.base64.length > MAX_BASE64_LENGTH) {
     return { success: false, error: "File must be between 1 byte and 5 MB." };
@@ -151,7 +150,7 @@ export async function getAttachmentDownloadUrl(
   attachmentId: string
 ): Promise<ActionResult<{ url: string; fileName: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
+  if (!can(session, "attachments.manage")) return permissionDenied();
 
   const attachment = await prisma.consultationAttachment.findFirst({
     where: { id: attachmentId, clinicId: session.clinicId },
@@ -185,7 +184,7 @@ export async function deleteConsultationAttachment(
   attachmentId: string
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
+  if (!can(session, "attachments.manage")) return permissionDenied();
 
   const attachment = await prisma.consultationAttachment.findFirst({
     where: { id: attachmentId, clinicId: session.clinicId },

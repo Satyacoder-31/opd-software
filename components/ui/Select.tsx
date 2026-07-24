@@ -29,9 +29,14 @@ type SelectProps = {
   required?: boolean;
   allowClear?: boolean;
   clearLabel?: string;
+  /** Visually hide the label while keeping it available to assistive tech. */
+  hideLabel?: boolean;
 };
 
 const CLEAR_VALUE = "__clear__";
+const SELECT_TRIGGER_CLASS =
+  "h-11 min-h-11 w-full px-3.5 py-2.5 data-[size=default]:h-11";
+const SELECT_OPTION_CLASS = "py-2.5 pl-3 pr-9";
 
 export function Select({
   label,
@@ -47,19 +52,32 @@ export function Select({
   required,
   allowClear = true,
   clearLabel = "Select…",
+  hideLabel = false,
 }: SelectProps) {
   const selectId = id ?? label.toLowerCase().replace(/\s+/g, "-");
   const hasEmptyOption = options.some((opt) => opt.value === "");
   const showClear = allowClear && (hasEmptyOption || !required);
+  const clearOptionLabel =
+    options.find((opt) => opt.value === "")?.label ?? clearLabel;
+  // Base UI Select.Value shows the raw value unless `items` maps value → label.
+  const items = [
+    ...(showClear ? [{ value: CLEAR_VALUE, label: clearOptionLabel }] : []),
+    ...options
+      .filter((opt) => opt.value !== "")
+      .map((opt) => ({ value: opt.value, label: opt.label })),
+  ];
 
   return (
     <Field data-invalid={!!error || undefined}>
-      <FieldLabel htmlFor={selectId}>{label}</FieldLabel>
+      <FieldLabel htmlFor={selectId} className={hideLabel ? "sr-only" : undefined}>
+        {label}
+      </FieldLabel>
       <SelectRoot
         name={name}
         value={value || null}
         disabled={disabled}
         required={required}
+        items={items}
         onValueChange={(nextValue) => {
           const resolved =
             nextValue === CLEAR_VALUE || nextValue == null ? "" : nextValue;
@@ -70,16 +88,19 @@ export function Select({
       >
         <SelectTrigger
           id={selectId}
-          className={cn("h-11 w-full", className)}
+          className={cn(SELECT_TRIGGER_CLASS, className)}
           aria-invalid={!!error || undefined}
         >
           <SelectValue placeholder={clearLabel} />
         </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
+        <SelectContent align="start" className="p-1.5">
+          <SelectGroup className="p-0">
             {showClear && (
-              <SelectItem value={CLEAR_VALUE} className={optionClassName}>
-                {options.find((opt) => opt.value === "")?.label ?? clearLabel}
+              <SelectItem
+                value={CLEAR_VALUE}
+                className={cn(SELECT_OPTION_CLASS, optionClassName)}
+              >
+                {clearOptionLabel}
               </SelectItem>
             )}
             {options
@@ -88,7 +109,7 @@ export function Select({
                 <SelectItem
                   key={opt.value}
                   value={opt.value}
-                  className={optionClassName}
+                  className={cn(SELECT_OPTION_CLASS, optionClassName)}
                 >
                   {opt.label}
                 </SelectItem>

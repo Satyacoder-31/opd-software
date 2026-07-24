@@ -1,14 +1,13 @@
 "use server";
 
-import { InvoiceStatus, Role } from "@prisma/client";
+import { InvoiceStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { parseLocalDateInput } from "@/lib/date-utils";
+import { can } from "@/lib/rbac";
 import type { ActionResult } from "@/lib/types";
 
-const VISIT_BILLING_EXPORT_ROLES: Role[] = [Role.admin, Role.receptionist];
-const PATIENT_EXPORT_ROLES: Role[] = [Role.admin];
 const MAX_EXPORT_ROWS = 5_000;
 const MAX_EXPORT_RANGE_DAYS = 90;
 
@@ -47,7 +46,7 @@ export async function exportPatientsCsv(): Promise<
   ActionResult<{ csv: string; filename: string }>
 > {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_EXPORT_ROLES)) return permissionDenied();
+  if (!can(session, "reports.export.patients")) return permissionDenied();
 
   const patients = await prisma.patient.findMany({
     where: { clinicId: session.clinicId },
@@ -89,7 +88,7 @@ export async function exportVisitsCsv(
   to: string
 ): Promise<ActionResult<{ csv: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, VISIT_BILLING_EXPORT_ROLES)) return permissionDenied();
+  if (!can(session, "reports.export.visits")) return permissionDenied();
 
   const range = parseRange(from, to);
   if (!range) {
@@ -147,7 +146,7 @@ export async function exportBillingCsv(
   to: string
 ): Promise<ActionResult<{ csv: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, VISIT_BILLING_EXPORT_ROLES)) return permissionDenied();
+  if (!can(session, "reports.export.visits")) return permissionDenied();
 
   const range = parseRange(from, to);
   if (!range) {

@@ -4,17 +4,18 @@ import { revalidatePath } from "next/cache";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
+import { can } from "@/lib/rbac";
 import type { ActionResult, Medicine, VoidActionResult } from "@/lib/types";
-
-const DOCTOR_ROLES: Role[] = [Role.admin, Role.doctor];
 
 const medicineSchema = z.object({
   name: z.string().min(1),
   dosage: z.string(),
+  route: z.string().optional(),
   frequency: z.string(),
   duration: z.string(),
+  quantity: z.string().optional(),
   instructions: z.string().optional(),
 });
 
@@ -27,7 +28,7 @@ const templateSchema = z.object({
 
 export async function listPrescriptionTemplates() {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, DOCTOR_ROLES)) return [];
+  if (!can(session, "templates.manage")) return [];
 
   return prisma.prescriptionTemplate.findMany({
     where: {
@@ -45,7 +46,7 @@ export async function savePrescriptionTemplate(input: {
   followUp?: string;
 }): Promise<ActionResult<{ id: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, DOCTOR_ROLES)) return permissionDenied();
+  if (!can(session, "templates.manage")) return permissionDenied();
 
   const parsed = templateSchema.safeParse({
     name: input.name,
@@ -85,7 +86,7 @@ export async function deletePrescriptionTemplate(
   id: string
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, DOCTOR_ROLES)) return permissionDenied();
+  if (!can(session, "templates.manage")) return permissionDenied();
 
   const existing = await prisma.prescriptionTemplate.findFirst({
     where: {

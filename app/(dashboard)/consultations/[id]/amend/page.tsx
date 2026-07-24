@@ -1,11 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { getConsultation } from "@/actions/consultations";
+import { AmendConsultationPageClient } from "@/components/consultation/AmendConsultationPageClient";
+import { formatPatientAge } from "@/lib/date-utils";
 import { isConsultationEditable } from "@/lib/consultation-utils";
 import {
   mergePatientAlertsIntoClinical,
   toConsultationClinicalData,
 } from "@/lib/consultation-utils";
-import { AmendConsultationPageClient } from "@/components/consultation/AmendConsultationPageClient";
+import { formatEpisodeNo, formatUhid } from "@/lib/visit-identifiers";
 import type { Medicine } from "@/lib/types";
 
 type Props = {
@@ -31,12 +33,25 @@ export default async function AmendConsultationPage({ params }: Props) {
     toConsultationClinicalData(consultation),
     consultation.patient
   );
+  const patientAge = formatPatientAge(consultation.patient);
+  const patientGender = consultation.patient.gender
+    ? consultation.patient.gender.charAt(0).toUpperCase() +
+      consultation.patient.gender.slice(1)
+    : null;
 
   return (
     <AmendConsultationPageClient
       consultationId={consultation.id}
+      patientId={consultation.patient.id}
       patientName={consultation.patient.name}
-      patientMrn={consultation.patient.mrn}
+      uhid={formatUhid(consultation.patient.mrn)}
+      episodeNo={formatEpisodeNo({
+        queueDate: consultation.appointment.queueDate,
+        tokenNumber: consultation.appointment.tokenNumber,
+      })}
+      patientPhone={consultation.patient.phone}
+      patientAge={patientAge}
+      patientGender={patientGender}
       doctorName={consultation.doctor.name}
       clinical={clinical}
       medicines={medicines}

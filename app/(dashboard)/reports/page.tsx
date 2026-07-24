@@ -1,9 +1,5 @@
-import { Role } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { requireSessionUser, roleAllowed } from "@/lib/auth";
-import { getDailyReport } from "@/actions/reports";
-import { DailyReportClient } from "@/components/reports/DailyReportClient";
-import { todayDateString } from "@/lib/utils";
+import { ReportsOverview } from "@/components/reports/ReportsOverview";
 
 type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -14,22 +10,13 @@ function first(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
+/** Hub for report jobs. Old `/reports?date=` links redirect to Daily close. */
 export default async function ReportsPage({ searchParams }: Props) {
-  const session = await requireSessionUser();
-  if (!roleAllowed(session, [Role.admin, Role.receptionist])) {
-    redirect("/queue");
+  const params = await searchParams;
+  const date = first(params.date);
+  if (date) {
+    redirect(`/reports/daily?date=${encodeURIComponent(date)}`);
   }
 
-  const params = await searchParams;
-  const date = first(params.date) || todayDateString();
-  const report = await getDailyReport(date);
-
-  if (!report) redirect("/queue");
-
-  return (
-    <DailyReportClient
-      report={report}
-      canExportPatients={session.role === Role.admin}
-    />
-  );
+  return <ReportsOverview />;
 }

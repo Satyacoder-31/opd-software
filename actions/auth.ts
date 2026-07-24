@@ -19,6 +19,11 @@ import { zodFieldErrors } from "@/lib/form-utils";
 import { loginSchema, clinicProfileSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validation";
 import { logger } from "@/lib/logger";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
+import {
+  can,
+  isInvitableRole,
+  ROLE_LABELS,
+} from "@/lib/rbac";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
 
 const signupSchema = z.object({
@@ -116,7 +121,7 @@ export async function signup(
           create: {
             name: adminName,
             email,
-            role: Role.admin,
+            role: Role.owner,
             supabaseAuthId: authData.user.id,
           },
         },
@@ -129,7 +134,7 @@ export async function signup(
     await admin.auth.admin.updateUserById(authData.user.id, {
       app_metadata: {
         clinicId: clinic.id,
-        role: Role.admin,
+        role: Role.owner,
         userId: adminUser.id,
       },
       user_metadata: { name: adminName },
@@ -295,15 +300,18 @@ export async function logout(): Promise<void> {
 const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
-  role: z.enum(["doctor", "receptionist"]),
+  role: z.enum(["admin", "doctor", "receptionist"]),
 });
 
 export async function inviteStaff(
   formData: FormData
 ): Promise<ActionResult<{ email: string }>> {
+  const rateLimited = await enforceAuthRateLimit("signup");
+  if (rateLimited) return rateLimited;
+
   const session = await requireSessionUser();
-  if (session.role !== Role.admin) {
-    return { success: false, error: "Only admins can invite staff." };
+  if (!can(session, "staff.manage")) {
+    return { success: false, error: "Only clinic managers can invite staff." };
   }
 
   const parsed = inviteSchema.safeParse({
@@ -321,6 +329,17 @@ export async function inviteStaff(
   }
 
   const { email, name, role } = parsed.data;
+
+  if (!isInvitableRole(role)) {
+    return { success: false, error: "Invalid staff role." };
+  }
+
+  if (role === Role.admin && !can(session, "staff.invite.admin")) {
+    return {
+      success: false,
+      error: "You do not have permission to invite admins.",
+    };
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -392,6 +411,7 @@ export async function inviteStaff(
 
   revalidateTag("clinic-profile");
   revalidatePath("/settings");
+  revalidatePath("/settings/staff");
   return { success: true, data: { email } };
 }
 
@@ -399,8 +419,8 @@ export async function updateClinicProfile(
   formData: FormData
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (session.role !== Role.admin) {
-    return { success: false, error: "Only admins can update clinic profile." };
+  if (!can(session, "clinic.manage")) {
+    return { success: false, error: "Only clinic managers can update clinic profile." };
   }
 
   const parsed = clinicProfileSchema.safeParse({
@@ -439,8 +459,10 @@ export async function updateClinicProfile(
   });
 
   revalidateTag("clinic-profile");
+  revalidateTag("clinic-name");
   revalidatePath("/settings");
-  revalidatePath("/settings/edit");
+  revalidatePath("/settings/clinic");
+  revalidatePath("/settings/clinic/edit");
   return { success: true };
 }
 
@@ -454,6 +476,7 @@ const getCachedClinicProfile = unstable_cache(
         phone: true,
         address: true,
         gstin: true,
+        prescriptionLayout: true,
         plan: true,
         subscriptionStatus: true,
         createdAt: true,
@@ -471,27 +494,41 @@ export async function getClinicProfile() {
   return getCachedClinicProfile(session.clinicId);
 }
 
+const staffSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  isActive: true,
+  qualifications: true,
+  registrationNo: true,
+  createdAt: true,
+  updatedAt: true,
+  clinicId: true,
+} as const;
+
 export async function getStaffList() {
   const session = await requireSessionUser();
-  if (session.role !== Role.admin) {
+  if (!can(session, "staff.manage")) {
     return [];
   }
 
   return prisma.user.findMany({
     where: { clinicId: session.clinicId },
     orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      role: true,
-      isActive: true,
-      qualifications: true,
-      registrationNo: true,
-      createdAt: true,
-      updatedAt: true,
-      clinicId: true,
-    },
+    select: staffSelect,
+  });
+}
+
+export async function getStaffMember(userId: string) {
+  const session = await requireSessionUser();
+  if (!can(session, "staff.manage")) {
+    return null;
+  }
+
+  return prisma.user.findFirst({
+    where: { id: userId, clinicId: session.clinicId },
+    select: staffSelect,
   });
 }
 
@@ -506,8 +543,8 @@ export async function setStaffActive(
   isActive: boolean
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (session.role !== Role.admin) {
-    return { success: false, error: "Only admins can manage staff." };
+  if (!can(session, "staff.manage")) {
+    return { success: false, error: "Only clinic managers can manage staff." };
   }
 
   if (userId === session.userId) {
@@ -522,17 +559,34 @@ export async function setStaffActive(
     return { success: false, error: "Staff member not found." };
   }
 
-  if (target.role === Role.admin && !isActive) {
-    const activeAdmins = await prisma.user.count({
+  if (target.role === Role.owner && !isActive) {
+    const activeOwners = await prisma.user.count({
       where: {
         clinicId: session.clinicId,
-        role: Role.admin,
+        role: Role.owner,
         isActive: true,
         id: { not: userId },
       },
     });
-    if (activeAdmins === 0) {
-      return { success: false, error: "Keep at least one active admin." };
+    if (activeOwners === 0) {
+      return { success: false, error: "Keep at least one active owner." };
+    }
+  }
+
+  if (target.role === Role.admin && !isActive) {
+    const activeManagers = await prisma.user.count({
+      where: {
+        clinicId: session.clinicId,
+        role: { in: [Role.owner, Role.admin] },
+        isActive: true,
+        id: { not: userId },
+      },
+    });
+    if (activeManagers === 0) {
+      return {
+        success: false,
+        error: `Keep at least one active ${ROLE_LABELS[Role.admin].toLowerCase()} or owner.`,
+      };
     }
   }
 
@@ -565,5 +619,6 @@ export async function setStaffActive(
 
   revalidateTag("clinic-profile");
   revalidatePath("/settings");
+  revalidatePath("/settings/staff");
   return { success: true };
 }

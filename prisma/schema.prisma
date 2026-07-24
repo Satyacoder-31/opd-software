@@ -9,6 +9,7 @@ datasource db {
 }
 
 enum Role {
+  owner
   admin
   doctor
   receptionist
@@ -31,6 +32,8 @@ enum AppointmentStatus {
   waiting
   in_progress
   done
+  cancelled
+  no_show
 }
 
 enum AppointmentType {
@@ -71,6 +74,7 @@ model Clinic {
   phone              String
   address            String
   gstin              String?
+  prescriptionLayout String             @default("classic")
   nextInvoiceSeq     Int                @default(1)
   plan               Plan               @default(free)
   subscriptionStatus SubscriptionStatus @default(trialing)
@@ -85,6 +89,7 @@ model Clinic {
   invoices               Invoice[]
   auditLogs              AuditLog[]
   feeItems               FeeItem[]
+  drugCatalogItems       DrugCatalogItem[]
   prescriptionTemplates  PrescriptionTemplate[]
   consultationAttachments ConsultationAttachment[]
 }
@@ -281,6 +286,31 @@ model FeeItem {
   clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
 
   @@index([clinicId])
+}
+
+model DrugCatalogItem {
+  id             String   @id @default(uuid())
+  clinicId       String
+  name           String
+  normalizedName String
+  /// Default dose string applied when this medicine is picked in Rx.
+  dosage         String?
+  /// Default route of administration (e.g. Oral, Topical).
+  route          String?
+  frequency      String?
+  duration       String?
+  quantity       String?
+  instructions   String?
+  isActive       Boolean  @default(true)
+  usageCount     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, normalizedName])
+  @@index([clinicId, isActive, usageCount])
+  @@index([clinicId, name])
 }
 
 model PrescriptionTemplate {

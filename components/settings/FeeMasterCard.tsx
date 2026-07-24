@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IndianRupeeIcon, PlusIcon } from "lucide-react";
+import { faIndianRupeeSign, faPlus } from "@fortawesome/free-solid-svg-icons";
 import {
   createFeeItem,
   setFeeItemActive,
 } from "@/actions/fees";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Banner } from "@/components/ui/Banner";
 import { usePendingAction } from "@/hooks/usePendingAction";
@@ -61,7 +62,18 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
     },
   });
 
-  function handleToggle(id: string, isActive: boolean) {
+  function handleToggle(id: string, isActive: boolean, name: string) {
+    const action = isActive ? "reactivate" : "deactivate";
+    if (
+      !window.confirm(
+        `Are you sure you want to ${action} “${name}”?${
+          isActive ? "" : " It will no longer appear in billing."
+        }`
+      )
+    ) {
+      return;
+    }
+
     setToggleError(null);
     void run(async () => {
       const result = await setFeeItemActive(id, isActive);
@@ -77,12 +89,12 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <ul className="space-y-3">
+    <div className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-3">
         {items.length === 0 && (
           <li>
             <EmptyState
-              icon={IndianRupeeIcon}
+              icon={faIndianRupeeSign}
               title="No fee items yet"
               description="Add consultation and procedure fees below."
               compact
@@ -92,12 +104,16 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
           >
-            <span>
+            <span className="min-w-0 break-words">
               {item.name}{" "}
-              <span className="text-muted-foreground">
-                · ₹{item.amount.toFixed(2)}
+              <span className="tabular-nums text-muted-foreground">
+                ·{" "}
+                {new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                }).format(item.amount)}
                 {!item.isActive ? " · inactive" : ""}
               </span>
             </span>
@@ -106,7 +122,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
               variant="ghost"
               size="sm"
               loading={isPending(item.id)}
-              onClick={() => handleToggle(item.id, !item.isActive)}
+              onClick={() => handleToggle(item.id, !item.isActive, item.name)}
             >
               {item.isActive ? "Deactivate" : "Reactivate"}
             </Button>
@@ -116,10 +132,14 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
 
       {toggleError && <Banner variant="error">{toggleError}</Banner>}
 
-      <form onSubmit={handleSubmit} className="grid gap-3 border-t border-border pt-4 sm:grid-cols-3">
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-3 border-t border-border pt-4 sm:grid-cols-3"
+      >
         <Input
           label="Fee name"
           name="name"
+          autoComplete="off"
           value={values.name ?? ""}
           onChange={(e) => setValue("name", e.target.value)}
           error={fieldError("name")}
@@ -129,6 +149,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
           label="Amount (₹)"
           name="amount"
           type="number"
+          inputMode="decimal"
           min={0}
           step={0.01}
           value={values.amount ?? ""}
@@ -137,8 +158,8 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
           required
         />
         <div className="flex items-end">
-          <Button type="submit" loading={pending}>
-            <PlusIcon data-icon="inline-start" />
+          <Button type="submit" loading={pending} className="w-full sm:w-auto">
+            <Icon icon={faPlus} data-icon="inline-start" />
             Add fee
           </Button>
         </div>

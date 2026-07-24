@@ -1,10 +1,11 @@
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { getInitialPatients } from "@/lib/patients-data";
 import { getActiveQueuePatientIds } from "@/actions/appointments";
 import { PatientTable } from "@/components/patients/PatientTable";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { PageShell } from "@/components/ui/PageShell";
-import { UserPlusIcon } from "lucide-react";
 import Link from "next/link";
 
 export default async function PatientsPage() {
@@ -23,7 +24,7 @@ export default async function PatientsPage() {
         actions={
           <Link href="/patients/new">
             <Button>
-              <UserPlusIcon data-icon="inline-start" />
+              <Icon icon={faPlus} data-icon="inline-start" />
               Register patient
             </Button>
           </Link>

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeftIcon } from "lucide-react";
+import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
 import type { Patient } from "@prisma/client";
 import { PatientForm } from "@/components/patients/PatientForm";
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { PageShell } from "@/components/ui/PageShell";
 
 type EditPatientPageClientProps = {
@@ -24,7 +25,7 @@ export function EditPatientPageClient({ patient }: EditPatientPageClientProps) {
             aria-label="Back to patient"
             className="inline-flex items-center gap-1 text-ink hover:text-primary"
           >
-            <ChevronLeftIcon className="size-5 shrink-0" aria-hidden />
+            <Icon icon={faChevronLeft} className="size-5 shrink-0" aria-hidden />
             <h1 className="font-display text-lg font-semibold">Edit patient</h1>
           </Link>
           <p className="mt-1 pl-6 text-sm text-muted-foreground">

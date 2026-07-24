@@ -1,9 +1,11 @@
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  CheckCircle2Icon,
-  CircleAlertIcon,
-  InfoIcon,
-} from "lucide-react";
+  faCircleCheck,
+  faCircleExclamation,
+  faCircleInfo,
+} from "@fortawesome/free-solid-svg-icons";
 import { Alert, AlertDescription } from "@/components/ui/shadcn/alert";
+import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
 type BannerProps = {
@@ -20,30 +22,34 @@ const variants = {
 };
 
 const icons = {
-  success: CheckCircle2Icon,
-  error: CircleAlertIcon,
-  info: InfoIcon,
-};
+  success: faCircleCheck,
+  error: faCircleExclamation,
+  info: faCircleInfo,
+} as const satisfies Record<NonNullable<BannerProps["variant"]>, IconDefinition>;
 
 export function Banner({
   variant = "info",
   children,
   className,
 }: BannerProps) {
-  const Icon = icons[variant];
+  const icon = icons[variant];
 
   if (variant === "error") {
     return (
-      <Alert variant="destructive" className={className}>
-        <Icon />
+      <Alert variant="destructive" className={className} aria-live="assertive">
+        <Icon icon={icon} />
         <AlertDescription>{children}</AlertDescription>
       </Alert>
     );
   }
 
   return (
-    <Alert role="status" className={cn(variants[variant], className)}>
-      <Icon />
+    <Alert
+      role="status"
+      aria-live="polite"
+      className={cn(variants[variant], className)}
+    >
+      <Icon icon={icon} />
       <AlertDescription className="text-inherit">{children}</AlertDescription>
     </Alert>
   );

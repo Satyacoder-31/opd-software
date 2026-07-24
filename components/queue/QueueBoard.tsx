@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppointmentStatus } from "@prisma/client";
 import {
-  CheckCircle2Icon,
-  ClipboardListIcon,
-  EyeIcon,
-  UsersIcon,
-} from "lucide-react";
+  faCircleCheck,
+  faClipboardList,
+  faEye,
+  faPlus,
+  faReceipt,
+  faUserClock,
+} from "@fortawesome/free-solid-svg-icons";
 import {
   getCompletedQueue,
   getQueue,
@@ -20,10 +22,11 @@ import { StatusBadge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Banner } from "@/components/ui/Banner";
+import { Icon } from "@/components/ui/Icon";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { Select } from "@/components/ui/Select";
 import { cn, formatPhone } from "@/lib/utils";
-import { formatClinicTime, formatPatientAge } from "@/lib/date-utils";
+import { formatPatientAge } from "@/lib/date-utils";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import {
   useAppointmentRealtime,
@@ -33,6 +36,7 @@ import {
 type QueueItem = Awaited<ReturnType<typeof getQueue>>[number];
 type CompletedItem = Awaited<ReturnType<typeof getCompletedQueue>>[number];
 type DoctorOption = { id: string; name: string };
+type QueueTab = "waiting" | "in_progress" | "completed";
 
 type QueueBoardProps = {
   clinicId: string;
@@ -40,6 +44,10 @@ type QueueBoardProps = {
   initialCompleted: CompletedItem[];
   canStartConsultation: boolean;
   canPickDoctor: boolean;
+  /** Open / View visit links (doctor, admin). */
+  canOpenConsultation: boolean;
+  /** Billing links (receptionist, admin). */
+  canAccessBilling: boolean;
   doctors: DoctorOption[];
   defaultDoctorId?: string;
 };
@@ -50,13 +58,13 @@ export function QueueBoard({
   initialCompleted,
   canStartConsultation,
   canPickDoctor,
+  canOpenConsultation,
+  canAccessBilling,
   doctors,
   defaultDoctorId,
 }: QueueBoardProps) {
   const router = useRouter();
-  const [tab, setTab] = useState<"waiting" | "in_progress" | "completed">(
-    "waiting"
-  );
+  const [tab, setTab] = useState<QueueTab>("waiting");
   const [queue, setQueue] = useState(initialQueue);
   const [completed, setCompleted] = useState(initialCompleted);
   const [selectedDoctorId, setSelectedDoctorId] = useState(
@@ -112,88 +120,116 @@ export function QueueBoard({
   const inProgress = queue.filter((q) => q.status === "in_progress");
   const waiting = queue.filter((q) => q.status === "waiting");
 
+  const liveTone =
+    connectionStatus === "connected"
+      ? "live"
+      : connectionStatus === "error"
+        ? "pending"
+        : "offline";
+
   const statusLabel =
     connectionStatus === "connected"
-      ? "Live updates"
+      ? "Live"
       : connectionStatus === "error"
         ? "Reconnecting…"
-        : connectionStatus === "disconnected"
-          ? "Disconnected"
-          : "Connecting…";
+        : "Offline";
+
+  const tabs: { id: QueueTab; label: string }[] = [
+    { id: "waiting", label: "Waiting" },
+    { id: "in_progress", label: "In consult" },
+    { id: "completed", label: "Done" },
+  ];
 
   return (
     <PageShell>
       <PageHeader
-        title="Today's queue"
-        description={`${statusLabel} · ${queue.length} active · ${completed.length} done`}
+        className="sm:items-center"
+        title={
+          <span className="flex w-full items-center justify-between gap-3">
+            <span>Today&apos;s queue</span>
+            <LiveChip tone={liveTone} label={statusLabel} />
+          </span>
+        }
         actions={
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant={tab === "waiting" ? "primary" : "secondary"}
-              onClick={() => setTab("waiting")}
-            >
-              Waiting ({waiting.length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={tab === "in_progress" ? "primary" : "secondary"}
-              onClick={() => setTab("in_progress")}
-            >
-              In consultation ({inProgress.length})
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={tab === "completed" ? "primary" : "secondary"}
-              onClick={() => setTab("completed")}
-            >
-              Completed ({completed.length})
-            </Button>
-          </>
+          <Button
+            nativeButton={false}
+            render={<Link href="/patients/new" />}
+            size="sm"
+          >
+            <Icon icon={faPlus} data-icon="inline-start" />
+            Register patient
+          </Button>
         }
       />
 
+      <div className="border-b border-border bg-card">
+        <div
+          role="tablist"
+          aria-label="Queue status"
+          className="flex w-full bg-surface-muted/60"
+        >
+          {tabs.map((item) => {
+            const selected = tab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setTab(item.id)}
+                className={cn(
+                  "inline-flex min-h-11 flex-1 items-center justify-center px-2 text-sm font-medium transition-[background-color,color] duration-150",
+                  "border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
+                  selected
+                    ? "border-primary bg-white text-ink"
+                    : "border-transparent text-muted-foreground hover:bg-white/70 hover:text-ink"
+                )}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {tab === "waiting" &&
+          canStartConsultation &&
+          canPickDoctor &&
+          doctors.length > 0 && (
+            <div className="border-t border-border px-4 py-3 md:px-8">
+              <div className="flex max-w-sm flex-col gap-1.5">
+                <Select
+                  label="Assign doctor when starting"
+                  name="doctorId"
+                  value={selectedDoctorId}
+                  onChange={(e) => setSelectedDoctorId(e.target.value)}
+                  options={doctors.map((doctor) => ({
+                    value: doctor.id,
+                    label: `Dr. ${doctor.name}`,
+                  }))}
+                />
+              </div>
+            </div>
+          )}
+      </div>
+
       {actionError && (
-        <div className="px-5 pb-2 md:px-8">
+        <div className="px-5 pb-2 pt-3 md:px-8">
           <Banner variant="error">{actionError}</Banner>
         </div>
       )}
 
-      {tab === "waiting" && canStartConsultation && canPickDoctor && doctors.length > 0 && (
-        <Card title="Assign doctor when starting" flush className="border-y border-border">
-          <div className="px-6 py-5 md:px-8">
-            <Select
-              label="Doctor"
-              name="doctorId"
-              value={selectedDoctorId}
-              className="px-4 py-6"
-              optionClassName="py-3"
-              onChange={(e) => setSelectedDoctorId(e.target.value)}
-              options={doctors.map((doctor) => ({
-                value: doctor.id,
-                label: `Dr. ${doctor.name}`,
-              }))}
-            />
-          </div>
-        </Card>
-      )}
-
       {tab === "waiting" && (
         <section aria-label="Waiting" className="border-b border-border">
+          <QueueTabSummary
+            count={waiting.length}
+            singular="patient waiting"
+            plural="patients waiting"
+          />
           {waiting.length === 0 ? (
             <EmptyState
-              icon={UsersIcon}
+              icon={faUserClock}
               title="No patients waiting"
-              description={
-                <>
-                  Add someone from{" "}
-                  <Link href="/patients">Patients</Link> to get the queue
-                  moving.
-                </>
-              }
+              description="Register a patient from the header, or open Patients to add someone to today’s queue."
               className="bg-card"
             />
           ) : (
@@ -204,6 +240,7 @@ export function QueueBoard({
                   item={item}
                   onStatus={handleStatus}
                   canStart={canStartConsultation}
+                  canOpenConsultation={canOpenConsultation}
                   isPending={isPending}
                 />
               ))}
@@ -214,11 +251,20 @@ export function QueueBoard({
 
       {tab === "in_progress" && (
         <section aria-label="In consultation" className="border-b border-border">
+          <QueueTabSummary
+            count={inProgress.length}
+            singular="consultation in progress"
+            plural="consultations in progress"
+          />
           {inProgress.length === 0 ? (
             <EmptyState
-              icon={ClipboardListIcon}
+              icon={faClipboardList}
               title="No consultations in progress"
-              description="Start a consultation from the Waiting tab to see it here."
+              description={
+                canStartConsultation
+                  ? "Start a consultation from Waiting to see it here."
+                  : "When a doctor starts a visit from Waiting, it appears here. Use Completed for billing after the visit."
+              }
               className="bg-card"
             />
           ) : (
@@ -229,6 +275,7 @@ export function QueueBoard({
                   item={item}
                   onStatus={handleStatus}
                   canStart={canStartConsultation}
+                  canOpenConsultation={canOpenConsultation}
                   isPending={isPending}
                 />
               ))}
@@ -239,9 +286,14 @@ export function QueueBoard({
 
       {tab === "completed" && (
         <section aria-label="Completed" className="border-b border-border">
+          <QueueTabSummary
+            count={completed.length}
+            singular="completed visit"
+            plural="completed visits"
+          />
           {completed.length === 0 ? (
             <EmptyState
-              icon={CheckCircle2Icon}
+              icon={faCircleCheck}
               title="No completed visits yet"
               description="Finished consultations will show up here for today."
               className="bg-card"
@@ -249,7 +301,12 @@ export function QueueBoard({
           ) : (
             <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
               {completed.map((item) => (
-                <CompletedCard key={item.id} item={item} />
+                <CompletedCard
+                  key={item.id}
+                  item={item}
+                  canOpenConsultation={canOpenConsultation}
+                  canAccessBilling={canAccessBilling}
+                />
               ))}
             </div>
           )}
@@ -259,92 +316,171 @@ export function QueueBoard({
   );
 }
 
+function QueueTabSummary({
+  count,
+  singular,
+  plural,
+}: {
+  count: number;
+  singular: string;
+  plural: string;
+}) {
+  if (count === 0) return null;
+
+  return (
+    <div className="border-b border-border bg-card px-4 py-2.5 md:px-8">
+      <p className="text-sm text-muted-foreground">
+        <span className="font-medium tabular-nums text-ink">{count}</span>
+        {" "}
+        {count === 1 ? singular : plural}
+      </p>
+    </div>
+  );
+}
+
+function LiveChip({
+  tone,
+  label,
+}: {
+  tone: "live" | "pending" | "offline";
+  label: string;
+}) {
+  return (
+    <span
+      role="status"
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium",
+        tone === "live" &&
+          "border-success/30 bg-success/10 text-success",
+        tone === "pending" &&
+          "border-accent/30 bg-accent/10 text-accent-foreground",
+        tone === "offline" &&
+          "border-border bg-muted text-muted-foreground"
+      )}
+    >
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          tone === "live" && "bg-success",
+          tone === "pending" && "animate-pulse bg-accent",
+          tone === "offline" && "bg-muted-foreground/50"
+        )}
+        aria-hidden
+      />
+      {label}
+    </span>
+  );
+}
+
 function QueueCard({
   item,
   onStatus,
   canStart,
+  canOpenConsultation,
   isPending,
 }: {
   item: QueueItem;
   onStatus: (id: string, status: AppointmentStatus) => void;
   canStart: boolean;
+  canOpenConsultation: boolean;
   isPending: (id: string) => boolean;
 }) {
   const loading = isPending(item.id);
   const ageLabel = formatPatientAge(item.patient);
+  const meta = [
+    formatPhone(item.patient.phone),
+    ageLabel,
+    item.consultation?.doctor ? `Dr. ${item.consultation.doctor.name}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <Card flush className="relative overflow-hidden bg-card">
-      <div className="relative px-5 py-5">
+    <Card flush className="bg-card">
+            <div className="flex min-h-30">
         <div
           className={cn(
-            "absolute -right-4 -top-4 flex h-20 w-20 items-center justify-center rounded-full",
-            "border-4 border-accent/40 bg-accent/10 font-display text-3xl font-bold text-accent-foreground"
+            "flex w-16 shrink-0 flex-col items-center justify-center border-r border-border",
+            item.status === "waiting"
+              ? "bg-accent/10"
+              : "bg-primary/10"
           )}
           aria-label={`Token number ${item.tokenNumber}`}
         >
-          {item.tokenNumber}
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Token
+          </span>
+          <span className="font-display text-2xl font-semibold tabular-nums text-ink">
+            {item.tokenNumber}
+          </span>
         </div>
 
-        <div className="pr-16">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-medium text-ink">{item.patient.name}</p>
-              <p className="text-sm text-muted-foreground">{item.patient.mrn}</p>
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-4 py-4">
+          <div className="min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link
+                  href={`/patients/${item.patient.id}`}
+                  className="block truncate font-medium text-ink hover:text-primary"
+                >
+                  {item.patient.name}
+                </Link>
+                <p className="truncate text-sm text-muted-foreground">
+                  {item.patient.mrn}
+                </p>
+              </div>
+              <StatusBadge status={item.status} className="shrink-0" />
             </div>
-            <StatusBadge status={item.status} />
+
+            {meta ? (
+              <p className="mt-1.5 truncate text-sm text-muted-foreground">
+                {meta}
+              </p>
+            ) : null}
           </div>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            {formatPhone(item.patient.phone)}
-            {ageLabel ? ` · ${ageLabel}` : ""}
-          </p>
-          {item.type === "scheduled" && item.scheduledAt && (
-            <p className="mt-1 text-xs text-primary">
-              Scheduled {formatClinicTime(item.scheduledAt)}
-            </p>
-          )}
-          {item.consultation?.doctor && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Dr. {item.consultation.doctor.name}
-            </p>
-          )}
-
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {item.status === "waiting" && canStart && (
               <Button
                 size="sm"
                 onClick={() => onStatus(item.id, AppointmentStatus.in_progress)}
                 loading={loading}
               >
-                <ClipboardListIcon data-icon="inline-start" />
+                <Icon icon={faClipboardList} data-icon="inline-start" />
                 Start consultation
               </Button>
             )}
-            {item.status === "in_progress" && item.consultation && (
-              <>
-                <Link href={`/consultations/${item.consultation.id}`}>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="border-primary/45 bg-primary/20 text-primary hover:bg-primary/30 hover:text-primary"
-                  >
-                    <EyeIcon data-icon="inline-start" />
-                    <span className="font-semibold">Open</span>
-                  </Button>
-                </Link>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="bg-success/50 text-[#0f5132] hover:bg-success/30 hover:text-success"
-                  onClick={() => onStatus(item.id, AppointmentStatus.done)}
-                  loading={loading}
-                >
-                  <CheckCircle2Icon data-icon="inline-start" />
-                  <span className="font-semibold">Mark done</span>
-                </Button>
-              </>
+            {item.status === "waiting" && !canStart && (
+              <Button
+                nativeButton={false}
+                render={<Link href={`/patients/${item.patient.id}`} />}
+                size="sm"
+                variant="secondary"
+              >
+                Patient record
+              </Button>
             )}
+            {item.status === "in_progress" &&
+              item.consultation &&
+              canOpenConsultation && (
+                <Button
+                  nativeButton={false}
+                  render={
+                    <Link href={`/consultations/${item.consultation.id}`} />
+                  }
+                  size="sm"
+                >
+                  <Icon icon={faEye} data-icon="inline-start" />
+                  Open consultation
+                </Button>
+              )}
+            {item.status === "in_progress" &&
+              item.consultation &&
+              !canOpenConsultation && (
+                <p className="text-sm text-muted-foreground">
+                  With Dr. {item.consultation.doctor?.name ?? "doctor"}
+                </p>
+              )}
           </div>
         </div>
       </div>
@@ -352,46 +488,92 @@ function QueueCard({
   );
 }
 
-function CompletedCard({ item }: { item: CompletedItem }) {
+function CompletedCard({
+  item,
+  canOpenConsultation,
+  canAccessBilling,
+}: {
+  item: CompletedItem;
+  canOpenConsultation: boolean;
+  canAccessBilling: boolean;
+}) {
   const ageLabel = formatPatientAge(item.patient);
+  const showVisit = Boolean(item.consultation && canOpenConsultation);
+  const showBilling = Boolean(item.consultation && canAccessBilling);
 
   return (
-    <Card flush className="relative overflow-hidden bg-card">
-      <div className="px-5 py-5">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="font-medium text-ink">{item.patient.name}</p>
-            <p className="text-sm text-muted-foreground">
-              Token #{item.tokenNumber} · {item.patient.mrn}
+    <Card flush className="bg-card">
+            <div className="flex min-h-30">
+        <div
+          className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-border bg-muted/50"
+          aria-label={`Token number ${item.tokenNumber}`}
+        >
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Token
+          </span>
+          <span className="font-display text-2xl font-semibold tabular-nums text-ink">
+            {item.tokenNumber}
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-4 py-4">
+          <div className="min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link
+                  href={`/patients/${item.patient.id}`}
+                  className="block truncate font-medium text-ink hover:text-primary"
+                >
+                  {item.patient.name}
+                </Link>
+                <p className="truncate text-sm text-muted-foreground">
+                  {item.patient.mrn}
+                </p>
+              </div>
+              <StatusBadge status={item.status} className="shrink-0" />
+            </div>
+            <p className="mt-1.5 truncate text-sm text-muted-foreground">
+              {[
+                formatPhone(item.patient.phone),
+                ageLabel,
+                item.consultation?.doctor
+                  ? `Dr. ${item.consultation.doctor.name}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           </div>
-          <StatusBadge status={item.status} />
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {formatPhone(item.patient.phone)}
-          {ageLabel ? ` · ${ageLabel}` : ""}
-        </p>
-        {item.consultation?.doctor && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            Dr. {item.consultation.doctor.name}
-          </p>
-        )}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {item.consultation && (
-            <Link
-              href={`/consultations/${item.consultation.id}`}
-              className="inline-flex h-9 items-center rounded-lg border border-border bg-white px-3 text-sm font-medium text-ink hover:bg-surface-muted"
-            >
-              View visit
-            </Link>
-          )}
-          {item.consultation?.invoice && (
-            <Link
-              href={`/billing/${item.consultation.id}`}
-              className="inline-flex h-9 items-center rounded-lg border border-border bg-white px-3 text-sm font-medium text-ink hover:bg-surface-muted"
-            >
-              Billing
-            </Link>
+
+          {(showVisit || showBilling) && (
+            <div className="flex flex-wrap gap-2">
+              {showVisit && item.consultation && (
+                <Button
+                  nativeButton={false}
+                  render={
+                    <Link href={`/consultations/${item.consultation.id}`} />
+                  }
+                  size="sm"
+                  variant="secondary"
+                >
+                  <Icon icon={faEye} data-icon="inline-start" />
+                  View visit
+                </Button>
+              )}
+              {showBilling && item.consultation && (
+                <Button
+                  nativeButton={false}
+                  render={
+                    <Link href={`/billing/${item.consultation.id}`} />
+                  }
+                  size="sm"
+                  variant="secondary"
+                >
+                  <Icon icon={faReceipt} data-icon="inline-start" />
+                  Billing
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

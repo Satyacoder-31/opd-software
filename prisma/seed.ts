@@ -28,7 +28,7 @@ async function main() {
         create: {
           name: "Dr. Admin Demo",
           email: "admin@demo.local",
-          role: Role.admin,
+          role: Role.owner,
           supabaseAuthId: demoAuthId,
         },
       },
@@ -85,7 +85,7 @@ async function main() {
         tokenNumber: 3,
         queueDate: today,
         status: AppointmentStatus.done,
-        type: AppointmentType.scheduled,
+        type: AppointmentType.walkin,
         createdById: admin.id,
       },
     ],

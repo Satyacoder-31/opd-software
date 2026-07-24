@@ -1,8 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { getConsultation } from "@/actions/consultations";
-import { isConsultationEditable } from "@/lib/consultation-utils";
-import { toConsultationClinicalData } from "@/lib/consultation-utils";
 import { EditConsultationPageClient } from "@/components/consultation/EditConsultationPageClient";
+import { formatPatientAge } from "@/lib/date-utils";
+import { isConsultationEditable } from "@/lib/consultation-utils";
+import {
+  mergePatientAlertsIntoClinical,
+  toConsultationClinicalData,
+} from "@/lib/consultation-utils";
+import { formatEpisodeNo, formatUhid } from "@/lib/visit-identifiers";
 import type { Medicine } from "@/lib/types";
 
 type Props = {
@@ -20,17 +25,36 @@ export default async function EditConsultationPage({ params }: Props) {
   }
 
   const medicines = (consultation.prescription?.medicines as Medicine[]) ?? [];
+  const clinical = mergePatientAlertsIntoClinical(
+    toConsultationClinicalData(consultation),
+    consultation.patient
+  );
+  const patientAge = formatPatientAge(consultation.patient);
+  const patientGender = consultation.patient.gender
+    ? consultation.patient.gender.charAt(0).toUpperCase() +
+      consultation.patient.gender.slice(1)
+    : null;
 
   return (
     <EditConsultationPageClient
       consultationId={consultation.id}
+      patientId={consultation.patient.id}
       patientName={consultation.patient.name}
-      patientMrn={consultation.patient.mrn}
+      uhid={formatUhid(consultation.patient.mrn)}
+      episodeNo={formatEpisodeNo({
+        queueDate: consultation.appointment.queueDate,
+        tokenNumber: consultation.appointment.tokenNumber,
+      })}
+      patientPhone={consultation.patient.phone}
+      patientAge={patientAge}
+      patientGender={patientGender}
       doctorName={consultation.doctor.name}
-      clinical={toConsultationClinicalData(consultation)}
+      clinical={clinical}
       medicines={medicines}
       advice={consultation.prescription?.advice}
       followUp={consultation.prescription?.followUp}
+      patientAllergies={consultation.patient.allergies}
+      patientChronicConditions={consultation.patient.chronicConditions}
     />
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChevronLeftIcon } from "lucide-react";
+import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
+import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
 type PageShellProps = {
@@ -17,7 +18,7 @@ export function PageShell({ children, className }: PageShellProps) {
 type PageHeaderProps = {
   title: React.ReactNode;
   description?: React.ReactNode;
-  /** When set, title row becomes a back link with chevron. */
+  /** When set, shows a separate back link above the title. */
   backHref?: string;
   /** Accessible label for the back control. Defaults to "Back". */
   backLabel?: string;
@@ -35,36 +36,55 @@ export function PageHeader({
   children,
   className,
 }: PageHeaderProps) {
+  const trimmedBackLabel = backLabel.trim();
+  const ariaBackLabel = trimmedBackLabel || "Back";
+  const inlineTitleWithBack = Boolean(backHref && !trimmedBackLabel);
+
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-end sm:justify-between md:px-8 md:py-8",
+        "flex flex-col gap-4 px-6 py-6 sm:flex-row sm:justify-between md:px-8 md:py-8",
+        inlineTitleWithBack ? "sm:items-center" : "sm:items-end",
         className
       )}
     >
-      <div className="min-w-0 space-y-3">
-        <div>
-          {backHref ? (
-            <Link
-              href={backHref}
-              aria-label={backLabel}
-              className="inline-flex items-center gap-1 text-ink hover:text-primary"
-            >
-              <ChevronLeftIcon className="size-5 shrink-0" aria-hidden />
-              <h1 className="font-display text-lg font-semibold sm:text-2xl">
+      <div className="min-w-0 flex flex-1 flex-col gap-3">
+        <div className="flex flex-col gap-2">
+          {backHref && inlineTitleWithBack ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <Link
+                href={backHref}
+                aria-label={ariaBackLabel}
+                className="inline-flex size-11 shrink-0 items-center justify-center text-muted-foreground transition-[color,opacity,transform] duration-150 hover:text-primary active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <Icon icon={faChevronLeft} className="size-4" aria-hidden />
+              </Link>
+              <h1 className="min-w-0 font-display text-2xl font-semibold text-balance text-ink">
                 {title}
               </h1>
-            </Link>
+            </div>
           ) : (
-            <h1 className="font-display text-2xl font-semibold text-ink">
-              {title}
-            </h1>
+            <>
+              {backHref ? (
+                <Link
+                  href={backHref}
+                  aria-label={ariaBackLabel}
+                  className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <Icon icon={faChevronLeft} className="size-4" aria-hidden />
+                  {trimmedBackLabel ? <span>{backLabel}</span> : null}
+                </Link>
+              ) : null}
+              <h1 className="font-display text-2xl font-semibold text-balance text-ink">
+                {title}
+              </h1>
+            </>
           )}
           {description ? (
             <p
               className={cn(
                 "text-sm text-muted-foreground",
-                backHref ? "mt-1 pl-6" : "mt-1"
+                inlineTitleWithBack && "pl-11"
               )}
             >
               {description}
@@ -88,7 +108,7 @@ type PageBodyProps = {
 /** Padded content area under the header when not using flush sections. */
 export function PageBody({ children, className }: PageBodyProps) {
   return (
-    <div className={cn("space-y-6 px-6 pb-6 md:px-8 md:pb-8", className)}>
+    <div className={cn("flex flex-col gap-6 px-6 pb-6 md:px-8 md:pb-8", className)}>
       {children}
     </div>
   );

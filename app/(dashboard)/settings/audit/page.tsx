@@ -1,7 +1,6 @@
 import { Suspense } from "react";
-import { Role, type AuditAction } from "@prisma/client";
+import type { AuditAction } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { requireSessionUser } from "@/lib/auth";
 import { getAuditLogs } from "@/actions/audit";
 import { AuditLogViewer } from "@/components/settings/AuditLogViewer";
 
@@ -15,9 +14,6 @@ function first(value: string | string[] | undefined): string {
 }
 
 export default async function AuditLogPage({ searchParams }: Props) {
-  const session = await requireSessionUser();
-  if (session.role !== Role.admin) redirect("/queue");
-
   const params = await searchParams;
   const filters = {
     action: first(params.action) as AuditAction | "",

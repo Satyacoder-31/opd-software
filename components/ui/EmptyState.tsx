@@ -1,4 +1,5 @@
-import type { LucideIcon } from "lucide-react";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { isValidElement, type ReactNode } from "react";
 import {
   Empty,
   EmptyContent,
@@ -7,10 +8,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
 type EmptyStateProps = {
-  icon: LucideIcon;
+  /** Font Awesome icon definition, or a custom icon node. */
+  icon: IconDefinition | ReactNode;
   title: string;
   description?: React.ReactNode;
   action?: React.ReactNode;
@@ -18,8 +21,13 @@ type EmptyStateProps = {
   compact?: boolean;
 };
 
+function EmptyIcon({ icon }: { icon: IconDefinition | ReactNode }) {
+  if (isValidElement(icon)) return icon;
+  return <Icon icon={icon as IconDefinition} />;
+}
+
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
@@ -36,7 +44,7 @@ export function EmptyState({
     >
       <EmptyHeader>
         <EmptyMedia variant="icon">
-          <Icon />
+          <EmptyIcon icon={icon} />
         </EmptyMedia>
         <EmptyTitle>{title}</EmptyTitle>
         {description ? (

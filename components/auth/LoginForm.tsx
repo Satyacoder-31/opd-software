@@ -50,14 +50,14 @@ export function LoginForm() {
       <p className="text-sm text-muted-foreground">
         <Link
           href="/login/forgot-password"
-          className="text-primary hover:underline"
+          className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70"
         >
           Forgot password?
         </Link>
       </p>
       <p className="text-sm text-muted-foreground">
         New clinic?{" "}
-        <Link href="/signup" className="text-primary hover:underline">
+        <Link href="/signup" className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70">
           Register your clinic
         </Link>
       </p>

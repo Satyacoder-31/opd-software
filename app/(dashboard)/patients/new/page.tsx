@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronLeftIcon } from "lucide-react";
+import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { PatientForm } from "@/components/patients/PatientForm";
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { PageShell } from "@/components/ui/PageShell";
 
 export default function NewPatientPage() {
@@ -19,7 +20,7 @@ export default function NewPatientPage() {
             aria-label="Back to patients"
             className="inline-flex items-center gap-1 text-ink hover:text-primary"
           >
-            <ChevronLeftIcon className="size-5 shrink-0" aria-hidden />
+            <Icon icon={faChevronLeft} className="size-5 shrink-0" aria-hidden />
             <h1 className="font-display text-lg font-semibold">
               Register new patient
             </h1>

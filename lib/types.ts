@@ -69,8 +69,12 @@ export type ConsultationClinicalData = {
 export type Medicine = {
   name: string;
   dosage: string;
+  /** Route of administration, e.g. Oral, Inhalation, Topical. */
+  route?: string;
   frequency: string;
   duration: string;
+  /** Dispense quantity (tablets/capsules/etc.), often estimated from freq × duration. */
+  quantity?: string;
   instructions?: string;
 };
 

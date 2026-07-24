@@ -1,35 +1,20 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { Role } from "@prisma/client";
-import { z } from "zod";
+import { revalidatePath, revalidateTag } from "next/cache";
 import type { Gender } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { permissionDenied, requireSessionUser, roleAllowed } from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { renderPrescriptionPdf } from "@/lib/pdf";
+import type { PrescriptionPdfProps } from "@/lib/pdf/prescription";
 import { formatPatientAge } from "@/lib/date-utils";
 import { isConsultationEditable } from "@/lib/consultation-utils";
+import { validatePrescriptionDraft } from "@/lib/prescription-validation";
 import { validateReason } from "@/lib/validation";
-import type { ActionResult, Medicine } from "@/lib/types";
-
-const CLINICAL_ROLES: Role[] = [Role.admin, Role.doctor];
-
-const CONSULTATION_LOCKED_ERROR =
-  "This consultation is finalized and cannot be edited.";
-
-const medicineSchema = z.object({
-  name: z.string().min(1),
-  dosage: z.string().min(1),
-  frequency: z.string().min(1),
-  duration: z.string().min(1),
-  instructions: z.string().optional(),
-});
-
-const prescriptionMetaSchema = z.object({
-  advice: z.string().optional(),
-  followUp: z.string().optional(),
-});
+import { isPrescriptionLayoutId } from "@/lib/prescription-layouts";
+import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
+import { can } from "@/lib/rbac";
+import type { ActionResult, Medicine, VoidActionResult } from "@/lib/types";
 
 function formatGender(gender: Gender | null | undefined): string | undefined {
   if (!gender) return undefined;
@@ -50,7 +35,7 @@ export async function savePrescription(
   meta?: { advice?: string; followUp?: string; amendmentReason?: string }
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
+  if (!can(session, "prescriptions.write")) return permissionDenied();
 
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
@@ -78,14 +63,9 @@ export async function savePrescription(
     amendmentReasonValue = reasonCheck.reason;
   }
 
-  const validated = z.array(medicineSchema).safeParse(medicines);
-  if (!validated.success) {
-    return { success: false, error: "Invalid medicine entries." };
-  }
-
-  const validatedMeta = prescriptionMetaSchema.safeParse(meta ?? {});
-  if (!validatedMeta.success) {
-    return { success: false, error: "Invalid prescription details." };
+  const validated = validatePrescriptionDraft(medicines, meta);
+  if (!validated.ok) {
+    return { success: false, error: validated.error };
   }
 
   const prescription = await prisma.$transaction(async (tx) => {
@@ -94,15 +74,15 @@ export async function savePrescription(
       create: {
         clinicId: session.clinicId,
         consultationId,
-        medicines: validated.data,
-        advice: validatedMeta.data.advice?.trim() || null,
-        followUp: validatedMeta.data.followUp?.trim() || null,
+        medicines: validated.medicines,
+        advice: validated.advice?.trim() || null,
+        followUp: validated.followUp?.trim() || null,
         createdById: session.userId,
       },
       update: {
-        medicines: validated.data,
-        advice: validatedMeta.data.advice?.trim() || null,
-        followUp: validatedMeta.data.followUp?.trim() || null,
+        medicines: validated.medicines,
+        advice: validated.advice?.trim() || null,
+        followUp: validated.followUp?.trim() || null,
         updatedById: session.userId,
       },
     });
@@ -118,6 +98,8 @@ export async function savePrescription(
         },
       });
     }
+
+    await recordPrescribedDrugs(tx, session.clinicId, validated.medicines);
 
     return upserted;
   });
@@ -143,7 +125,7 @@ export async function generatePrescriptionPdf(
   consultationId: string
 ): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, CLINICAL_ROLES)) return permissionDenied();
+  if (!can(session, "prescriptions.write")) return permissionDenied();
 
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
@@ -182,6 +164,7 @@ export async function generatePrescriptionPdf(
     medicines,
     advice: consultation.prescription.advice ?? undefined,
     followUp: consultation.prescription.followUp ?? undefined,
+    layout: clinic.prescriptionLayout,
   });
 
   await logAudit({
@@ -203,8 +186,8 @@ export async function updateDoctorCredentials(
   formData: FormData
 ): Promise<ActionResult<void>> {
   const session = await requireSessionUser();
-  if (session.role !== "admin") {
-    return { success: false, error: "Only admins can update doctor credentials." };
+  if (!can(session, "staff.manage")) {
+    return { success: false, error: "Only clinic managers can update doctor credentials." };
   }
 
   const user = await prisma.user.findFirst({
@@ -224,6 +207,117 @@ export async function updateDoctorCredentials(
   });
 
   revalidatePath("/settings");
-  revalidatePath("/settings/edit");
+  revalidatePath("/settings/staff");
   return { success: true, data: undefined };
 }
+
+const SAMPLE_PRESCRIPTION: Omit<PrescriptionPdfProps, "layout"> = {
+  clinicName: "Sunrise Family Clinic",
+  clinicPhone: "+91 98765 43210",
+  clinicAddress: "12 MG Road, Bengaluru 560001",
+  doctorName: "Ananya Sharma",
+  doctorQualifications: "MBBS, MD (Internal Medicine)",
+  doctorRegistrationNo: "KMC 45218",
+  date: "19 Jul 2026",
+  patientName: "Rahul Mehta",
+  patientAge: "34 yrs",
+  patientGender: "Male",
+  patientMrn: "MRN-10482",
+  patientPhone: "+91 99887 76655",
+  diagnosis: "Acute pharyngitis with mild dehydration",
+  medicines: [
+    {
+      name: "Amoxicillin 500 mg",
+      dosage: "1 capsule",
+      route: "Oral",
+      frequency: "Thrice daily",
+      duration: "5 days",
+      instructions: "After food",
+    },
+    {
+      name: "Paracetamol 650 mg",
+      dosage: "1 tablet",
+      route: "Oral",
+      frequency: "As needed for fever",
+      duration: "3 days",
+      instructions: "Max 3 tablets / day",
+    },
+    {
+      name: "ORS sachets",
+      dosage: "1 sachet in 200 ml water",
+      route: "Oral",
+      frequency: "After every loose stool",
+      duration: "Until recovered",
+    },
+  ],
+  advice: "Warm saline gargles twice a day\nIncrease oral fluids\nRest for 48 hours",
+  followUp: "Review after 5 days or sooner if fever persists",
+};
+
+export async function setPrescriptionLayout(
+  layoutId: string
+): Promise<VoidActionResult> {
+  const session = await requireSessionUser();
+  if (!can(session, "settings.access")) {
+    return { success: false, error: "Only clinic managers can change the prescription layout." };
+  }
+
+  if (!isPrescriptionLayoutId(layoutId)) {
+    return { success: false, error: "Unknown prescription layout." };
+  }
+
+  await prisma.clinic.update({
+    where: { id: session.clinicId },
+    data: { prescriptionLayout: layoutId },
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "clinic",
+    resourceId: session.clinicId,
+    metadata: { prescriptionLayout: layoutId },
+  });
+
+  revalidateTag("clinic-profile");
+  revalidatePath("/settings");
+  revalidatePath("/settings/prescriptions");
+  return { success: true };
+}
+
+export async function previewPrescriptionLayout(
+  layoutId: string
+): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
+  const session = await requireSessionUser();
+  if (!can(session, "settings.access")) {
+    return { success: false, error: "Only clinic managers can preview prescription layouts." };
+  }
+
+  if (!isPrescriptionLayoutId(layoutId)) {
+    return { success: false, error: "Unknown prescription layout." };
+  }
+
+  const clinic = await prisma.clinic.findUniqueOrThrow({
+    where: { id: session.clinicId },
+    select: { name: true, phone: true, address: true },
+  });
+
+  const pdfBytes = await renderPrescriptionPdf({
+    ...SAMPLE_PRESCRIPTION,
+    clinicName: clinic.name || SAMPLE_PRESCRIPTION.clinicName,
+    clinicPhone: clinic.phone || SAMPLE_PRESCRIPTION.clinicPhone,
+    clinicAddress: clinic.address || SAMPLE_PRESCRIPTION.clinicAddress,
+    layout: layoutId,
+  });
+
+  return {
+    success: true,
+    data: {
+      pdfBase64: Buffer.from(pdfBytes).toString("base64"),
+      filename: `prescription-preview-${layoutId}.pdf`,
+    },
+  };
+}
+
+

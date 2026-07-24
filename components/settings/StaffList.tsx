@@ -1,99 +1,57 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { setStaffActive } from "@/actions/auth";
-import { Button } from "@/components/ui/Button";
-import { Banner } from "@/components/ui/Banner";
-import { DoctorStaffCard } from "@/components/settings/DoctorStaffCard";
-import { usePendingAction } from "@/hooks/usePendingAction";
-import type { StaffMember } from "@/components/settings/SettingsClient";
+import Link from "next/link";
+import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { ROLE_LABELS } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
+import type { StaffMember } from "@/components/settings/types";
+import { Icon } from "@/components/ui/Icon";
 
 type StaffListProps = {
   staff: StaffMember[];
-  currentUserId: string;
 };
 
-export function StaffList({ staff, currentUserId }: StaffListProps) {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const { isPending, run } = usePendingAction<string>();
-
-  function handleToggle(userId: string, isActive: boolean) {
-    setError(null);
-    void run(async () => {
-      const result = await setStaffActive(userId, isActive);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      router.refresh();
-    }, userId);
-  }
-
-  return (
-    <div className="space-y-4">
-      {error && <Banner variant="error">{error}</Banner>}
-      {staff.map((user) => (
-        <div key={user.id} className="space-y-2">
-          {user.role === "doctor" ? (
-            <ul>
-              <DoctorStaffCard doctor={user} />
-            </ul>
-          ) : (
-            <div className="rounded-lg border border-border p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span>
-                  {user.name}{" "}
-                  <span className="text-muted-foreground">({user.email})</span>
-                  {!user.isActive && (
-                    <span className="ml-2 text-danger">Inactive</span>
-                  )}
-                </span>
-                <span className="capitalize text-muted-foreground">
-                  {user.role}
-                </span>
-              </div>
-            </div>
-          )}
-          <StaffActiveToggle
-            user={user}
-            currentUserId={currentUserId}
-            pending={isPending(user.id)}
-            onToggle={handleToggle}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StaffActiveToggle({
-  user,
-  currentUserId,
-  pending,
-  onToggle,
-}: {
-  user: StaffMember;
-  currentUserId: string;
-  pending: boolean;
-  onToggle: (userId: string, isActive: boolean) => void;
-}) {
-  if (user.id === currentUserId) {
+export function StaffList({ staff }: StaffListProps) {
+  if (staff.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">This is your account.</p>
+      <p className="px-5 py-5 text-sm text-muted-foreground">
+        No staff members yet.
+      </p>
     );
   }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      loading={pending}
-      onClick={() => onToggle(user.id, !user.isActive)}
-    >
-      {user.isActive ? "Deactivate" : "Reactivate"}
-    </Button>
+    <ul className="divide-y divide-border">
+      {staff.map((user) => (
+        <li key={user.id}>
+          <Link
+            href={`/settings/staff/${user.id}`}
+            className={cn(
+              "flex items-center gap-3 px-5 py-3 transition-colors",
+              "hover:bg-surface-muted/60 active:bg-surface-muted"
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-ink">
+                {user.name}
+                {!user.isActive && (
+                  <span className="ml-2 text-xs font-normal text-danger">
+                    Inactive
+                  </span>
+                )}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {ROLE_LABELS[user.role]}
+              </p>
+            </div>
+            <Icon
+              icon={faChevronRight}
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

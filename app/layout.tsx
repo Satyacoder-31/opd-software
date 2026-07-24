@@ -1,6 +1,20 @@
 import type { Metadata } from "next";
+import { Fraunces, IBM_Plex_Sans } from "next/font/google";
+import "@/lib/fontawesome";
 import "./globals.css";
 import { SkipLink } from "@/components/ui/SkipLink";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  weight: ["600", "700"],
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-ibm-plex-sans",
+  weight: ["400", "500", "600"],
+});
 
 export const metadata: Metadata = {
   title: "Medyx — OPD EMR for Indian Clinics",
@@ -18,18 +32,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="font-sans">
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${ibmPlexSans.variable} font-sans`}
+    >
       <body>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
         <SkipLink />
         {children}
       </body>

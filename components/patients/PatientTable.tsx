@@ -4,17 +4,17 @@ import { useState, useTransition, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import type { Patient } from "@prisma/client";
 import {
-  ListPlusIcon,
-  SearchIcon,
-  UserRoundSearchIcon,
-  UsersIcon,
-} from "lucide-react";
+  faListOl,
+  faMagnifyingGlass,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 import { searchPatients, countPatients } from "@/actions/patients";
 import { createAppointment } from "@/actions/appointments";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Banner } from "@/components/ui/Banner";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
+import { SearchField } from "@/components/ui/SearchField";
 import { formatPhone } from "@/lib/utils";
 import { formatPatientAge } from "@/lib/date-utils";
 import { usePendingAction } from "@/hooks/usePendingAction";
@@ -141,20 +141,13 @@ export function PatientTable({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 px-5 pt-1">
-        <div className="relative">
-          <SearchIcon
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            name="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, phone, or MRN"
-            aria-label="Search by name, phone, or MRN"
-            className="pl-9"
-          />
-        </div>
+        <SearchField
+          name="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by name, phone, or MRN"
+          aria-label="Search by name, phone, or MRN"
+        />
 
         {searching && patients.length === 0 && (
           <p className="text-sm text-muted-foreground">Loading patients…</p>
@@ -169,7 +162,7 @@ export function PatientTable({
 
       {patients.length === 0 && !searching ? (
         <EmptyState
-          icon={query.trim() ? UserRoundSearchIcon : UsersIcon}
+          icon={query.trim() ? faMagnifyingGlass : faUsers}
           title={query.trim() ? "No patients match" : "No patients yet"}
           description={
             query.trim() ? (
@@ -210,15 +203,9 @@ export function PatientTable({
                       <div className="flex items-center gap-3 whitespace-nowrap">
                         <Link
                           href={`/patients/${patient.id}`}
-                          className="text-primary hover:underline"
+                          className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70"
                         >
                           View
-                        </Link>
-                        <Link
-                          href={`/patients/${patient.id}`}
-                          className="text-primary hover:underline"
-                        >
-                          Schedule
                         </Link>
                         {queuedPatientIds.has(patient.id) ? (
                           <span className="text-muted-foreground">In queue</span>
@@ -227,7 +214,7 @@ export function PatientTable({
                             type="button"
                             onClick={() => handleAddToQueue(patient.id)}
                             disabled={isQueuePending(patient.id)}
-                            className="inline-flex shrink-0 items-center gap-1.5 text-primary hover:underline disabled:opacity-50"
+                            className="inline-flex shrink-0 items-center gap-1.5 text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70 disabled:opacity-50"
                             aria-busy={isQueuePending(patient.id) || undefined}
                           >
                             {isQueuePending(patient.id) && (
@@ -236,7 +223,7 @@ export function PatientTable({
                                 aria-hidden
                               />
                             )}
-                            <ListPlusIcon className="size-3.5" aria-hidden />
+                            <Icon icon={faListOl} className="size-3.5" aria-hidden />
                             Add to queue
                           </button>
                         )}

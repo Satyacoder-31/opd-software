@@ -9,9 +9,11 @@ import {
 } from "@/actions/patients";
 import { createAppointment } from "@/actions/appointments";
 import { useServerActionForm } from "@/hooks/useServerActionForm";
+import { AgeField } from "@/components/patients/AgeField";
+import { GenderField } from "@/components/patients/GenderField";
 import { Button } from "@/components/ui/Button";
+import { DateField } from "@/components/ui/DateField";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Banner } from "@/components/ui/Banner";
 import { toDateInputValue } from "@/lib/date-utils";
@@ -86,7 +88,10 @@ function PatientFields({
           {duplicates.map((d, i) => (
             <span key={d.id}>
               {i > 0 ? "; " : ""}
-              <Link href={`/patients/${d.id}`} className="underline">
+              <Link
+                href={`/patients/${d.id}`}
+                className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70"
+              >
                 {d.name} ({d.mrn}, {d.phone})
               </Link>
             </span>
@@ -95,37 +100,29 @@ function PatientFields({
         </Banner>
       )}
       <div className="grid grid-cols-2 gap-4">
-        <Input
+        <DateField
           label="Date of birth"
           name="dateOfBirth"
-          type="date"
           value={values.dateOfBirth ?? ""}
-          onChange={(e) => setValue("dateOfBirth", e.target.value)}
+          onChange={(next) => {
+            setValue("dateOfBirth", next);
+            if (next) setValue("age", "");
+          }}
           error={fieldError("dateOfBirth")}
         />
-        <Input
-          label="Age (if DOB unknown)"
+        <AgeField
           name="age"
-          type="number"
-          min={0}
-          max={150}
           value={values.age ?? ""}
-          onChange={(e) => setValue("age", e.target.value)}
+          onChange={(next) => setValue("age", next)}
           error={fieldError("age")}
           disabled={!!values.dateOfBirth}
         />
       </div>
-      <Select
-        label="Gender"
+      <GenderField
         name="gender"
         value={values.gender ?? ""}
-        onChange={(e) => setValue("gender", e.target.value)}
-        options={[
-          { value: "", label: "Select…" },
-          { value: "male", label: "Male" },
-          { value: "female", label: "Female" },
-          { value: "other", label: "Other" },
-        ]}
+        onChange={(next) => setValue("gender", next)}
+        error={fieldError("gender")}
       />
       <Textarea
         label="Address"
@@ -292,16 +289,16 @@ function FormActions({
   isEdit: boolean;
 }) {
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap justify-end p-2 gap-3">
       {cancelHref && (
         <Link
           href={cancelHref}
-          className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-ink hover:bg-surface-muted"
+          className="inline-flex h-12 px-4 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-ink hover:bg-surface-muted"
         >
           Cancel
         </Link>
       )}
-      <Button type="submit" loading={pending}>
+      <Button className="h-12 px-4" type="submit" loading={pending}>
         {isEdit ? "Save changes" : "Register patient"}
       </Button>
     </div>

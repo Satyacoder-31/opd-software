@@ -1,14 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Gender, Role } from "@prisma/client";
+import { Gender } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import {
-  permissionDenied,
-  requireSessionUser,
-  roleAllowed,
-} from "@/lib/auth";
+import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { zodFieldErrors } from "@/lib/form-utils";
 import { logger } from "@/lib/logger";
@@ -17,9 +13,8 @@ import {
   clampPagination,
   DEFAULT_PATIENT_PAGE_SIZE,
 } from "@/lib/pagination";
+import { can } from "@/lib/rbac";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
-
-const PATIENT_ROLES: Role[] = [Role.admin, Role.doctor, Role.receptionist];
 
 const patientSchema = z.object({
   name: z.string().min(2),
@@ -83,7 +78,7 @@ export async function createPatient(
   formData: FormData
 ): Promise<ActionResult<{ id: string }>> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return permissionDenied();
+  if (!can(session, "patients.write")) return permissionDenied();
 
   const parsed = parsePatientForm(formData);
 
@@ -159,7 +154,7 @@ export async function updatePatient(
   formData: FormData
 ): Promise<VoidActionResult> {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return permissionDenied();
+  if (!can(session, "patients.write")) return permissionDenied();
 
   const parsed = parsePatientForm(formData);
 
@@ -226,7 +221,7 @@ export async function searchPatients(
   take = DEFAULT_PATIENT_PAGE_SIZE
 ) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return [];
+  if (!can(session, "patients.read")) return [];
 
   const { skip: safeSkip, take: safeTake } = clampPagination(skip, take);
   const trimmed = query.trim().slice(0, 100);
@@ -265,7 +260,7 @@ export async function searchPatients(
 
 export async function countPatients(query: string) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return 0;
+  if (!can(session, "patients.read")) return 0;
 
   const trimmed = query.trim().slice(0, 100);
 
@@ -287,7 +282,7 @@ export async function countPatients(query: string) {
 
 export async function getPatientById(id: string) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return null;
+  if (!can(session, "patients.read")) return null;
 
   const patient = await prisma.patient.findFirst({
     where: { id, clinicId: session.clinicId },
@@ -308,7 +303,7 @@ export async function getPatientById(id: string) {
 
 export async function getPatientHistory(patientId: string) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return null;
+  if (!can(session, "patients.read")) return null;
 
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, clinicId: session.clinicId },
@@ -348,7 +343,7 @@ export async function findPossibleDuplicatePatients(input: {
   excludeId?: string;
 }) {
   const session = await requireSessionUser();
-  if (!roleAllowed(session, PATIENT_ROLES)) return [];
+  if (!can(session, "patients.read")) return [];
 
   const name = input.name.trim().slice(0, 100);
   const phone = input.phone.trim().slice(0, 20);

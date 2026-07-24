@@ -15,6 +15,7 @@ export type AuditResourceType =
   | "user"
   | "clinic"
   | "fee_item"
+  | "drug_catalog_item"
   | "prescription_template"
   | "consultation_attachment";
 

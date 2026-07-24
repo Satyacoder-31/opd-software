@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
+import { can, type Permission } from "@/lib/rbac";
 import type { SessionUser } from "@/lib/types";
 
 export const PENDING_AUTH_PREFIX = "pending:";
@@ -141,6 +142,15 @@ export function requireRole(session: SessionUser, allowed: Role[]): void {
 
 export function roleAllowed(session: SessionUser, allowed: Role[]): boolean {
   return allowed.includes(session.role);
+}
+
+export function requirePermission(
+  session: SessionUser,
+  permission: Permission
+): void {
+  if (!can(session, permission)) {
+    redirect("/queue");
+  }
 }
 
 export function permissionDenied() {

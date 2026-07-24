@@ -98,7 +98,7 @@ const faqs = [
   {
     question: "How does the token queue work?",
     answer:
-      "Reception issues a daily token for each walk-in or appointment. The queue board updates in real time across all logged-in devices, so every desk sees who's waiting, in consultation, or done.",
+      "Reception issues a daily token for each walk-in. The queue board updates in real time across all logged-in devices, so every desk sees who's waiting, in consultation, or done.",
   },
   {
     question: "Can multiple staff use it at the same time?",
@@ -117,6 +117,18 @@ const faqs = [
   },
 ];
 
+const ctaStyles = {
+  primary:
+    "bg-primary text-white hover:bg-primary/90 focus-visible:ring-primary shadow-lg shadow-primary/20",
+  secondary:
+    "border border-border bg-white/90 text-ink shadow-sm backdrop-blur-sm hover:bg-white focus-visible:ring-primary",
+  /* For rich, dark bands */
+  accent:
+    "bg-accent text-ink hover:bg-accent/90 focus-visible:ring-white shadow-lg shadow-black/25",
+  "outline-light":
+    "border border-white/40 text-white backdrop-blur-sm hover:bg-white/10 focus-visible:ring-white",
+} as const;
+
 function CtaButton({
   href,
   children,
@@ -124,17 +136,13 @@ function CtaButton({
 }: {
   href: string;
   children: React.ReactNode;
-  variant?: "primary" | "secondary";
+  variant?: keyof typeof ctaStyles;
 }) {
   const base =
-    "inline-flex h-12 items-center justify-center rounded-xl px-8 text-base font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
-  const styles =
-    variant === "primary"
-      ? "bg-primary text-white hover:bg-primary/90 focus-visible:ring-primary shadow-lg shadow-primary/20"
-      : "border border-border bg-white/90 text-ink shadow-sm backdrop-blur-sm hover:bg-white focus-visible:ring-primary";
+    "inline-flex h-12 items-center justify-center rounded-xl px-8 text-base font-medium transition-[color,background-color,transform] duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
 
   return (
-    <Link href={href} className={`${base} ${styles}`}>
+    <Link href={href} className={`${base} ${ctaStyles[variant]}`}>
       {children}
     </Link>
   );
@@ -142,29 +150,31 @@ function CtaButton({
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div id="main-content" className="min-h-screen bg-background text-foreground">
       <LandingNav />
 
-      {/* Hero — bold sky-blue wash like MyFitnessPal */}
+      {/* Hero — deep ocean-blue band, white type, amber CTA */}
       <section className="relative overflow-hidden tint-hero">
-        <div className="landing-grain pointer-events-none absolute inset-0 opacity-50" />
+        <div className="landing-grain pointer-events-none absolute inset-0 opacity-60" />
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-20">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-white/70 px-4 py-1.5 text-sm font-medium text-primary shadow-sm backdrop-blur-sm">
-              <span className="size-2 rounded-full bg-success" />
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm">
+              <span className="size-2 rounded-full bg-accent" />
               Modern OPD &amp; EMR Platform
             </p>
-            <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-white text-balance sm:text-5xl lg:text-6xl">
               The Complete OPD &amp; EMR Platform for Modern Clinics.
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-white/80 sm:text-xl">
               The all-in-one queue, patient records, consultation, and billing
               platform for small OPD practices.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <CtaButton href="/signup">Start today — it&apos;s free</CtaButton>
-              <CtaButton href="/login" variant="secondary">
+              <CtaButton href="/signup" variant="accent">
+                Start today — it&apos;s free
+              </CtaButton>
+              <CtaButton href="/login" variant="outline-light">
                 Sign in to your clinic
               </CtaButton>
             </div>
@@ -173,7 +183,7 @@ export function LandingPage() {
       </section>
 
       {/* Integrations / capabilities */}
-      <section className="bg-primary py-16 text-white sm:py-20">
+      <section className="tint-band py-16 text-white sm:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-display text-3xl font-semibold sm:text-4xl">
@@ -197,13 +207,13 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Feature sections with images */}
-      <section id="features" className="tint-soft py-20 sm:py-28">
+      {/* Feature sections with images — warm ochre band, white cards */}
+      <section id="features" className="tint-band-warm py-20 sm:py-28">
         <div className="mx-auto max-w-6xl space-y-24 px-4 sm:px-6">
           {features.map((feature, i) => (
             <div
               key={feature.title}
-              className={`flex flex-col items-center gap-12 rounded-3xl border border-border/60 bg-white/80 p-6 shadow-sm backdrop-blur-sm sm:p-10 lg:gap-16 ${
+              className={`flex flex-col items-center gap-12 rounded-3xl bg-white p-6 shadow-lg shadow-black/10 sm:p-10 lg:gap-16 ${
                 i % 2 === 1 ? "lg:flex-row-reverse" : "lg:flex-row"
               }`}
             >
@@ -256,19 +266,21 @@ export function LandingPage() {
             queue, prescriptions, and billing in one secure place.
           </p>
           <div className="mt-10">
-            <CtaButton href="/signup">Get started free</CtaButton>
+            <CtaButton href="/signup" variant="accent">
+              Get started free
+            </CtaButton>
           </div>
         </div>
       </section>
 
-      {/* Success stories */}
-      <section id="stories" className="tint-band-strong py-20 sm:py-28">
+      {/* Success stories — rich blue band, white cards */}
+      <section id="stories" className="tint-band py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-ink sm:text-4xl">
+            <h2 className="font-display text-3xl font-semibold text-white sm:text-4xl">
               Clinics that made the switch
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p className="mt-4 text-lg text-white/80">
               Real practices. Real mornings without the paper chase.
             </p>
           </div>
@@ -277,7 +289,7 @@ export function LandingPage() {
             {stories.map((story) => (
               <blockquote
                 key={story.name}
-                className="flex flex-col rounded-2xl border border-border bg-white p-8 shadow-sm"
+                className="flex flex-col rounded-2xl bg-white p-8 shadow-lg shadow-black/15"
               >
                 <p className="flex-1 text-lg text-ink">{story.quote}</p>
                 <footer className="mt-6 border-t border-border pt-6">
@@ -290,49 +302,42 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="bg-white py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center text-white shadow-xl shadow-primary/25 sm:px-16">
-            <h2 className="font-display text-3xl font-semibold sm:text-4xl">
-              Starting is the hard part. We make it easy.
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-white/85">
-              Register your clinic, invite your team, and issue your first token
-              today. No credit card required.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                href="/signup"
-                className="inline-flex h-12 items-center justify-center rounded-xl bg-white px-8 text-base font-medium text-primary transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-              >
-                Register your clinic
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-white/30 px-8 text-base font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
-              >
-                I already have an account
-              </Link>
-            </div>
+      {/* Final CTA — full-bleed rich band */}
+      <section className="relative overflow-hidden tint-hero py-20 sm:py-28">
+        <div className="landing-grain pointer-events-none absolute inset-0 opacity-40" />
+        <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
+          <h2 className="font-display text-3xl font-semibold text-white text-balance sm:text-4xl">
+            Starting is the hard part. We make it easy.
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg text-white/80">
+            Register your clinic, invite your team, and issue your first token
+            today. No credit card required.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <CtaButton href="/signup" variant="accent">
+              Register your clinic
+            </CtaButton>
+            <CtaButton href="/login" variant="outline-light">
+              I already have an account
+            </CtaButton>
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="border-t border-border tint-band py-20 sm:py-28">
+      {/* FAQ — rich blue band, white accordion */}
+      <section id="faq" className="tint-band py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-ink sm:text-4xl">
+            <h2 className="font-display text-3xl font-semibold text-white sm:text-4xl">
               Questions &amp; answers
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p className="mt-4 text-lg text-white/80">
               Quick answers about getting started, the queue, and your data.
             </p>
           </div>
 
           <div className="mx-auto mt-14 max-w-3xl">
-            <Accordion className="rounded-2xl border border-border bg-white px-6">
+            <Accordion className="rounded-2xl bg-white px-6 shadow-lg shadow-black/15">
               {faqs.map((faq, i) => (
                 <AccordionItem
                   key={faq.question}
@@ -353,7 +358,7 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-ink py-12 text-white">
+      <footer className="bg-surface-deep py-12 text-white">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex flex-col items-center justify-between gap-8 sm:flex-row">
             <div>

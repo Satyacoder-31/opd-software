@@ -1,44 +1,11 @@
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  StyleSheet,
-} from "@react-pdf/renderer";
+import React from "react";
+import { Document, Page, Text, View } from "@react-pdf/renderer";
+import type { Style } from "@react-pdf/types";
 import type { Medicine } from "@/lib/types";
-
-const styles = StyleSheet.create({
-  page: { padding: 48, fontSize: 10, fontFamily: "Helvetica", color: "#1A2332" },
-  rule: { borderBottom: "1px solid #CBD5E1", marginVertical: 14 },
-  header: { alignItems: "center", marginBottom: 4 },
-  clinicName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: "#1A85C8",
-  },
-  clinicMeta: { fontSize: 9, color: "#5C6B7A", marginTop: 6, textAlign: "center" },
-  doctorBlock: { marginTop: 16, marginBottom: 4 },
-  doctorName: { fontSize: 11, fontWeight: "bold" },
-  doctorMeta: { fontSize: 9, color: "#5C6B7A", marginTop: 2 },
-  fieldRow: { marginBottom: 5 },
-  fieldLabel: { fontSize: 9, color: "#5C6B7A", marginBottom: 2 },
-  fieldValue: { fontSize: 10 },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#1A2332",
-  },
-  medicineBlock: { marginBottom: 12 },
-  medicineTitle: { fontSize: 10, fontWeight: "bold", marginBottom: 4 },
-  medicineLine: { fontSize: 10, color: "#334155", marginLeft: 12, marginBottom: 2 },
-  bullet: { fontSize: 10, marginLeft: 8, marginBottom: 3, color: "#334155" },
-  signatureBlock: { marginTop: 28, alignItems: "flex-end" },
-  signatureName: { fontSize: 10, fontWeight: "bold" },
-  signatureLabel: { fontSize: 8, color: "#5C6B7A", marginTop: 2 },
-});
+import {
+  resolvePrescriptionLayout,
+  type PrescriptionLayoutConfig,
+} from "@/lib/prescription-layouts";
 
 export type PrescriptionPdfProps = {
   clinicName: string;
@@ -57,7 +24,25 @@ export type PrescriptionPdfProps = {
   medicines: Medicine[];
   advice?: string;
   followUp?: string;
+  /** Visual layout id from the prescription layout registry. */
+  layout?: string | null;
 };
+
+type Theme = {
+  layout: PrescriptionLayoutConfig;
+  body: string;
+  bold: string;
+};
+
+function buildTheme(layoutId?: string | null): Theme {
+  const layout = resolvePrescriptionLayout(layoutId);
+  const serif = layout.font === "Times-Roman";
+  return {
+    layout,
+    body: layout.font,
+    bold: serif ? "Times-Bold" : "Helvetica-Bold",
+  };
+}
 
 function parseAdviceLines(advice?: string): string[] {
   if (!advice?.trim()) return [];
@@ -67,130 +52,797 @@ function parseAdviceLines(advice?: string): string[] {
     .filter(Boolean);
 }
 
-export function PrescriptionDocument({
-  clinicName,
-  clinicPhone,
-  clinicAddress,
-  doctorName,
-  doctorQualifications,
-  doctorRegistrationNo,
-  date,
-  patientName,
-  patientAge,
-  patientGender,
-  patientMrn,
-  patientPhone,
-  diagnosis,
+/* ------------------------------- Header ------------------------------- */
+
+function DoctorLines({
+  theme,
+  props,
+  align,
+  color,
+  mutedColor,
+}: {
+  theme: Theme;
+  props: PrescriptionPdfProps;
+  align: "left" | "right" | "center";
+  color: string;
+  mutedColor: string;
+}) {
+  const meta: Style = {
+    fontSize: 8.5,
+    color: mutedColor,
+    marginTop: 2,
+    textAlign: align,
+  };
+  return (
+    <View>
+      <Text
+        style={{
+          fontSize: 11,
+          fontFamily: theme.bold,
+          color,
+          textAlign: align,
+        }}
+      >
+        Dr. {props.doctorName}
+      </Text>
+      {props.doctorQualifications ? (
+        <Text style={meta}>{props.doctorQualifications}</Text>
+      ) : null}
+      {props.doctorRegistrationNo ? (
+        <Text style={meta}>Reg. No: {props.doctorRegistrationNo}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps }) {
+  const { colors } = theme.layout;
+  const clinicMeta = `${props.clinicAddress}  ·  ${props.clinicPhone}`;
+
+  switch (theme.layout.header) {
+    case "banner": {
+      const onBanner = colors.headerText ?? "#FFFFFF";
+      return (
+        <View
+          style={{
+            backgroundColor: colors.accent,
+            paddingVertical: 22,
+            paddingHorizontal: 48,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+          }}
+        >
+          <View style={{ maxWidth: 300 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: theme.bold,
+                color: onBanner,
+                letterSpacing: 0.8,
+                textTransform: "uppercase",
+              }}
+            >
+              {props.clinicName}
+            </Text>
+            <Text style={{ fontSize: 8.5, color: onBanner, opacity: 0.85, marginTop: 5 }}>
+              {clinicMeta}
+            </Text>
+          </View>
+          <DoctorLines
+            theme={theme}
+            props={props}
+            align="right"
+            color={onBanner}
+            mutedColor={onBanner}
+          />
+        </View>
+      );
+    }
+
+    case "split":
+      return (
+        <View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+            }}
+          >
+            <View style={{ maxWidth: 300 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontFamily: theme.bold,
+                  color: colors.accent,
+                  letterSpacing: 0.6,
+                }}
+              >
+                {props.clinicName}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
+                {clinicMeta}
+              </Text>
+            </View>
+            <DoctorLines
+              theme={theme}
+              props={props}
+              align="right"
+              color={theme.layout.colors.ink}
+              mutedColor={colors.muted}
+            />
+          </View>
+          <View
+            style={{
+              borderBottom: `2px solid ${colors.accent}`,
+              marginTop: 14,
+            }}
+          />
+        </View>
+      );
+
+    case "sideband":
+      return (
+        <View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+            }}
+          >
+            <View style={{ maxWidth: 300 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontFamily: theme.bold,
+                  color: colors.accent,
+                  letterSpacing: 0.6,
+                }}
+              >
+                {props.clinicName}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
+                {clinicMeta}
+              </Text>
+            </View>
+            <DoctorLines
+              theme={theme}
+              props={props}
+              align="right"
+              color={theme.layout.colors.ink}
+              mutedColor={colors.muted}
+            />
+          </View>
+          <View
+            style={{ borderBottom: `1px solid ${colors.rule}`, marginTop: 14 }}
+          />
+        </View>
+      );
+
+    case "minimal":
+      return (
+        <View>
+          <Text
+            style={{
+              fontSize: 13,
+              fontFamily: theme.bold,
+              color: colors.ink,
+              letterSpacing: 1.6,
+              textTransform: "uppercase",
+            }}
+          >
+            {props.clinicName}
+          </Text>
+          <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 4 }}>
+            {clinicMeta}
+          </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              marginTop: 18,
+            }}
+          >
+            <DoctorLines
+              theme={theme}
+              props={props}
+              align="left"
+              color={colors.ink}
+              mutedColor={colors.muted}
+            />
+          </View>
+          <View
+            style={{ borderBottom: `0.75px solid ${colors.rule}`, marginTop: 12 }}
+          />
+        </View>
+      );
+
+    case "double-rule":
+      return (
+        <View>
+          <View style={{ alignItems: "center" }}>
+            <Text
+              style={{
+                fontSize: 17,
+                fontFamily: theme.bold,
+                color: colors.accent,
+                letterSpacing: 1.4,
+                textTransform: "uppercase",
+              }}
+            >
+              {props.clinicName}
+            </Text>
+            <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
+              {clinicMeta}
+            </Text>
+          </View>
+          <View
+            style={{ borderBottom: `2.5px solid ${colors.accent}`, marginTop: 12 }}
+          />
+          <View
+            style={{ borderBottom: `0.75px solid ${colors.accent}`, marginTop: 2 }}
+          />
+          <View style={{ marginTop: 12 }}>
+            <DoctorLines
+              theme={theme}
+              props={props}
+              align="left"
+              color={colors.ink}
+              mutedColor={colors.muted}
+            />
+          </View>
+        </View>
+      );
+
+    case "centered":
+    default:
+      return (
+        <View>
+          <View style={{ alignItems: "center" }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontFamily: theme.bold,
+                color: colors.accent,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+              }}
+            >
+              {props.clinicName}
+            </Text>
+            <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
+              {clinicMeta}
+            </Text>
+          </View>
+          <View
+            style={{ borderBottom: `1px solid ${colors.rule}`, marginVertical: 12 }}
+          />
+          <DoctorLines
+            theme={theme}
+            props={props}
+            align="left"
+            color={colors.ink}
+            mutedColor={colors.muted}
+          />
+        </View>
+      );
+  }
+}
+
+/* ---------------------------- Patient info ---------------------------- */
+
+type PatientField = { label: string; value: string };
+
+function patientFields(props: PrescriptionPdfProps): PatientField[] {
+  const fields: PatientField[] = [
+    { label: "Patient", value: props.patientName },
+  ];
+  if (props.patientAge) fields.push({ label: "Age", value: props.patientAge });
+  if (props.patientGender)
+    fields.push({ label: "Gender", value: props.patientGender });
+  fields.push({ label: "MRN", value: props.patientMrn });
+  fields.push({ label: "Phone", value: props.patientPhone });
+  fields.push({ label: "Date", value: props.date });
+  return fields;
+}
+
+function FieldLabelValue({
+  theme,
+  field,
+  minWidth,
+}: {
+  theme: Theme;
+  field: PatientField;
+  minWidth?: number;
+}) {
+  const { colors } = theme.layout;
+  return (
+    <View style={{ minWidth, marginRight: 14, marginBottom: 4 }}>
+      <Text
+        style={{
+          fontSize: 7,
+          color: colors.muted,
+          textTransform: "uppercase",
+          letterSpacing: 0.7,
+          marginBottom: 2,
+        }}
+      >
+        {field.label}
+      </Text>
+      <Text style={{ fontSize: 9.5, color: colors.ink, fontFamily: theme.body }}>
+        {field.value}
+      </Text>
+    </View>
+  );
+}
+
+function PatientInfo({
+  theme,
+  props,
+}: {
+  theme: Theme;
+  props: PrescriptionPdfProps;
+}) {
+  const { colors } = theme.layout;
+  const fields = patientFields(props);
+
+  if (theme.layout.patientInfo === "strip") {
+    return (
+      <View
+        style={{
+          backgroundColor: colors.soft,
+          borderRadius: 4,
+          paddingHorizontal: 12,
+          paddingTop: 9,
+          paddingBottom: 5,
+          flexDirection: "row",
+          flexWrap: "wrap",
+        }}
+      >
+        {fields.map((field) => (
+          <FieldLabelValue key={field.label} theme={theme} field={field} />
+        ))}
+      </View>
+    );
+  }
+
+  if (theme.layout.patientInfo === "boxed") {
+    return (
+      <View
+        style={{
+          border: `1px solid ${colors.rule}`,
+          borderRadius: 4,
+          paddingHorizontal: 12,
+          paddingTop: 9,
+          paddingBottom: 5,
+          flexDirection: "row",
+          flexWrap: "wrap",
+        }}
+      >
+        {fields.map((field) => (
+          <FieldLabelValue
+            key={field.label}
+            theme={theme}
+            field={field}
+            minWidth={110}
+          />
+        ))}
+      </View>
+    );
+  }
+
+  // grid
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+      {fields.map((field) => (
+        <FieldLabelValue
+          key={field.label}
+          theme={theme}
+          field={field}
+          minWidth={150}
+        />
+      ))}
+    </View>
+  );
+}
+
+/* ----------------------------- Medicines ------------------------------ */
+
+function SectionTitle({ theme, children }: { theme: Theme; children: string }) {
+  const { colors } = theme.layout;
+  return (
+    <Text
+      style={{
+        fontSize: 8,
+        fontFamily: theme.bold,
+        color: colors.accent,
+        textTransform: "uppercase",
+        letterSpacing: 1.2,
+        marginBottom: 7,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+function RxMark({ theme }: { theme: Theme }) {
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-end",
+        marginBottom: 8,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 18,
+          fontFamily:
+            theme.layout.font === "Times-Roman" ? "Times-BoldItalic" : theme.bold,
+          color: theme.layout.colors.accent,
+        }}
+      >
+        Rx
+      </Text>
+    </View>
+  );
+}
+
+function MedicinesTable({
+  theme,
   medicines,
-  advice,
-  followUp,
-}: PrescriptionPdfProps) {
-  const adviceLines = parseAdviceLines(advice);
+}: {
+  theme: Theme;
+  medicines: Medicine[];
+}) {
+  const { colors } = theme.layout;
+  const headCell: Style = {
+    fontSize: 7.5,
+    fontFamily: theme.bold,
+    color: colors.accent,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  };
+  const cell: Style = { fontSize: 9.5, color: colors.ink };
+
+  return (
+    <View>
+      <View
+        style={{
+          flexDirection: "row",
+          borderBottom: `1.5px solid ${colors.accent}`,
+          paddingBottom: 5,
+          marginBottom: 2,
+        }}
+      >
+        <Text style={[headCell, { width: 22 }]}>#</Text>
+        <Text style={[headCell, { flex: 2.4 }]}>Medicine</Text>
+        <Text style={[headCell, { flex: 1.1 }]}>Dosage</Text>
+        <Text style={[headCell, { flex: 1.1 }]}>Route</Text>
+        <Text style={[headCell, { flex: 1.4 }]}>Frequency</Text>
+        <Text style={[headCell, { flex: 1.0 }]}>Duration</Text>
+        <Text style={[headCell, { flex: 0.7 }]}>Qty</Text>
+      </View>
+      {medicines.map((med, i) => (
+        <View
+          key={i}
+          wrap={false}
+          style={{
+            borderBottom:
+              i < medicines.length - 1 ? `0.75px solid ${colors.rule}` : undefined,
+            paddingVertical: 6,
+          }}
+        >
+          <View style={{ flexDirection: "row" }}>
+            <Text style={[cell, { width: 22, color: colors.muted }]}>
+              {i + 1}
+            </Text>
+            <Text style={[cell, { flex: 2.4, fontFamily: theme.bold }]}>
+              {med.name}
+            </Text>
+            <Text style={[cell, { flex: 1.1 }]}>{med.dosage || "—"}</Text>
+            <Text style={[cell, { flex: 1.1 }]}>{med.route || "—"}</Text>
+            <Text style={[cell, { flex: 1.4 }]}>{med.frequency || "—"}</Text>
+            <Text style={[cell, { flex: 1.0 }]}>{med.duration || "—"}</Text>
+            <Text style={[cell, { flex: 0.7 }]}>{med.quantity || "—"}</Text>
+          </View>
+          {med.instructions ? (
+            <Text
+              style={{
+                fontSize: 8.5,
+                color: colors.muted,
+                marginLeft: 22,
+                marginTop: 3,
+              }}
+            >
+              {med.instructions}
+            </Text>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function MedicinesList({
+  theme,
+  medicines,
+}: {
+  theme: Theme;
+  medicines: Medicine[];
+}) {
+  const { colors } = theme.layout;
+  return (
+    <View>
+      {medicines.map((med, i) => {
+        const details = [
+          med.dosage,
+          med.route,
+          med.frequency,
+          med.duration,
+          med.quantity ? `Qty ${med.quantity}` : null,
+        ]
+          .filter(Boolean)
+          .join("  ·  ");
+        return (
+          <View key={i} wrap={false} style={{ marginBottom: 10 }}>
+            <Text
+              style={{
+                fontSize: 10,
+                fontFamily: theme.bold,
+                color: colors.ink,
+              }}
+            >
+              {i + 1}.  {med.name}
+            </Text>
+            {details ? (
+              <Text
+                style={{
+                  fontSize: 9.5,
+                  color: colors.ink,
+                  marginLeft: 16,
+                  marginTop: 3,
+                }}
+              >
+                {details}
+              </Text>
+            ) : null}
+            {med.instructions ? (
+              <Text
+                style={{
+                  fontSize: 8.5,
+                  color: colors.muted,
+                  marginLeft: 16,
+                  marginTop: 2,
+                }}
+              >
+                {med.instructions}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function MedicinesCards({
+  theme,
+  medicines,
+}: {
+  theme: Theme;
+  medicines: Medicine[];
+}) {
+  const { colors } = theme.layout;
+  return (
+    <View>
+      {medicines.map((med, i) => {
+        const details = [
+          med.dosage,
+          med.route,
+          med.frequency,
+          med.duration,
+          med.quantity ? `Qty ${med.quantity}` : null,
+        ]
+          .filter(Boolean)
+          .join("  ·  ");
+        return (
+          <View
+            key={i}
+            wrap={false}
+            style={{
+              backgroundColor: colors.soft,
+              borderRadius: 4,
+              borderLeft: `2.5px solid ${colors.accent}`,
+              paddingVertical: 8,
+              paddingHorizontal: 11,
+              marginBottom: 7,
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <Text
+                style={{ fontSize: 10, fontFamily: theme.bold, color: colors.ink }}
+              >
+                {i + 1}.  {med.name}
+              </Text>
+              {med.duration ? (
+                <Text style={{ fontSize: 8.5, color: colors.muted }}>
+                  {med.duration}
+                </Text>
+              ) : null}
+            </View>
+            {details ? (
+              <Text style={{ fontSize: 9, color: colors.ink, marginTop: 4 }}>
+                {[med.dosage, med.route, med.frequency]
+                  .filter(Boolean)
+                  .join("  ·  ")}
+                {med.quantity ? `  ·  Qty ${med.quantity}` : ""}
+              </Text>
+            ) : null}
+            {med.instructions ? (
+              <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 3 }}>
+                {med.instructions}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function Medicines({
+  theme,
+  medicines,
+}: {
+  theme: Theme;
+  medicines: Medicine[];
+}) {
+  switch (theme.layout.medicines) {
+    case "table":
+      return <MedicinesTable theme={theme} medicines={medicines} />;
+    case "cards":
+      return <MedicinesCards theme={theme} medicines={medicines} />;
+    case "list":
+    default:
+      return <MedicinesList theme={theme} medicines={medicines} />;
+  }
+}
+
+/* ------------------------------ Document ------------------------------ */
+
+export function PrescriptionDocument(props: PrescriptionPdfProps) {
+  const theme = buildTheme(props.layout);
+  const { colors, header } = theme.layout;
+  const adviceLines = parseAdviceLines(props.advice);
+
+  const isBanner = header === "banner";
+  const isSideband = header === "sideband";
+
+  const pageStyle: Style = {
+    fontSize: 10,
+    fontFamily: theme.body,
+    color: colors.ink,
+    paddingTop: isBanner ? 0 : 44,
+    paddingBottom: 44,
+    paddingLeft: isBanner ? 0 : isSideband ? 58 : 48,
+    paddingRight: isBanner ? 0 : 48,
+  };
+
+  const bodyStyle: Style = isBanner
+    ? { paddingTop: 24, paddingHorizontal: 48 }
+    : {};
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.clinicName}>{clinicName}</Text>
-          <Text style={styles.clinicMeta}>
-            {clinicAddress} | {clinicPhone}
-          </Text>
-        </View>
-
-        <View style={styles.rule} />
-
-        <View style={styles.doctorBlock}>
-          <Text style={styles.doctorName}>Dr. {doctorName}</Text>
-          {doctorQualifications ? (
-            <Text style={styles.doctorMeta}>{doctorQualifications}</Text>
-          ) : null}
-          {doctorRegistrationNo ? (
-            <Text style={styles.doctorMeta}>Reg. No: {doctorRegistrationNo}</Text>
-          ) : null}
-        </View>
-
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Date</Text>
-          <Text style={styles.fieldValue}>{date}</Text>
-        </View>
-
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Patient</Text>
-          <Text style={styles.fieldValue}>{patientName}</Text>
-        </View>
-        {patientAge ? (
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>Age</Text>
-            <Text style={styles.fieldValue}>{patientAge}</Text>
-          </View>
+      <Page size="A4" style={pageStyle}>
+        {isSideband ? (
+          <View
+            fixed
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: 14,
+              backgroundColor: colors.accent,
+            }}
+          />
         ) : null}
-        {patientGender ? (
-          <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>Gender</Text>
-            <Text style={styles.fieldValue}>{patientGender}</Text>
+
+        <Header theme={theme} props={props} />
+
+        <View style={bodyStyle}>
+          <View style={{ marginTop: isBanner ? 0 : 16 }}>
+            <PatientInfo theme={theme} props={props} />
           </View>
-        ) : null}
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>MRN</Text>
-          <Text style={styles.fieldValue}>{patientMrn}</Text>
-        </View>
-        <View style={styles.fieldRow}>
-          <Text style={styles.fieldLabel}>Phone</Text>
-          <Text style={styles.fieldValue}>{patientPhone}</Text>
-        </View>
 
-        <View style={{ marginTop: 10, marginBottom: 4 }}>
-          <Text style={styles.fieldLabel}>Diagnosis</Text>
-          <Text style={styles.fieldValue}>{diagnosis || "—"}</Text>
-        </View>
-
-        <View style={styles.rule} />
-
-        <Text style={styles.sectionTitle}>Rx</Text>
-        {medicines.map((med, i) => (
-          <View key={i} style={styles.medicineBlock}>
-            <Text style={styles.medicineTitle}>
-              {i + 1}. {med.name}
+          <View style={{ marginTop: 14 }}>
+            <SectionTitle theme={theme}>Diagnosis</SectionTitle>
+            <Text style={{ fontSize: 10, color: colors.ink }}>
+              {props.diagnosis || "—"}
             </Text>
-            {med.dosage ? (
-              <Text style={styles.medicineLine}>- {med.dosage}</Text>
-            ) : null}
-            {med.frequency ? (
-              <Text style={styles.medicineLine}>- {med.frequency}</Text>
-            ) : null}
-            {med.duration ? (
-              <Text style={styles.medicineLine}>- {med.duration}</Text>
-            ) : null}
-            {med.instructions ? (
-              <Text style={styles.medicineLine}>- {med.instructions}</Text>
-            ) : null}
           </View>
-        ))}
 
-        {adviceLines.length > 0 ? (
-          <View style={{ marginTop: 8 }}>
-            <Text style={styles.sectionTitle}>Advice</Text>
-            {adviceLines.map((line, i) => (
-              <Text key={i} style={styles.bullet}>
-                • {line}
+          <View style={{ marginTop: 18 }}>
+            <RxMark theme={theme} />
+            <Medicines theme={theme} medicines={props.medicines} />
+          </View>
+
+          {adviceLines.length > 0 ? (
+            <View style={{ marginTop: 16 }}>
+              <SectionTitle theme={theme}>Advice</SectionTitle>
+              {adviceLines.map((line, i) => (
+                <Text
+                  key={i}
+                  style={{
+                    fontSize: 9.5,
+                    color: colors.ink,
+                    marginBottom: 3,
+                    marginLeft: 4,
+                  }}
+                >
+                  •  {line}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {props.followUp?.trim() ? (
+            <View style={{ marginTop: 14 }}>
+              <SectionTitle theme={theme}>Follow-up</SectionTitle>
+              <Text style={{ fontSize: 9.5, color: colors.ink }}>
+                {props.followUp.trim()}
               </Text>
-            ))}
-          </View>
-        ) : null}
+            </View>
+          ) : null}
 
-        {followUp?.trim() ? (
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.sectionTitle}>Follow-up</Text>
-            <Text style={styles.fieldValue}>{followUp.trim()}</Text>
+          <View wrap={false} style={{ marginTop: 36, alignItems: "flex-end" }}>
+            <View
+              style={{
+                borderTop: `0.75px solid ${colors.muted}`,
+                paddingTop: 6,
+                minWidth: 150,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 9.5, fontFamily: theme.bold }}>
+                Dr. {props.doctorName}
+              </Text>
+              <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 2 }}>
+                Digital signature
+              </Text>
+            </View>
           </View>
-        ) : null}
-
-        <View style={styles.signatureBlock}>
-          <Text style={styles.signatureName}>Dr. {doctorName}</Text>
-          <Text style={styles.signatureLabel}>(Digital Signature)</Text>
         </View>
 
-        <View style={[styles.rule, { marginTop: 20 }]} />
+        <View
+          fixed
+          style={{
+            position: "absolute",
+            bottom: 22,
+            left: isSideband ? 58 : 48,
+            right: 48,
+            borderTop: `0.75px solid ${colors.rule}`,
+            paddingTop: 6,
+            flexDirection: "row",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={{ fontSize: 7, color: colors.muted }}>
+            {props.clinicName} · {props.clinicPhone}
+          </Text>
+          <Text
+            style={{ fontSize: 7, color: colors.muted }}
+            render={({ pageNumber, totalPages }) =>
+              `Page ${pageNumber} of ${totalPages}`
+            }
+          />
+        </View>
       </Page>
     </Document>
   );
