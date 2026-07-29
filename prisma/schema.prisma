@@ -52,11 +52,13 @@ enum PaymentMode {
   upi
   card
   other
+  online
 }
 
 enum InvoiceStatus {
   draft
   paid
+  partial
   void
 }
 
@@ -68,44 +70,161 @@ enum AuditAction {
   export
 }
 
+enum NotificationChannel {
+  sms
+  whatsapp
+}
+
+enum NotificationStatus {
+  pending
+  sent
+  failed
+  skipped
+}
+
+enum LabOrderStatus {
+  ordered
+  collected
+  completed
+  cancelled
+}
+
+enum LabItemStatus {
+  pending
+  collected
+  resulted
+  cancelled
+}
+
+enum InvoicePaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum BookingSource {
+  walkin
+  staff
+  portal
+}
+
+enum ClinicType {
+  solo
+  multi_doctor
+  polyclinic
+  specialty
+  hospital_opd
+}
+
+enum BusinessEntity {
+  sole_prop
+  partnership
+  pvt_ltd
+  trust
+  other
+}
+
 model Clinic {
   id                 String             @id @default(uuid())
   name               String
   phone              String
   address            String
+  /// Structured address (legacy `address` kept in sync as display string)
+  addressLine1       String?
+  addressLine2       String?
+  area               String?
+  state              String?
+  pincode            String?
+  /// Patient-facing clinic contact email
+  email              String?
+  /// Optional WhatsApp / alternate phone
+  whatsapp           String?
   gstin              String?
+  pan                String?
+  businessEntity     BusinessEntity?
+  /// Public URL slug for /clinics/[slug]
+  slug               String?            @unique
+  /// Opt-in to appear in the public clinic directory
+  isPublicListed     Boolean            @default(false)
+  description        String?
+  specialties        String[]           @default([])
+  city               String?
+  languages          String[]           @default([])
+  facilities         String[]           @default([])
+  /// Allow patients to self-book via portal when listed
+  bookingEnabled     Boolean            @default(true)
+  /// Hours before slot start when cancel/reschedule is blocked
+  cancelCutoffHours  Int                @default(2)
   prescriptionLayout String             @default("classic")
   nextInvoiceSeq     Int                @default(1)
   plan               Plan               @default(free)
   subscriptionStatus SubscriptionStatus @default(trialing)
+  /// Messaging provider config (API keys, sender ID, opt-ins). Secrets preferably via env.
+  messagingConfig    Json?
+  razorpayKeyId      String?
+  /// Set when Critical onboarding wizard is finished
+  onboardingCompletedAt DateTime?
+  /// Soft-skip: user left wizard without completing; banner stays until completed
+  onboardingSkippedAt   DateTime?
+  clinicType         ClinicType         @default(solo)
+  logoUrl            String?
+  /// Front-desk hours: [{ dayOfWeek, open, close, closed }]
+  clinicHours        Json?
+  website            String?
+  mapsUrl            String?
+  landmark           String?
+  /// WGS84 latitude from device / maps pin
+  latitude           Float?
+  /// WGS84 longitude from device / maps pin
+  longitude          Float?
+  timezone           String             @default("Asia/Kolkata")
+  termsAcceptedAt    DateTime?
+  termsVersion       String?
+  /// Required before enabling public listing
+  phoneVerifiedAt    DateTime?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  users                  User[]
-  patients               Patient[]
-  appointments           Appointment[]
-  consultations          Consultation[]
-  prescriptions          Prescription[]
-  invoices               Invoice[]
-  auditLogs              AuditLog[]
-  feeItems               FeeItem[]
-  drugCatalogItems       DrugCatalogItem[]
-  prescriptionTemplates  PrescriptionTemplate[]
+  users                   User[]
+  patients                Patient[]
+  appointments            Appointment[]
+  consultations           Consultation[]
+  prescriptions           Prescription[]
+  invoices                Invoice[]
+  auditLogs               AuditLog[]
+  feeItems                FeeItem[]
+  drugCatalogItems        DrugCatalogItem[]
+  prescriptionTemplates   PrescriptionTemplate[]
   consultationAttachments ConsultationAttachment[]
+  notificationLogs        NotificationLog[]
+  labTests                LabTest[]
+  labOrders               LabOrder[]
+  portalOtps              PortalOtp[]
+  clinicPatients          ClinicPatient[]
+  doctorAvailabilities    DoctorAvailability[]
+  doctorLeaves            DoctorLeave[]
 }
 
 model User {
-  id             String   @id @default(uuid())
-  clinicId       String
-  name           String
-  email          String   @unique
-  role           Role
-  supabaseAuthId String   @unique
-  qualifications String?
-  registrationNo String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String   @id @default(uuid())
+  clinicId         String
+  name             String
+  email            String   @unique
+  role             Role
+  supabaseAuthId   String   @unique
+  qualifications   String?
+  registrationNo   String?
+  /// Public-facing specialty for clinic directory / booking
+  specialty        String?
+  consultationFee  Decimal? @db.Decimal(10, 2)
+  /// Desk/admin job title (e.g. Front desk, Billing, Lab desk)
+  designation      String?
+  /// Staff contact phone (not used for auth)
+  phone            String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   clinic                Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   consultationsAsDoctor Consultation[] @relation("ConsultationDoctor")
@@ -120,6 +239,11 @@ model User {
   prescriptionTemplates PrescriptionTemplate[]
   attachmentsUploaded   ConsultationAttachment[]
   auditLogs             AuditLog[]
+  appointmentsAsDoctor  Appointment[]  @relation("AppointmentDoctor")
+  labOrdersOrdered      LabOrder[]     @relation("LabOrderOrderedBy")
+  labItemsResulted      LabOrderItem[] @relation("LabItemResultedBy")
+  availabilities        DoctorAvailability[]
+  leaves                DoctorLeave[]
 
   @@index([clinicId])
 }
@@ -145,23 +269,29 @@ model AuditLog {
 }
 
 model Patient {
-  id                 String    @id @default(uuid())
-  clinicId           String
-  name               String
-  phone              String
-  age                Int?
-  dateOfBirth        DateTime? @db.Date
-  gender             Gender?
-  address            String?
-  allergies          String?
-  chronicConditions  String?
-  mrn                String
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  clinicId          String
+  name              String
+  phone             String
+  age               Int?
+  dateOfBirth       DateTime? @db.Date
+  gender            Gender?
+  address           String?
+  allergies         String?
+  chronicConditions String?
+  mrn               String
+  abhaNumber        String?
+  abhaAddress       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  clinic        Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  appointments  Appointment[]
-  consultations Consultation[]
+  clinic         Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointments   Appointment[]
+  consultations  Consultation[]
+  labOrders      LabOrder[]
+  notifications  NotificationLog[]
+  portalOtps     PortalOtp[]
+  clinicPatient  ClinicPatient?
 
   @@unique([clinicId, mrn])
   @@unique([clinicId, phone])
@@ -169,60 +299,141 @@ model Patient {
   @@index([clinicId, phone])
 }
 
+/// Platform-level patient identity (can visit multiple clinics).
+model PortalAccount {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clinicLinks ClinicPatient[]
+  portalOtps  PortalOtp[]
+}
+
+/// Maps a portal account to a clinic-scoped clinical Patient record.
+model ClinicPatient {
+  id              String   @id @default(uuid())
+  portalAccountId String
+  clinicId        String
+  patientId       String   @unique
+  createdAt       DateTime @default(now())
+
+  portalAccount PortalAccount @relation(fields: [portalAccountId], references: [id], onDelete: Cascade)
+  clinic        Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([portalAccountId, clinicId])
+  @@index([clinicId])
+}
+
+model DoctorAvailability {
+  id           String  @id @default(uuid())
+  clinicId     String
+  doctorId     String
+  /// 0 = Sunday … 6 = Saturday (JS Date.getDay())
+  dayOfWeek    Int
+  /// Local time "HH:mm"
+  startTime    String
+  endTime      String
+  slotDuration Int     @default(15)
+  maxPerSlot   Int     @default(1)
+  isActive     Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor User   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, dayOfWeek, startTime])
+  @@index([clinicId, doctorId])
+}
+
+model DoctorLeave {
+  id        String   @id @default(uuid())
+  clinicId  String
+  doctorId  String
+  date      DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor User   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, date])
+  @@index([clinicId, doctorId])
+}
+
 model Appointment {
-  id          String            @id @default(uuid())
-  clinicId    String
-  patientId   String
-  tokenNumber Int
-  queueDate   DateTime          @db.Date
-  status      AppointmentStatus @default(waiting)
-  type        AppointmentType   @default(walkin)
-  scheduledAt DateTime?
-  createdById String
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id             String            @id @default(uuid())
+  clinicId       String
+  patientId      String
+  doctorId       String?
+  tokenNumber    Int
+  queueDate      DateTime          @db.Date
+  status         AppointmentStatus @default(waiting)
+  type           AppointmentType   @default(walkin)
+  bookingSource  BookingSource     @default(walkin)
+  scheduledAt    DateTime?
+  slotEnd        DateTime?
+  reasonForVisit String?
+  checkedInAt    DateTime?
+  /// Staff who created the appointment; null for portal self-bookings
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
   patient      Patient       @relation(fields: [patientId], references: [id])
+  doctor       User?         @relation("AppointmentDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
   consultation Consultation?
 
   @@unique([clinicId, queueDate, tokenNumber])
   @@index([clinicId, queueDate, status])
+  @@index([clinicId, scheduledAt])
+  @@index([doctorId, scheduledAt])
+  @@index([patientId, scheduledAt])
 }
 
 model Consultation {
-  id             String   @id @default(uuid())
-  clinicId       String
-  appointmentId  String   @unique
-  patientId      String
-  doctorId       String
-  vitals         Json?
-  chiefComplaint String?
+  id                   String    @id @default(uuid())
+  clinicId             String
+  appointmentId        String    @unique
+  patientId            String
+  doctorId             String
+  vitals               Json?
+  chiefComplaint       String?
   clinicalPresentation Json?
-  patientHistory Json?
-  examination    Json?
+  patientHistory       Json?
+  examination          Json?
   investigationResults Json?
-  diagnosis      String?
-  notes          String?
-  medicalCertificate Json?
-  amendmentReason String?
-  amendedAt       DateTime?
-  amendedById     String?
-  createdById    String
-  updatedById    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  diagnosis            String?
+  /// ICD-10 codes: [{ code, display, type: primary|secondary }]
+  diagnosisCodes       Json?
+  /// Referral letter: { toSpecialty, toFacility, reason, notes }
+  referral             Json?
+  notes                String?
+  medicalCertificate   Json?
+  amendmentReason      String?
+  amendedAt            DateTime?
+  amendedById          String?
+  createdById          String
+  updatedById          String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  clinic       Clinic        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  appointment  Appointment   @relation(fields: [appointmentId], references: [id])
-  patient      Patient       @relation(fields: [patientId], references: [id])
-  doctor       User          @relation("ConsultationDoctor", fields: [doctorId], references: [id])
-  createdBy    User          @relation("ConsultationCreatedBy", fields: [createdById], references: [id])
-  updatedBy    User?         @relation("ConsultationUpdatedBy", fields: [updatedById], references: [id])
-  amendedBy    User?         @relation("ConsultationAmendedBy", fields: [amendedById], references: [id])
+  clinic       Clinic                   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  appointment  Appointment              @relation(fields: [appointmentId], references: [id])
+  patient      Patient                  @relation(fields: [patientId], references: [id])
+  doctor       User                     @relation("ConsultationDoctor", fields: [doctorId], references: [id])
+  createdBy    User                     @relation("ConsultationCreatedBy", fields: [createdById], references: [id])
+  updatedBy    User?                    @relation("ConsultationUpdatedBy", fields: [updatedById], references: [id])
+  amendedBy    User?                    @relation("ConsultationAmendedBy", fields: [amendedById], references: [id])
   prescription Prescription?
   invoice      Invoice?
   attachments  ConsultationAttachment[]
+  labOrders    LabOrder[]
 
   @@index([clinicId, patientId])
 }
@@ -246,32 +457,50 @@ model Prescription {
 }
 
 model Invoice {
-  id             String        @id @default(uuid())
-  clinicId       String
-  consultationId String        @unique
-  invoiceNumber  String?
-  lineItems      Json?
-  amount         Decimal       @db.Decimal(10, 2)
-  taxableAmount  Decimal?      @db.Decimal(10, 2)
-  taxRate        Decimal?      @db.Decimal(5, 2)
-  taxAmount      Decimal?      @db.Decimal(10, 2)
-  paymentMode    PaymentMode?
-  status         InvoiceStatus @default(draft)
-  voidReason     String?
-  voidedAt       DateTime?
-  voidedById     String?
-  createdById    String
-  updatedById    String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id              String        @id @default(uuid())
+  clinicId        String
+  consultationId  String        @unique
+  invoiceNumber   String?
+  lineItems       Json?
+  amount          Decimal       @db.Decimal(10, 2)
+  amountPaid      Decimal       @default(0) @db.Decimal(10, 2)
+  taxableAmount   Decimal?      @db.Decimal(10, 2)
+  taxRate         Decimal?      @db.Decimal(5, 2)
+  taxAmount       Decimal?      @db.Decimal(10, 2)
+  paymentMode     PaymentMode?
+  status          InvoiceStatus @default(draft)
+  razorpayOrderId String?
+  voidReason      String?
+  voidedAt        DateTime?
+  voidedById      String?
+  createdById     String
+  updatedById     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  clinic       Clinic       @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  consultation Consultation @relation(fields: [consultationId], references: [id])
-  createdBy    User         @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
-  updatedBy    User?        @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id])
-  voidedBy     User?        @relation("InvoiceVoidedBy", fields: [voidedById], references: [id])
+  clinic       Clinic           @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  consultation Consultation     @relation(fields: [consultationId], references: [id])
+  createdBy    User             @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  updatedBy    User?            @relation("InvoiceUpdatedBy", fields: [updatedById], references: [id])
+  voidedBy     User?            @relation("InvoiceVoidedBy", fields: [voidedById], references: [id])
+  payments     InvoicePayment[]
 
   @@unique([clinicId, invoiceNumber])
+}
+
+model InvoicePayment {
+  id                String               @id @default(uuid())
+  invoiceId         String
+  amount            Decimal              @db.Decimal(10, 2)
+  paymentMode       PaymentMode
+  status            InvoicePaymentStatus @default(completed)
+  razorpayPaymentId String?
+  paidAt            DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 model FeeItem {
@@ -279,11 +508,13 @@ model FeeItem {
   clinicId  String
   name      String
   amount    Decimal  @db.Decimal(10, 2)
+  hsnSac    String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic   Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  labTests LabTest[]
 
   @@index([clinicId])
 }
@@ -348,4 +579,107 @@ model ConsultationAttachment {
 
   @@index([consultationId])
   @@index([clinicId])
+}
+
+model NotificationLog {
+  id         String              @id @default(uuid())
+  clinicId   String
+  patientId  String?
+  channel    NotificationChannel
+  templateKey String
+  recipient  String
+  status     NotificationStatus  @default(pending)
+  payload    Json?
+  error      String?
+  createdAt  DateTime            @default(now())
+
+  clinic  Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@index([patientId])
+}
+
+model LabTest {
+  id         String   @id @default(uuid())
+  clinicId   String
+  name       String
+  code       String?
+  sampleType String?
+  feeAmount  Decimal? @db.Decimal(10, 2)
+  feeItemId  String?
+  hsnSac     String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  clinic Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  feeItem FeeItem?      @relation(fields: [feeItemId], references: [id], onDelete: SetNull)
+  items  LabOrderItem[]
+
+  @@index([clinicId, isActive])
+  @@index([clinicId, name])
+}
+
+model LabOrder {
+  id             String         @id @default(uuid())
+  clinicId       String
+  consultationId String
+  patientId      String
+  status         LabOrderStatus @default(ordered)
+  notes          String?
+  orderedById    String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  clinic       Clinic         @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  consultation Consultation   @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  patient      Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  orderedBy    User           @relation("LabOrderOrderedBy", fields: [orderedById], references: [id])
+  items        LabOrderItem[]
+
+  @@index([clinicId, status])
+  @@index([consultationId])
+  @@index([patientId])
+}
+
+model LabOrderItem {
+  id           String        @id @default(uuid())
+  labOrderId   String
+  labTestId    String
+  status       LabItemStatus @default(pending)
+  resultValue  String?
+  resultUnit   String?
+  resultNotes  String?
+  resultedAt   DateTime?
+  resultedById String?
+
+  labOrder   LabOrder @relation(fields: [labOrderId], references: [id], onDelete: Cascade)
+  labTest    LabTest  @relation(fields: [labTestId], references: [id])
+  resultedBy User?    @relation("LabItemResultedBy", fields: [resultedById], references: [id], onDelete: SetNull)
+
+  @@index([labOrderId])
+  @@index([labTestId])
+}
+
+model PortalOtp {
+  id              String   @id @default(uuid())
+  /// Optional when OTP is for platform portal login (not clinic-bound yet)
+  clinicId        String?
+  patientId       String?
+  portalAccountId String?
+  phone           String
+  codeHash        String
+  expiresAt       DateTime
+  consumedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  clinic        Clinic?        @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  patient       Patient?       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  portalAccount PortalAccount? @relation(fields: [portalAccountId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, phone])
+  @@index([portalAccountId])
+  @@index([phone])
+  @@index([expiresAt])
 }

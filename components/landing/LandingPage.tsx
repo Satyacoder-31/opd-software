@@ -14,79 +14,34 @@ const features = [
     title: "Live token queue",
     description:
       "Every reception desk sees the same queue. Status changes sync instantly — no refresh, no shouting across the room.",
-    image:
-      "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80",
-    alt: "Clinic staff coordinating patient flow at a reception desk",
+    image: "/landing/queue.png",
+    alt: "Live clinic token queue board showing the current token and waiting list",
   },
   {
     title: "Complete patient records",
     description:
       "MRN auto-generation, demographics, visit history, and consultation notes — all in one place, isolated per clinic.",
-    image:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80",
-    alt: "Doctor reviewing patient information on a tablet",
+    image: "/landing/records.png",
+    alt: "Patient profile with demographics and visit history",
   },
   {
     title: "Prescriptions & receipts",
     description:
       "Build prescriptions with your common medicines, download PDFs instantly, and generate itemized or flat-fee bills.",
-    image:
-      "https://images.unsplash.com/photo-1584515933487-779824d29309?w=800&q=80",
-    alt: "Medical prescription and healthcare documentation",
+    image: "/landing/prescriptions.png",
+    alt: "Prescription sheet and billing receipt documents",
   },
 ];
 
 const integrations = [
   "Realtime queue sync",
+  "Online appointments",
+  "Patient portal",
   "Role-based access",
   "Prescription PDFs",
   "Billing receipts",
   "Visit history",
   "Multi-staff clinics",
-  "Secure cloud storage",
-  "Mobile-friendly UI",
-];
-
-const stories = [
-  {
-    quote: (
-      <>
-        We went from paper tokens and Excel sheets to a live queue in one
-        weekend.{" "}
-        <strong className="font-semibold text-primary">
-          Our morning rush is actually manageable now.
-        </strong>
-      </>
-    ),
-    name: "Dr. Sanjay Gupta",
-    role: "Multi-specialty OPD, Delhi",
-  },
-  {
-    quote: (
-      <>
-        I used to lose consultation notes between visits. Medyx keeps
-        drafts safe and{" "}
-        <strong className="font-semibold text-primary">
-          my prescriptions look professional.
-        </strong>
-      </>
-    ),
-    name: "Dr. Lakshmi Rao",
-    role: "Dermatology clinic, Visakhapatnam",
-  },
-  {
-    quote: (
-      <>
-        As admin, I control who sees what. Doctors get consultations,
-        reception gets billing —{" "}
-        <strong className="font-semibold text-primary">
-          everyone stays in their lane.
-        </strong>
-      </>
-    ),
-    name: "Mohammed Farooq",
-    role: "Clinic manager, Lucknow",
-  },
 ];
 
 const faqs = [
@@ -99,6 +54,11 @@ const faqs = [
     question: "How does the token queue work?",
     answer:
       "Reception issues a daily token for each walk-in. The queue board updates in real time across all logged-in devices, so every desk sees who's waiting, in consultation, or done.",
+  },
+  {
+    question: "Can patients book appointments online?",
+    answer:
+      "Yes. Patients can browse listed clinics, book a slot, then sign in to the patient portal to see upcoming visits, live queue status, and past prescriptions.",
   },
   {
     question: "Can multiple staff use it at the same time?",
@@ -159,10 +119,6 @@ export function LandingPage() {
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pb-24 sm:pt-20">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm">
-              <span className="size-2 rounded-full bg-accent" />
-              Modern OPD &amp; EMR Platform
-            </p>
             <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight text-white text-balance sm:text-5xl lg:text-6xl">
               The Complete OPD &amp; EMR Platform for Modern Clinics.
             </h1>
@@ -213,12 +169,12 @@ export function LandingPage() {
           {features.map((feature, i) => (
             <div
               key={feature.title}
-              className={`flex flex-col items-center gap-12 rounded-3xl bg-white p-6 shadow-lg shadow-black/10 sm:p-10 lg:gap-16 ${
+              className={`flex flex-col items-stretch gap-8 rounded-3xl bg-white p-6 shadow-lg shadow-black/10 sm:gap-12 sm:p-10 lg:items-center lg:gap-16 ${
                 i % 2 === 1 ? "lg:flex-row-reverse" : "lg:flex-row"
               }`}
             >
-              <div className="flex-1">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-2xl shadow-xl">
+              <div className="w-full min-w-0 flex-1">
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-xl">
                   <Image
                     src={feature.image}
                     alt={feature.alt}
@@ -229,7 +185,7 @@ export function LandingPage() {
                   <div className="absolute inset-0 bg-ink/10" />
                 </div>
               </div>
-              <div className="flex-1">
+              <div className="w-full min-w-0 flex-1">
                 <h3 className="font-display text-2xl font-semibold text-ink sm:text-3xl">
                   {feature.title}
                 </h3>
@@ -245,17 +201,41 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Big CTA with image */}
-      <section className="relative overflow-hidden py-20">
+      {/* Patient path — directory + portal */}
+      <section id="patients" className="tint-band py-20 text-white sm:py-28">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-display text-3xl font-semibold sm:text-4xl">
+              Visiting a clinic?
+            </h2>
+            <p className="mt-4 text-lg text-white/80">
+              Find a listed clinic, book a slot online, then track your visit
+              and prescriptions in the patient portal.
+            </p>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <CtaButton href="/clinics" variant="accent">
+                Find a clinic
+              </CtaButton>
+              <CtaButton href="/portal" variant="outline-light">
+                Open patient portal
+              </CtaButton>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Clinic fit — full-bleed visual */}
+      <section className="relative overflow-hidden py-20 sm:py-28">
         <div className="absolute inset-0">
           <Image
-            src="https://images.unsplash.com/photo-1631217868264-e5b90bb5e933?w=1600&q=80"
+            src="/landing/clinic-fit.png"
             alt=""
             fill
             className="object-cover"
             sizes="100vw"
+            priority={false}
           />
-          <div className="absolute inset-0 bg-ink/75" />
+          <div className="absolute inset-0 bg-ink/65" />
         </div>
         <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
           <h2 className="font-display text-3xl font-semibold text-white sm:text-4xl">
@@ -263,42 +243,8 @@ export function LandingPage() {
           </h2>
           <p className="mt-4 text-lg text-white/80">
             From solo practitioners to multi-doctor OPDs — patient records,
-            queue, prescriptions, and billing in one secure place.
+            queue, prescriptions, online booking, and billing in one secure place.
           </p>
-          <div className="mt-10">
-            <CtaButton href="/signup" variant="accent">
-              Get started free
-            </CtaButton>
-          </div>
-        </div>
-      </section>
-
-      {/* Success stories — rich blue band, white cards */}
-      <section id="stories" className="tint-band py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-white sm:text-4xl">
-              Clinics that made the switch
-            </h2>
-            <p className="mt-4 text-lg text-white/80">
-              Real practices. Real mornings without the paper chase.
-            </p>
-          </div>
-
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {stories.map((story) => (
-              <blockquote
-                key={story.name}
-                className="flex flex-col rounded-2xl bg-white p-8 shadow-lg shadow-black/15"
-              >
-                <p className="flex-1 text-lg text-ink">{story.quote}</p>
-                <footer className="mt-6 border-t border-border pt-6">
-                  <p className="font-medium text-ink">{story.name}</p>
-                  <p className="text-sm text-muted-foreground">{story.role}</p>
-                </footer>
-              </blockquote>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -368,11 +314,17 @@ export function LandingPage() {
               </p>
             </div>
             <nav className="flex flex-wrap justify-center gap-6 text-sm text-white/70">
+              <Link href="/clinics" className="hover:text-white">
+                Find a clinic
+              </Link>
+              <Link href="/portal" className="hover:text-white">
+                Patient portal
+              </Link>
               <Link href="/signup" className="hover:text-white">
-                Register
+                Register clinic
               </Link>
               <Link href="/login" className="hover:text-white">
-                Sign in
+                Clinic sign in
               </Link>
               <a href="#faq" className="hover:text-white">
                 FAQ

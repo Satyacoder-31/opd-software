@@ -25,6 +25,8 @@ const patientSchema = z.object({
   address: z.string().optional(),
   allergies: z.string().optional(),
   chronicConditions: z.string().optional(),
+  abhaNumber: z.string().trim().max(30).optional(),
+  abhaAddress: z.string().trim().max(100).optional(),
 });
 
 function optionalText(value: FormDataEntryValue | null): string | undefined {
@@ -43,6 +45,8 @@ function parsePatientForm(formData: FormData) {
     address: optionalText(formData.get("address")),
     allergies: optionalText(formData.get("allergies")),
     chronicConditions: optionalText(formData.get("chronicConditions")),
+    abhaNumber: optionalText(formData.get("abhaNumber")),
+    abhaAddress: optionalText(formData.get("abhaAddress")),
   });
 }
 
@@ -108,6 +112,8 @@ export async function createPatient(
           address: parsed.data.address,
           allergies: parsed.data.allergies ?? null,
           chronicConditions: parsed.data.chronicConditions ?? null,
+          abhaNumber: parsed.data.abhaNumber ?? null,
+          abhaAddress: parsed.data.abhaAddress ?? null,
         },
       });
 
@@ -187,6 +193,8 @@ export async function updatePatient(
         address: parsed.data.address ?? null,
         allergies: parsed.data.allergies ?? null,
         chronicConditions: parsed.data.chronicConditions ?? null,
+        abhaNumber: parsed.data.abhaNumber ?? null,
+        abhaAddress: parsed.data.abhaAddress ?? null,
       },
     });
 

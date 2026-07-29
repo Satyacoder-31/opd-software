@@ -23,7 +23,51 @@ export const resetPasswordSchema = z
 export const clinicProfileSchema = z.object({
   name: z.string().min(2, "Clinic name must be at least 2 characters"),
   phone: z.string().min(10, "Enter a valid phone number"),
-  address: z.string().min(5, "Address must be at least 5 characters"),
+  address: z.string().min(5, "Address must be at least 5 characters").optional(),
+  addressLine1: z.string().trim().optional(),
+  addressLine2: z.string().trim().optional(),
+  area: z.string().trim().optional(),
+  state: z.string().trim().optional(),
+  pincode: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || /^[1-9][0-9]{5}$/.test(v), "Enter a valid 6-digit PIN"),
+  email: z.union([
+    z.literal(""),
+    z.string().trim().email("Enter a valid clinic email"),
+  ]),
+  whatsapp: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || v.length >= 10, "Enter a valid WhatsApp number"),
+  clinicType: z.enum([
+    "solo",
+    "multi_doctor",
+    "polyclinic",
+    "specialty",
+    "hospital_opd",
+  ]),
+  timezone: z.string().min(1),
+  logoUrl: z.string().trim().optional(),
+  website: z.string().trim().optional(),
+  mapsUrl: z.string().trim().optional(),
+  landmark: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  latitude: z.string().trim().optional(),
+  longitude: z.string().trim().optional(),
+  pan: z
+    .string()
+    .trim()
+    .optional()
+    .refine(
+      (v) => !v || /^[A-Z]{5}[0-9]{4}[A-Z]$/i.test(v),
+      "Enter a valid PAN"
+    ),
+  businessEntity: z
+    .enum(["sole_prop", "partnership", "pvt_ltd", "trust", "other", ""])
+    .optional(),
   gstin: z
     .string()
     .trim()

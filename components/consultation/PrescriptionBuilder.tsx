@@ -516,7 +516,7 @@ export function PrescriptionBuilder({
                         )
                       }
                       options={FREQUENCY_OPTIONS}
-                      placeholder="OD / BD / TDS…"
+                      placeholder="Once daily…"
                     />
                   </div>
 

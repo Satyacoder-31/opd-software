@@ -9,6 +9,7 @@ type FeeRow = {
   name: string;
   amount: number;
   isActive: boolean;
+  hsnSac: string | null;
 };
 
 type FeeMasterPageClientProps = {

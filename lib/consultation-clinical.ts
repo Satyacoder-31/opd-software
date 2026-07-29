@@ -5,8 +5,10 @@ import type {
   InvestigationResults,
   MedicalCertificate,
   PatientHistory,
+  ReferralLetter,
   Vitals,
 } from "@/lib/types";
+import { formatDiagnosisCodesSummary } from "@/lib/icd-catalog";
 
 export const vitalsSchema = z.object({
   bp: z.string().optional(),
@@ -113,9 +115,24 @@ export const medicalCertificateSchema = z.object({
   remarks: z.string().optional(),
 });
 
+export const diagnosisCodeSchema = z.object({
+  code: z.string().min(1),
+  display: z.string().min(1),
+  type: z.enum(["primary", "secondary"]),
+});
+
+export const referralSchema = z.object({
+  toSpecialty: z.string().optional(),
+  toFacility: z.string().optional(),
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 export const consultationClinicalSchema = z.object({
   chiefComplaint: z.string().optional(),
   diagnosis: z.string().optional(),
+  diagnosisCodes: z.array(diagnosisCodeSchema).optional(),
+  referral: referralSchema.optional(),
   notes: z.string().optional(),
   vitals: vitalsSchema.optional(),
   clinicalPresentation: clinicalPresentationSchema.optional(),
@@ -139,6 +156,7 @@ function countFilledRecord(record: Record<string, string | undefined> | undefine
 export function sectionCompletion(data: {
   chiefComplaint?: string;
   diagnosis?: string;
+  diagnosisCodes?: { code: string; display: string; type: string }[];
   notes?: string;
   vitals?: Vitals;
   clinicalPresentation?: ClinicalPresentation;
@@ -146,6 +164,7 @@ export function sectionCompletion(data: {
   examination?: Examination;
   investigationResults?: InvestigationResults;
   medicalCertificate?: MedicalCertificate;
+  referral?: ReferralLetter;
 }) {
   const vitals = data.vitals ?? {};
   const clinicalPresentation = data.clinicalPresentation ?? {};
@@ -153,6 +172,9 @@ export function sectionCompletion(data: {
   const examination = data.examination ?? {};
   const investigationResults = data.investigationResults ?? {};
   const medicalCertificate = data.medicalCertificate ?? {};
+  const referral = data.referral ?? {};
+  const hasIcd = (data.diagnosisCodes?.length ?? 0) > 0;
+  const diagnosisFilled = !!data.diagnosis?.trim() || hasIcd;
 
   return {
     vitals: {
@@ -185,8 +207,8 @@ export function sectionCompletion(data: {
       total: 3,
     },
     diagnosis: {
-      filled: !!data.diagnosis?.trim(),
-      count: data.diagnosis?.trim() ? 1 : 0,
+      filled: diagnosisFilled,
+      count: diagnosisFilled ? 1 : 0,
       total: 1,
     },
     notes: {
@@ -199,7 +221,23 @@ export function sectionCompletion(data: {
       count: countFilledRecord(medicalCertificate),
       total: 5,
     },
+    referral: {
+      filled: countFilledRecord(referral) > 0,
+      count: countFilledRecord(referral),
+      total: 4,
+    },
   };
+}
+
+export function syncDiagnosisTextFromCodes(
+  codes: { code: string; display: string; type: string }[] | undefined,
+  existingDiagnosis?: string
+): string | undefined {
+  const fromCodes = formatDiagnosisCodesSummary(
+    codes as Parameters<typeof formatDiagnosisCodesSummary>[0]
+  );
+  if (fromCodes) return fromCodes;
+  return existingDiagnosis;
 }
 
 export function sectionSummary(
@@ -216,10 +254,16 @@ export const emptyPatientHistory = (): PatientHistory => ({});
 export const emptyExamination = (): Examination => ({});
 export const emptyInvestigationResults = (): InvestigationResults => ({});
 export const emptyMedicalCertificate = (): MedicalCertificate => ({});
+export const emptyReferral = (): ReferralLetter => ({});
 
 export function hasMedicalCertificateContent(
   certificate?: MedicalCertificate | null
 ): boolean {
   if (!certificate) return false;
   return Object.values(certificate).some((value) => value?.trim());
+}
+
+export function hasReferralContent(referral?: ReferralLetter | null): boolean {
+  if (!referral) return false;
+  return Object.values(referral).some((value) => value?.trim());
 }

@@ -6,6 +6,10 @@ import {
   faPills,
   faScroll,
   faUsers,
+  faBell,
+  faFlask,
+  faCalendarDays,
+  faGlobe,
 } from "@fortawesome/free-solid-svg-icons";
 import { SettingsOverviewLink } from "@/components/settings/SettingsOverviewLink";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
@@ -34,6 +38,18 @@ export function SettingsOverview() {
               icon={faBuilding}
             />
             <SettingsOverviewLink
+              href="/settings/availability"
+              title="Public booking"
+              description="Clinic directory listing, specialties, and online booking"
+              icon={faGlobe}
+            />
+            <SettingsOverviewLink
+              href="/settings/availability/schedules"
+              title="Doctor schedules"
+              description="Weekly hours, slot length, and leave days for booking"
+              icon={faCalendarDays}
+            />
+            <SettingsOverviewLink
               href="/settings/prescriptions"
               title="Prescription layouts"
               description="Choose the printed look of clinic prescriptions"
@@ -44,6 +60,18 @@ export function SettingsOverview() {
               title="Medicine dictionary"
               description="Manage quick suggestions used while prescribing"
               icon={faPills}
+            />
+            <SettingsOverviewLink
+              href="/settings/labs"
+              title="Lab catalog"
+              description="Manage tests, sample types, fees, and billing codes"
+              icon={faFlask}
+            />
+            <SettingsOverviewLink
+              href="/settings/notifications"
+              title="Patient notifications"
+              description="Configure SMS and WhatsApp delivery"
+              icon={faBell}
             />
           </div>
         </section>

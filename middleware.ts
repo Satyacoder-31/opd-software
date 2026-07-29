@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { SESSION_HEADER } from "@/lib/session-header";
-import { rolesWith, type Permission } from "@/lib/rbac";
 
 const publicRoutes = [
   "/",
@@ -9,14 +8,25 @@ const publicRoutes = [
   "/signup",
   "/auth/callback",
   "/api/health",
+  "/portal",
+  "/clinics",
+  "/api/webhooks/razorpay",
+  "/terms",
+  "/privacy",
 ];
 
-/** Route prefixes gated by RBAC permissions (JWT role is a hint; actions re-check DB). */
-const permissionRoutes: Record<string, Permission> = {
-  "/settings": "settings.access",
-  "/reports": "reports.read",
-  "/consultations": "consultations.read",
-  "/billing": "billing.read",
+/**
+ * Lightweight route → role allowlists for Edge.
+ * Keep in sync with lib/rbac.ts (JWT role is a hint; actions re-check DB).
+ * Do not import @/lib/rbac or @prisma/client here — they blow the Edge size limit.
+ */
+const routeAllowedRoles: Record<string, readonly string[]> = {
+  "/settings": ["owner", "admin"],
+  "/reports": ["owner", "admin", "receptionist"],
+  "/consultations": ["owner", "admin", "doctor"],
+  "/billing": ["owner", "admin", "receptionist"],
+  "/labs": ["owner", "admin", "doctor", "receptionist"],
+  "/appointments": ["owner", "admin", "doctor", "receptionist"],
 };
 
 function isPublicRoute(pathname: string): boolean {
@@ -37,6 +47,7 @@ function nextWithCleanHeaders(
   source: NextResponse
 ): NextResponse {
   const requestHeaders = stripIdentityHeader(request);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
 
   const nextResponse = NextResponse.next({
     request: { headers: requestHeaders },
@@ -72,9 +83,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?deactivated=1", request.url));
   }
 
-  for (const [routePrefix, permission] of Object.entries(permissionRoutes)) {
+  for (const [routePrefix, allowedRoles] of Object.entries(routeAllowedRoles)) {
     if (pathname.startsWith(routePrefix)) {
-      const allowedRoles = rolesWith(permission).map(String);
       if (!role || !allowedRoles.includes(role)) {
         return NextResponse.redirect(new URL("/queue", request.url));
       }
@@ -88,13 +98,21 @@ export const config = {
   matcher: [
     "/",
     "/queue/:path*",
+    "/appointments/:path*",
     "/patients/:path*",
+    "/labs/:path*",
+    "/portal/:path*",
+    "/clinics/:path*",
     "/reports/:path*",
     "/settings/:path*",
     "/consultations/:path*",
     "/billing/:path*",
+    "/onboarding",
+    "/onboarding/:path*",
     "/login",
     "/signup",
+    "/terms",
+    "/privacy",
     "/auth/:path*",
     "/api/:path*",
   ],

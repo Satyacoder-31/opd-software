@@ -1,14 +1,16 @@
-import { Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
 import type { SessionUser } from "@/lib/types";
 
 /**
- * Clinic-scoped RBAC for OPD EMR.
+ * Clinic-scoped RBAC for OPD EMR / local clinic CMS.
  *
  * Roles are permission templates on the user's clinic membership
  * (`User.clinicId` + `User.role`). Custom per-user overrides can be
  * layered on later without changing call sites that use `can()`.
  *
  * There is no Nurse role — desk / vitals-prep work belongs to Receptionist.
+ * Lab desk work also maps to receptionist (or admin) until dedicated roles
+ * are added.
  */
 export const PERMISSIONS = [
   "patients.read",
@@ -16,6 +18,7 @@ export const PERMISSIONS = [
   "queue.read",
   "queue.manage",
   "appointments.cancel",
+  "appointments.schedule",
   "consultations.start",
   "consultations.read",
   "consultations.write",
@@ -29,6 +32,11 @@ export const PERMISSIONS = [
   "fees.manage",
   "drugs.search",
   "drugs.manage",
+  "labs.read",
+  "labs.manage",
+  "labs.results",
+  "messaging.send",
+  "messaging.manage",
   "reports.read",
   "reports.export.visits",
   "reports.export.patients",
@@ -60,6 +68,7 @@ const DOCTOR_PERMISSIONS: Permission[] = [
   "patients.write",
   "queue.read",
   "queue.manage",
+  "appointments.schedule",
   "consultations.start",
   "consultations.read",
   "consultations.write",
@@ -69,10 +78,13 @@ const DOCTOR_PERMISSIONS: Permission[] = [
   "attachments.manage",
   "fees.read",
   "drugs.search",
+  "labs.read",
+  "labs.manage",
+  "messaging.send",
 ];
 
 /**
- * Receptionist: front desk + billing + reports.
+ * Receptionist: front desk + billing + reports + lab desk.
  * Also covers former nurse/assistant duties (queue, patient prep, vitals).
  * No prescriptions, diagnosis edits, or clinic settings.
  */
@@ -82,35 +94,35 @@ const RECEPTIONIST_PERMISSIONS: Permission[] = [
   "queue.read",
   "queue.manage",
   "appointments.cancel",
+  "appointments.schedule",
   "consultations.vitals",
   "billing.read",
   "billing.write",
   "fees.read",
+  "labs.read",
+  "labs.results",
+  "messaging.send",
   "reports.read",
   "reports.export.visits",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  [Role.owner]: OWNER_PERMISSIONS,
-  [Role.admin]: ADMIN_PERMISSIONS,
-  [Role.doctor]: DOCTOR_PERMISSIONS,
-  [Role.receptionist]: RECEPTIONIST_PERMISSIONS,
+  owner: OWNER_PERMISSIONS,
+  admin: ADMIN_PERMISSIONS,
+  doctor: DOCTOR_PERMISSIONS,
+  receptionist: RECEPTIONIST_PERMISSIONS,
 };
 
 /** Roles that can be assigned when inviting staff (never owner). */
-export const INVITABLE_ROLES = [
-  Role.admin,
-  Role.doctor,
-  Role.receptionist,
-] as const;
+export const INVITABLE_ROLES = ["admin", "doctor", "receptionist"] as const satisfies readonly Role[];
 
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
-  [Role.owner]: "Owner",
-  [Role.admin]: "Admin",
-  [Role.doctor]: "Doctor",
-  [Role.receptionist]: "Receptionist",
+  owner: "Owner",
+  admin: "Admin",
+  doctor: "Doctor",
+  receptionist: "Receptionist",
 };
 
 export function permissionsFor(role: Role): readonly Permission[] {
@@ -139,13 +151,11 @@ export function rolesWith(permission: Permission): Role[] {
 
 /** Owner and admin manage clinic settings / staff. */
 export function isClinicManager(role: Role): boolean {
-  return role === Role.owner || role === Role.admin;
+  return role === "owner" || role === "admin";
 }
 
 export function isClinicalRole(role: Role): boolean {
-  return (
-    role === Role.owner || role === Role.admin || role === Role.doctor
-  );
+  return role === "owner" || role === "admin" || role === "doctor";
 }
 
 export function isInvitableRole(role: string): role is InvitableRole {

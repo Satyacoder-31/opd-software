@@ -24,6 +24,7 @@ import type {
   PatientHistory,
   Vitals,
 } from "@/lib/types";
+import { DiagnosisCodesField } from "@/components/consultation/DiagnosisCodesField";
 
 function updateRecordField<T extends Record<string, string | undefined>>(
   setter: Dispatch<SetStateAction<T>>,
@@ -151,7 +152,7 @@ export function ConsultationClinicalSections({
                 className="min-h-14"
               />
               <Textarea
-                label="Diagnosis"
+                label="Diagnosis notes"
                 name="diagnosis"
                 value={value.diagnosis ?? ""}
                 onChange={(e) =>
@@ -161,8 +162,15 @@ export function ConsultationClinicalSections({
                 }
                 rows={2}
                 className="min-h-14"
+                placeholder="Free-text notes (optional if ICD codes set)"
               />
             </div>
+            <DiagnosisCodesField
+              value={value.diagnosisCodes ?? []}
+              onChange={(diagnosisCodes) =>
+                patchClinical(value, onChange, { diagnosisCodes })
+              }
+            />
             <Textarea
               label="History of present illness"
               name="historyOfPresentIllness"

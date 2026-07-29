@@ -18,6 +18,7 @@ const navItems: {
   permission: Permission;
 }[] = [
   { href: "/queue", label: "Queue", permission: "queue.read" },
+  { href: "/appointments", label: "Appointments", permission: "appointments.schedule" },
   { href: "/patients", label: "Patients", permission: "patients.read" },
   { href: "/billing", label: "Billing", permission: "billing.read" },
   { href: "/reports", label: "Reports", permission: "reports.read" },
@@ -76,9 +77,10 @@ function MobileNavItem({
 type MobileNavProps = {
   session: SessionUser;
   clinicName: string;
+  clinicLogoUrl?: string | null;
 };
 
-export function MobileNav({ session, clinicName }: MobileNavProps) {
+export function MobileNav({ session, clinicName, clinicLogoUrl }: MobileNavProps) {
   const pathname = usePathname();
   const [navigating, setNavigating] = useState(false);
   const filtered = navItems.filter((item) => can(session, item.permission));
@@ -92,10 +94,22 @@ export function MobileNav({ session, clinicName }: MobileNavProps) {
       <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-surface-deep px-4 py-3 md:px-6">
         <div className="min-w-0">
           <BrandLogo size="sm" inverted />
-          <p className="mt-1 truncate text-xs text-white/70">{clinicName}</p>
-          <p className="truncate text-xs text-white/60">
-            {session.name} · {ROLE_LABELS[session.role]}
-          </p>
+          <div className="mt-1 flex min-w-0 items-center gap-2.5">
+            {clinicLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={clinicLogoUrl}
+                alt=""
+                className="size-9 shrink-0 rounded-lg border border-white/20 bg-white object-contain p-0.5"
+              />
+            ) : null}
+            <div className="min-w-0">
+              <p className="truncate text-xs text-white/70">{clinicName}</p>
+              <p className="truncate text-xs text-white/60">
+                {session.name} · {ROLE_LABELS[session.role]}
+              </p>
+            </div>
+          </div>
         </div>
         <form action={logout} className="shrink-0">
           <Button

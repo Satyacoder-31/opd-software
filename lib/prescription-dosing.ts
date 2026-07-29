@@ -27,11 +27,11 @@ export const DOSAGE_SHORTCUTS = [
 ] as const;
 
 export const DURATION_SHORTCUTS = [
-  { label: "3d", value: "3 Days" },
-  { label: "5d", value: "5 Days" },
-  { label: "7d", value: "7 Days" },
-  { label: "10d", value: "10 Days" },
-  { label: "14d", value: "14 Days" },
+  { label: "3 days", value: "3 Days" },
+  { label: "5 days", value: "5 Days" },
+  { label: "7 days", value: "7 Days" },
+  { label: "10 days", value: "10 Days" },
+  { label: "14 days", value: "14 Days" },
 ] as const;
 
 export const INSTRUCTION_SHORTCUTS = [

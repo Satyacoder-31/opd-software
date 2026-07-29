@@ -10,7 +10,33 @@ import { Icon } from "@/components/ui/Icon";
 import { PageShell } from "@/components/ui/PageShell";
 
 type ClinicEditPageClientProps = {
-  clinic: Clinic;
+  clinic: Pick<
+    Clinic,
+    | "id"
+    | "name"
+    | "phone"
+    | "address"
+    | "email"
+    | "whatsapp"
+    | "gstin"
+    | "clinicType"
+    | "timezone"
+    | "logoUrl"
+    | "website"
+    | "mapsUrl"
+    | "landmark"
+    | "addressLine1"
+    | "addressLine2"
+    | "area"
+    | "state"
+    | "pincode"
+    | "pan"
+    | "businessEntity"
+    | "phoneVerifiedAt"
+    | "city"
+    | "latitude"
+    | "longitude"
+  >;
 };
 
 export function ClinicEditPageClient({ clinic }: ClinicEditPageClientProps) {

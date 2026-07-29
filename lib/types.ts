@@ -1,4 +1,5 @@
 import type { Role } from "@prisma/client";
+import type { DiagnosisCodeEntry } from "@/lib/icd-catalog";
 
 export type SessionUser = {
   userId: string;
@@ -54,9 +55,20 @@ export type MedicalCertificate = {
   remarks?: string;
 };
 
+export type ReferralLetter = {
+  toSpecialty?: string;
+  toFacility?: string;
+  reason?: string;
+  notes?: string;
+};
+
+export type { DiagnosisCodeEntry };
+
 export type ConsultationClinicalData = {
   chiefComplaint?: string;
   diagnosis?: string;
+  diagnosisCodes?: DiagnosisCodeEntry[];
+  referral?: ReferralLetter;
   notes?: string;
   vitals?: Vitals;
   clinicalPresentation?: ClinicalPresentation;
@@ -86,6 +98,7 @@ export type PrescriptionMeta = {
 export type LineItem = {
   description: string;
   amount: number;
+  hsnSac?: string;
 };
 
 export type FieldErrors = Record<string, string>;

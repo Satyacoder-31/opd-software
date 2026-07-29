@@ -137,6 +137,10 @@ npx prisma migrate deploy
 
 Create a private Supabase Storage bucket named `consultation-attachments` (Settings → Storage). Doctors upload visit reports/images into it from the consultation screen.
 
+### Clinic logos storage
+
+Clinic logo uploads use a **public** Supabase Storage bucket named `clinic-logos`. Public image URLs only work when the bucket is public (a private bucket returns “Bucket not found” on `/object/public/…` links). The app creates the bucket and sets it public on upload when the service role key can manage storage; otherwise create/edit it manually (Settings → Storage → `clinic-logos` → Public).
+
 ### E2E tests
 
 ```bash

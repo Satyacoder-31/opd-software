@@ -2,6 +2,7 @@ export type BillingHubStatusFilter =
   | "all"
   | "draft"
   | "paid"
+  | "partial"
   | "void"
   | "unbilled";
 

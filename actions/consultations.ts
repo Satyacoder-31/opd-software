@@ -5,11 +5,11 @@ import type { Gender } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { consultationClinicalSchema, hasMedicalCertificateContent } from "@/lib/consultation-clinical";
+import { consultationClinicalSchema, hasMedicalCertificateContent, hasReferralContent, syncDiagnosisTextFromCodes } from "@/lib/consultation-clinical";
 import { isConsultationEditable } from "@/lib/consultation-utils";
 import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
 import { zodFieldErrors } from "@/lib/form-utils";
-import { renderMedicalCertificatePdf } from "@/lib/pdf";
+import { renderMedicalCertificatePdf, renderReferralPdf } from "@/lib/pdf";
 import { formatPatientAge } from "@/lib/date-utils";
 import { validatePrescriptionDraft } from "@/lib/prescription-validation";
 import { can } from "@/lib/rbac";
@@ -19,6 +19,7 @@ import type {
   ConsultationClinicalData,
   MedicalCertificate,
   Medicine,
+  ReferralLetter,
   VoidActionResult,
 } from "@/lib/types";
 
@@ -36,9 +37,15 @@ function clinicalUpdateData(
   parsed: ConsultationClinicalData,
   userId: string
 ) {
+  const diagnosis =
+    syncDiagnosisTextFromCodes(parsed.diagnosisCodes, parsed.diagnosis) ??
+    parsed.diagnosis;
+
   return {
     chiefComplaint: parsed.chiefComplaint,
-    diagnosis: parsed.diagnosis,
+    diagnosis,
+    diagnosisCodes: parsed.diagnosisCodes ?? undefined,
+    referral: parsed.referral ?? undefined,
     notes: parsed.notes,
     vitals: parsed.vitals ?? undefined,
     clinicalPresentation: parsed.clinicalPresentation ?? undefined,
@@ -158,18 +165,7 @@ export async function saveConsultation(
 
   await prisma.consultation.updateMany({
     where: { id, clinicId: session.clinicId },
-    data: {
-      chiefComplaint: parsed.data.chiefComplaint,
-      diagnosis: parsed.data.diagnosis,
-      notes: parsed.data.notes,
-      vitals: parsed.data.vitals ?? undefined,
-      clinicalPresentation: parsed.data.clinicalPresentation ?? undefined,
-      patientHistory: parsed.data.patientHistory ?? undefined,
-      examination: parsed.data.examination ?? undefined,
-      investigationResults: parsed.data.investigationResults ?? undefined,
-      medicalCertificate: parsed.data.medicalCertificate ?? undefined,
-      updatedById: session.userId,
-    },
+    data: clinicalUpdateData(parsed.data, session.userId),
   });
 
   if (!options?.autosave) {
@@ -233,18 +229,7 @@ export async function submitConsultation(
 
     await tx.consultation.updateMany({
       where: { id, clinicId: session.clinicId },
-      data: {
-        chiefComplaint: parsed.data.chiefComplaint,
-        diagnosis: parsed.data.diagnosis,
-        notes: parsed.data.notes,
-        vitals: parsed.data.vitals ?? undefined,
-        clinicalPresentation: parsed.data.clinicalPresentation ?? undefined,
-        patientHistory: parsed.data.patientHistory ?? undefined,
-        examination: parsed.data.examination ?? undefined,
-        investigationResults: parsed.data.investigationResults ?? undefined,
-        medicalCertificate: parsed.data.medicalCertificate ?? undefined,
-        updatedById: session.userId,
-      },
+      data: clinicalUpdateData(parsed.data, session.userId),
     });
 
     return true;
@@ -481,19 +466,10 @@ export async function amendConsultation(
   await prisma.consultation.updateMany({
     where: { id, clinicId: session.clinicId },
     data: {
-      chiefComplaint: parsed.data.chiefComplaint,
-      diagnosis: parsed.data.diagnosis,
-      notes: parsed.data.notes,
-      vitals: parsed.data.vitals ?? undefined,
-      clinicalPresentation: parsed.data.clinicalPresentation ?? undefined,
-      patientHistory: parsed.data.patientHistory ?? undefined,
-      examination: parsed.data.examination ?? undefined,
-      investigationResults: parsed.data.investigationResults ?? undefined,
-      medicalCertificate: parsed.data.medicalCertificate ?? undefined,
+      ...clinicalUpdateData(parsed.data, session.userId),
       amendmentReason: reasonCheck.reason,
       amendedAt: new Date(),
       amendedById: session.userId,
-      updatedById: session.userId,
     },
   });
 
@@ -542,6 +518,7 @@ export async function generateMedicalCertificatePdf(
     clinicName: clinic.name,
     clinicPhone: clinic.phone,
     clinicAddress: clinic.address,
+    clinicLogoUrl: clinic.logoUrl,
     doctorName: consultation.doctor.name,
     doctorQualifications: consultation.doctor.qualifications ?? undefined,
     doctorRegistrationNo: consultation.doctor.registrationNo ?? undefined,
@@ -570,4 +547,51 @@ export async function generateMedicalCertificatePdf(
   const filename = `medical-certificate-${consultation.patient.mrn}.pdf`;
 
   return { success: true, data: { pdfBase64, filename } };
+}
+
+export async function generateReferralPdf(
+  consultationId: string
+): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
+  const session = await requireSessionUser();
+  if (!can(session, "consultations.write")) return permissionDenied();
+  const consultation = await prisma.consultation.findFirst({
+    where: { id: consultationId, clinicId: session.clinicId },
+    include: { patient: true, doctor: true, clinic: true },
+  });
+  if (!consultation) return { success: false, error: "Consultation not found." };
+  const referral = consultation.referral as ReferralLetter | null;
+  if (!hasReferralContent(referral)) {
+    return { success: false, error: "Add referral details before downloading." };
+  }
+  const pdfBytes = await renderReferralPdf({
+    clinicName: consultation.clinic.name,
+    clinicPhone: consultation.clinic.phone,
+    clinicAddress: consultation.clinic.address,
+    clinicLogoUrl: consultation.clinic.logoUrl,
+    doctorName: consultation.doctor.name,
+    doctorQualifications: consultation.doctor.qualifications ?? undefined,
+    doctorRegistrationNo: consultation.doctor.registrationNo ?? undefined,
+    date: formatCertificateDate(consultation.createdAt),
+    patientName: consultation.patient.name,
+    patientMrn: consultation.patient.mrn,
+    patientAge: formatPatientAge(consultation.patient),
+    patientGender: formatGender(consultation.patient.gender),
+    diagnosis: consultation.diagnosis ?? undefined,
+    ...referral,
+  });
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "export",
+    resourceType: "consultation",
+    resourceId: consultation.id,
+    metadata: { document: "referral" },
+  });
+  return {
+    success: true,
+    data: {
+      pdfBase64: Buffer.from(pdfBytes).toString("base64"),
+      filename: `referral-${consultation.patient.mrn}.pdf`,
+    },
+  };
 }

@@ -3,6 +3,7 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 
@@ -10,6 +11,7 @@ const styles = StyleSheet.create({
   page: { padding: 48, fontSize: 10, fontFamily: "Helvetica", color: "#1A2332" },
   rule: { borderBottom: "1px solid #CBD5E1", marginVertical: 14 },
   header: { alignItems: "center", marginBottom: 4 },
+  logo: { width: 44, height: 44, objectFit: "contain", marginBottom: 8 },
   clinicName: {
     fontSize: 16,
     fontWeight: "bold",
@@ -43,6 +45,7 @@ export type MedicalCertificatePdfProps = {
   clinicName: string;
   clinicPhone: string;
   clinicAddress: string;
+  clinicLogoUrl?: string | null;
   doctorName: string;
   doctorQualifications?: string;
   doctorRegistrationNo?: string;
@@ -71,6 +74,7 @@ export function MedicalCertificateDocument({
   clinicName,
   clinicPhone,
   clinicAddress,
+  clinicLogoUrl,
   doctorName,
   doctorQualifications,
   doctorRegistrationNo,
@@ -98,6 +102,9 @@ export function MedicalCertificateDocument({
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
+          {clinicLogoUrl ? (
+            <Image src={clinicLogoUrl} style={styles.logo} />
+          ) : null}
           <Text style={styles.clinicName}>{clinicName}</Text>
           <Text style={styles.clinicMeta}>
             {clinicAddress} | {clinicPhone}

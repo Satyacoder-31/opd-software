@@ -7,9 +7,9 @@ const sampleMedicines: Medicine[] = [
   {
     name: "Amoxicillin 500 mg",
     dosage: "1 capsule",
-    frequency: "Thrice daily",
+    frequency: "Three times daily",
     duration: "5 days",
-    instructions: "After food",
+    instructions: "After meals",
   },
   {
     name: "Paracetamol 650 mg",
@@ -24,11 +24,15 @@ describe("prescription PDF layouts", () => {
     "renders %s (%s) to a non-empty PDF",
     async (layoutId) => {
       const buffer = await renderPrescriptionPdf({
-        clinicName: "Sunrise Family Clinic",
-        clinicPhone: "+91 98765 43210",
-        clinicAddress: "12 MG Road, Bengaluru",
-        doctorName: "Ananya Sharma",
-        doctorQualifications: "MBBS, MD",
+        clinicName: "Maple Care Multispecialty Clinic",
+        clinicPhone: "+91 191 245 6789",
+        clinicAddress:
+          "2nd Floor, Sunrise Plaza, Gandhi Nagar, Jammu, Jammu & Kashmir – 180004, India",
+        clinicEmail: "care@maplecareclinic.com",
+        doctorName: "Aditi Sharma",
+        doctorQualifications: "MBBS, MD (General Medicine)",
+        doctorSpecialization: "Consultant Physician",
+        doctorExperience: "12 Years",
         doctorRegistrationNo: "KMC 45218",
         date: "19 Jul 2026",
         patientName: "Rahul Mehta",

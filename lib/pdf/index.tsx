@@ -10,6 +10,7 @@ import {
 } from "@/lib/pdf/medical-certificate";
 import { ReceiptDocument } from "@/lib/pdf/receipt";
 import type { LineItem } from "@/lib/types";
+import { ReferralDocument, type ReferralPdfProps } from "@/lib/pdf/referral";
 
 export async function renderPrescriptionPdf(
   props: PrescriptionPdfProps
@@ -25,11 +26,19 @@ export async function renderMedicalCertificatePdf(
   return new Uint8Array(buffer);
 }
 
+export async function renderReferralPdf(
+  props: ReferralPdfProps
+): Promise<Uint8Array> {
+  const buffer = await renderToBuffer(<ReferralDocument {...props} />);
+  return new Uint8Array(buffer);
+}
+
 export async function renderReceiptPdf(props: {
   clinicName: string;
   clinicPhone: string;
   clinicAddress: string;
   clinicGstin?: string;
+  clinicLogoUrl?: string | null;
   patientName: string;
   lineItems: LineItem[] | null;
   amount: number;

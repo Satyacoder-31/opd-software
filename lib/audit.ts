@@ -17,7 +17,12 @@ export type AuditResourceType =
   | "fee_item"
   | "drug_catalog_item"
   | "prescription_template"
-  | "consultation_attachment";
+  | "consultation_attachment"
+  | "lab_test"
+  | "lab_order"
+  | "lab_result"
+  | "messaging_config"
+  | "notification";
 
 type AuditParams = {
   clinicId: string;

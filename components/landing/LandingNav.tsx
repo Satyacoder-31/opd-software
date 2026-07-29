@@ -8,7 +8,8 @@ import { Icon } from "@/components/ui/Icon";
 
 const navLinks = [
   { href: "#features", label: "Features" },
-  { href: "#stories", label: "Stories" },
+  { href: "/clinics", label: "Find a clinic" },
+  { href: "/portal", label: "Patient portal" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -24,15 +25,25 @@ export function LandingNav() {
           </Link>
 
           <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-white/75 underline-offset-4 transition-[color,opacity] duration-150 hover:text-white hover:underline active:opacity-70"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.href.startsWith("/") ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-white/75 underline-offset-4 transition-[color,opacity] duration-150 hover:text-white hover:underline active:opacity-70"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-white/75 underline-offset-4 transition-[color,opacity] duration-150 hover:text-white hover:underline active:opacity-70"
+                >
+                  {link.label}
+                </a>
+              ),
+            )}
           </nav>
         </div>
 
@@ -43,15 +54,9 @@ export function LandingNav() {
           >
             Sign in
           </Link>
-          <Link
-            href="/signup"
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-accent px-4 text-sm font-medium text-ink transition-[color,background-color,transform] duration-150 hover:bg-accent/90 active:scale-[0.97] active:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-surface-deep"
-          >
-            Start today
-          </Link>
           <button
             type="button"
-            className="inline-flex size-10 items-center justify-center rounded-lg border border-white/25 text-white"
+            className="inline-flex size-10 items-center justify-center text-white transition-opacity duration-150 hover:opacity-80 active:opacity-60"
             aria-expanded={open}
             aria-controls="mobile-nav-menu"
             aria-label={open ? "Close menu" : "Open menu"}
@@ -75,13 +80,23 @@ export function LandingNav() {
           <ul className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <li key={link.href}>
-                <a
-                  href={link.href}
-                  className="block rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
-                  onClick={() => setOpen(false)}
-                >
-                  {link.label}
-                </a>
+                {link.href.startsWith("/") ? (
+                  <Link
+                    href={link.href}
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a
+                    href={link.href}
+                    className="block rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
+                    onClick={() => setOpen(false)}
+                  >
+                    {link.label}
+                  </a>
+                )}
               </li>
             ))}
             <li>
@@ -90,7 +105,7 @@ export function LandingNav() {
                 className="block rounded-lg px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white"
                 onClick={() => setOpen(false)}
               >
-                Sign in
+                Clinic sign in
               </Link>
             </li>
           </ul>

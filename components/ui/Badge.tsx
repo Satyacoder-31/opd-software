@@ -9,6 +9,7 @@ const statusStyles: Record<string, string> = {
   no_show: "border-border bg-muted text-muted-foreground",
   draft: "border-border bg-muted text-muted-foreground",
   paid: "border-primary/30 bg-primary/10 text-primary",
+  partial: "border-accent/30 bg-accent/15 text-accent-foreground",
   void: "border-destructive/30 bg-destructive/10 text-destructive",
   unbilled: "border-accent/30 bg-accent/15 text-accent-foreground",
 };

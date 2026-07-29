@@ -132,6 +132,7 @@ export function BillingHubClient({
                 { value: "all", label: "All" },
                 { value: "unbilled", label: "Unbilled" },
                 { value: "draft", label: "Draft" },
+                { value: "partial", label: "Partial" },
                 { value: "paid", label: "Paid" },
                 { value: "void", label: "Void" },
               ]}

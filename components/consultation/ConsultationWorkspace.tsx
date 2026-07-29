@@ -31,6 +31,8 @@ import {
 } from "@/lib/consultation-workspace";
 import type { ConsultationClinicalData, Medicine } from "@/lib/types";
 import { usePendingAction } from "@/hooks/usePendingAction";
+import { LabOrdersPanel } from "@/components/consultation/LabOrdersPanel";
+import { ReferralSections } from "@/components/consultation/ReferralSections";
 
 const AUTOSAVE_MS = 3000;
 
@@ -358,10 +360,16 @@ export function ConsultationWorkspace({
           </TabsContent>
 
           <TabsContent value="investigations" className="mt-0">
+            <LabOrdersPanel consultationId={consultationId} />
             <InvestigationSections value={clinical} onChange={setClinical} />
           </TabsContent>
 
           <TabsContent value="documents" className="mt-0">
+            <ReferralSections
+              consultationId={consultationId}
+              value={clinical}
+              onChange={setClinical}
+            />
             <MedicalCertificateSections
               value={clinical}
               onChange={setClinical}

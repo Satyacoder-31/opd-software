@@ -307,3 +307,75 @@ export async function exportDailyReportCsv(
     },
   };
 }
+
+export async function getClinicMisSummary(input?: {
+  from?: string;
+  to?: string;
+}) {
+  const session = await requireSessionUser();
+  if (!can(session, "reports.read")) return null;
+  const from = input?.from ? parseLocalDateInput(input.from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const toBase = input?.to ? parseLocalDateInput(input.to) : clinicTodayDate();
+  if (!from || !toBase) return null;
+  const to = new Date(toBase);
+  to.setDate(to.getDate() + 1);
+  const [appointments, paidInvoices, completedLabs] = await Promise.all([
+    prisma.appointment.findMany({
+      where: { clinicId: session.clinicId, queueDate: { gte: from, lt: to } },
+      select: {
+        status: true,
+        consultation: {
+          select: {
+            doctorId: true,
+            doctor: { select: { name: true } },
+            invoice: { select: { amountPaid: true, status: true } },
+          },
+        },
+      },
+    }),
+    prisma.invoice.findMany({
+      where: {
+        clinicId: session.clinicId,
+        status: { in: [InvoiceStatus.paid, InvoiceStatus.partial] },
+        updatedAt: { gte: from, lt: to },
+      },
+      select: { amountPaid: true, taxableAmount: true, taxAmount: true },
+    }),
+    prisma.labOrder.findMany({
+      where: { clinicId: session.clinicId, status: "completed", updatedAt: { gte: from, lt: to } },
+      select: { createdAt: true, updatedAt: true },
+    }),
+  ]);
+  const doctorMap = new Map<string, { doctorName: string; visits: number; revenue: number }>();
+  for (const appointment of appointments) {
+    const consultation = appointment.consultation;
+    if (!consultation) continue;
+    const row = doctorMap.get(consultation.doctorId) ?? {
+      doctorName: consultation.doctor.name,
+      visits: 0,
+      revenue: 0,
+    };
+    row.visits += 1;
+    row.revenue += Number(consultation.invoice?.amountPaid ?? 0);
+    doctorMap.set(consultation.doctorId, row);
+  }
+  const turnaroundHours = completedLabs.length
+    ? completedLabs.reduce((sum, order) => sum + (order.updatedAt.getTime() - order.createdAt.getTime()) / 3_600_000, 0) / completedLabs.length
+    : null;
+  return {
+    period: { from: formatDateKey(from), to: formatDateKey(toBase) },
+    appointments: {
+      total: appointments.length,
+      completed: appointments.filter((a) => a.status === AppointmentStatus.done).length,
+      cancelled: appointments.filter((a) => a.status === AppointmentStatus.cancelled).length,
+      noShow: appointments.filter((a) => a.status === AppointmentStatus.no_show).length,
+    },
+    doctorRevenue: Array.from(doctorMap.entries()).map(([doctorId, value]) => ({ doctorId, ...value })).sort((a, b) => b.revenue - a.revenue),
+    labTurnaroundHours: turnaroundHours,
+    gst: {
+      taxable: paidInvoices.reduce((sum, invoice) => sum + Number(invoice.taxableAmount ?? 0), 0),
+      tax: paidInvoices.reduce((sum, invoice) => sum + Number(invoice.taxAmount ?? 0), 0),
+      collected: paidInvoices.reduce((sum, invoice) => sum + Number(invoice.amountPaid), 0),
+    },
+  };
+}

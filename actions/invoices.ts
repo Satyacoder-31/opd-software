@@ -16,6 +16,8 @@ import {
   type BillingHubStatusFilter,
 } from "@/lib/billing-hub";
 import { can } from "@/lib/rbac";
+import { createRazorpayOrder, getRazorpayKeyId } from "@/lib/integrations/razorpay";
+import { planAllows } from "@/lib/plan-features";
 import type { ActionResult, LineItem, VoidActionResult } from "@/lib/types";
 
 const lineItemSchema = z.object({
@@ -331,10 +333,11 @@ export async function markInvoicePaid(
       where: {
         id: invoice.id,
         clinicId: session.clinicId,
-        status: InvoiceStatus.draft,
+        status: { in: [InvoiceStatus.draft, InvoiceStatus.partial] },
       },
       data: {
         status: InvoiceStatus.paid,
+        amountPaid: invoice.amount,
         paymentMode,
         updatedById: session.userId,
       },
@@ -342,6 +345,17 @@ export async function markInvoicePaid(
 
     if (paid.count === 0) {
       return null;
+    }
+
+    const balance = Number(invoice.amount) - Number(invoice.amountPaid);
+    if (balance > 0) {
+      await tx.invoicePayment.create({
+        data: {
+          invoiceId: invoice.id,
+          amount: new Decimal(balance),
+          paymentMode,
+        },
+      });
     }
 
     if (invoice.invoiceNumber) {
@@ -485,6 +499,7 @@ export async function generateReceiptPdf(
     clinicPhone: clinic.phone,
     clinicAddress: clinic.address,
     clinicGstin: clinic.gstin ?? undefined,
+    clinicLogoUrl: clinic.logoUrl,
     patientName: invoice.consultation.patient.name,
     lineItems,
     amount,
@@ -509,4 +524,99 @@ export async function generateReceiptPdf(
   const filename = `receipt-${(invoice.invoiceNumber ?? invoice.id).slice(0, 12)}.pdf`;
 
   return { success: true, data: { pdfBase64, filename } };
+}
+
+export async function recordPartialPayment(
+  consultationId: string,
+  amount: number,
+  paymentMode: PaymentMode,
+): Promise<VoidActionResult> {
+  const session = await requireSessionUser();
+  if (!can(session, "billing.write")) return permissionDenied();
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { success: false, error: "Enter a valid payment amount." };
+  }
+  if (!Object.values(PaymentMode).includes(paymentMode)) {
+    return { success: false, error: "Select a valid payment mode." };
+  }
+  const invoice = await prisma.invoice.findFirst({
+    where: { consultationId, clinicId: session.clinicId },
+  });
+  if (!invoice || invoice.status === InvoiceStatus.void) {
+    return { success: false, error: "Active invoice not found." };
+  }
+  const currentPaid = Number(invoice.amountPaid);
+  const total = Number(invoice.amount);
+  if (currentPaid + amount > total + 0.001) {
+    return { success: false, error: `Payment exceeds the balance of ₹${(total - currentPaid).toFixed(2)}.` };
+  }
+  const nextPaid = Math.round((currentPaid + amount) * 100) / 100;
+  const status = nextPaid >= total ? InvoiceStatus.paid : InvoiceStatus.partial;
+  await prisma.$transaction([
+    prisma.invoicePayment.create({
+      data: { invoiceId: invoice.id, amount: new Decimal(amount), paymentMode },
+    }),
+    prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        amountPaid: new Decimal(nextPaid),
+        status,
+        paymentMode,
+        updatedById: session.userId,
+      },
+    }),
+  ]);
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "invoice",
+    resourceId: invoice.id,
+    metadata: { paymentAmount: amount, amountPaid: nextPaid, status },
+  });
+  revalidatePath(`/billing/${consultationId}`);
+  revalidatePath("/billing");
+  revalidatePath("/reports");
+  return { success: true };
+}
+
+export async function createOnlinePaymentOrder(
+  consultationId: string,
+): Promise<ActionResult<{
+  orderId: string;
+  amountPaise: number;
+  currency: string;
+  keyId: string | null;
+}>> {
+  const session = await requireSessionUser();
+  if (!can(session, "billing.write")) return permissionDenied();
+  const invoice = await prisma.invoice.findFirst({
+    where: { consultationId, clinicId: session.clinicId },
+    include: { clinic: { select: { plan: true } } },
+  });
+  if (!invoice || invoice.status === InvoiceStatus.void || invoice.status === InvoiceStatus.paid) {
+    return { success: false, error: "Payable invoice not found." };
+  }
+  if (!planAllows(invoice.clinic.plan, "online_payments")) {
+    return { success: false, error: "Your plan does not include online payments." };
+  }
+  const balance = Number(invoice.amount) - Number(invoice.amountPaid);
+  const order = await createRazorpayOrder({
+    amountPaise: Math.round(balance * 100),
+    receipt: (invoice.invoiceNumber ?? invoice.id).slice(0, 40),
+    notes: { invoiceId: invoice.id, clinicId: session.clinicId },
+  });
+  await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: { razorpayOrderId: order.id, updatedById: session.userId },
+  });
+  return {
+    success: true,
+    data: {
+      orderId: order.id,
+      amountPaise: order.amount,
+      currency: order.currency,
+      keyId: getRazorpayKeyId(),
+    },
+  };
 }

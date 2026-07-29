@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "designation" TEXT,
+  ADD COLUMN IF NOT EXISTS "phone" TEXT;

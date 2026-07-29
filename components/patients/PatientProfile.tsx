@@ -16,6 +16,12 @@ export function PatientProfile({ patient }: PatientProfileProps) {
   return (
     <dl>
       <DetailRow label="MRN" value={patient.mrn} />
+      {patient.abhaNumber ? (
+        <DetailRow label="ABHA number" value={patient.abhaNumber} />
+      ) : null}
+      {patient.abhaAddress ? (
+        <DetailRow label="ABHA address" value={patient.abhaAddress} />
+      ) : null}
       <DetailRow label="Phone" value={formatPhone(patient.phone)} />
       <DetailRow
         label="Date of birth"

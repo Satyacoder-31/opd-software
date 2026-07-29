@@ -1,5 +1,5 @@
 import React from "react";
-import { Document, Page, Text, View } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
 import type { Medicine } from "@/lib/types";
 import {
@@ -11,8 +11,13 @@ export type PrescriptionPdfProps = {
   clinicName: string;
   clinicPhone: string;
   clinicAddress: string;
+  clinicEmail?: string;
+  /** Absolute https URL for clinic logo (optional letterhead mark). */
+  clinicLogoUrl?: string | null;
   doctorName: string;
   doctorQualifications?: string;
+  doctorSpecialization?: string;
+  doctorExperience?: string;
   doctorRegistrationNo?: string;
   date: string;
   patientName: string;
@@ -54,6 +59,71 @@ function parseAdviceLines(advice?: string): string[] {
 
 /* ------------------------------- Header ------------------------------- */
 
+function ClinicLogoMark({
+  url,
+  size = 36,
+}: {
+  url?: string | null;
+  size?: number;
+}) {
+  if (!url) return null;
+  return (
+    <Image
+      src={url}
+      style={{
+        width: size,
+        height: size,
+        objectFit: "contain",
+      }}
+    />
+  );
+}
+
+function ClinicBrandBlock({
+  props,
+  nameStyle,
+  metaStyle,
+  clinicMeta,
+  align = "left",
+  logoSize = 36,
+}: {
+  props: PrescriptionPdfProps;
+  nameStyle: Style;
+  metaStyle: Style;
+  clinicMeta: string;
+  align?: "left" | "center";
+  logoSize?: number;
+}) {
+  const hasLogo = Boolean(props.clinicLogoUrl);
+  const logo = <ClinicLogoMark url={props.clinicLogoUrl} size={logoSize} />;
+
+  if (align === "center") {
+    return (
+      <View style={{ alignItems: "center" }}>
+        {hasLogo ? <View style={{ marginBottom: 6 }}>{logo}</View> : null}
+        <Text style={nameStyle}>{props.clinicName}</Text>
+        {clinicMeta ? <Text style={metaStyle}>{clinicMeta}</Text> : null}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        maxWidth: 320,
+      }}
+    >
+      {hasLogo ? <View style={{ marginRight: 10 }}>{logo}</View> : null}
+      <View style={{ flexGrow: 1, flexShrink: 1 }}>
+        <Text style={nameStyle}>{props.clinicName}</Text>
+        {clinicMeta ? <Text style={metaStyle}>{clinicMeta}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
 function DoctorLines({
   theme,
   props,
@@ -73,6 +143,11 @@ function DoctorLines({
     marginTop: 2,
     textAlign: align,
   };
+  const specialtyLine = [props.doctorSpecialization, props.doctorExperience]
+    .filter(Boolean)
+    .join("  ·  ");
+  const displayName = props.doctorName.replace(/^Dr\.?\s+/i, "");
+
   return (
     <View>
       <Text
@@ -83,11 +158,12 @@ function DoctorLines({
           textAlign: align,
         }}
       >
-        Dr. {props.doctorName}
+        Dr. {displayName}
       </Text>
       {props.doctorQualifications ? (
         <Text style={meta}>{props.doctorQualifications}</Text>
       ) : null}
+      {specialtyLine ? <Text style={meta}>{specialtyLine}</Text> : null}
       {props.doctorRegistrationNo ? (
         <Text style={meta}>Reg. No: {props.doctorRegistrationNo}</Text>
       ) : null}
@@ -97,7 +173,13 @@ function DoctorLines({
 
 function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps }) {
   const { colors } = theme.layout;
-  const clinicMeta = `${props.clinicAddress}  ·  ${props.clinicPhone}`;
+  const clinicMeta = [
+    props.clinicAddress,
+    props.clinicPhone,
+    props.clinicEmail,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
 
   switch (theme.layout.header) {
     case "banner": {
@@ -113,22 +195,23 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
             alignItems: "flex-end",
           }}
         >
-          <View style={{ maxWidth: 300 }}>
-            <Text
-              style={{
-                fontSize: 16,
-                fontFamily: theme.bold,
-                color: onBanner,
-                letterSpacing: 0.8,
-                textTransform: "uppercase",
-              }}
-            >
-              {props.clinicName}
-            </Text>
-            <Text style={{ fontSize: 8.5, color: onBanner, opacity: 0.85, marginTop: 5 }}>
-              {clinicMeta}
-            </Text>
-          </View>
+          <ClinicBrandBlock
+            props={props}
+            clinicMeta={clinicMeta}
+            nameStyle={{
+              fontSize: 16,
+              fontFamily: theme.bold,
+              color: onBanner,
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+            }}
+            metaStyle={{
+              fontSize: 8.5,
+              color: onBanner,
+              opacity: 0.85,
+              marginTop: 5,
+            }}
+          />
           <DoctorLines
             theme={theme}
             props={props}
@@ -150,21 +233,17 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
               alignItems: "flex-end",
             }}
           >
-            <View style={{ maxWidth: 300 }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontFamily: theme.bold,
-                  color: colors.accent,
-                  letterSpacing: 0.6,
-                }}
-              >
-                {props.clinicName}
-              </Text>
-              <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
-                {clinicMeta}
-              </Text>
-            </View>
+            <ClinicBrandBlock
+              props={props}
+              clinicMeta={clinicMeta}
+              nameStyle={{
+                fontSize: 16,
+                fontFamily: theme.bold,
+                color: colors.accent,
+                letterSpacing: 0.6,
+              }}
+              metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}
+            />
             <DoctorLines
               theme={theme}
               props={props}
@@ -192,21 +271,17 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
               alignItems: "flex-end",
             }}
           >
-            <View style={{ maxWidth: 300 }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontFamily: theme.bold,
-                  color: colors.accent,
-                  letterSpacing: 0.6,
-                }}
-              >
-                {props.clinicName}
-              </Text>
-              <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
-                {clinicMeta}
-              </Text>
-            </View>
+            <ClinicBrandBlock
+              props={props}
+              clinicMeta={clinicMeta}
+              nameStyle={{
+                fontSize: 16,
+                fontFamily: theme.bold,
+                color: colors.accent,
+                letterSpacing: 0.6,
+              }}
+              metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}
+            />
             <DoctorLines
               theme={theme}
               props={props}
@@ -224,20 +299,19 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
     case "minimal":
       return (
         <View>
-          <Text
-            style={{
+          <ClinicBrandBlock
+            props={props}
+            clinicMeta={clinicMeta}
+            logoSize={28}
+            nameStyle={{
               fontSize: 13,
               fontFamily: theme.bold,
               color: colors.ink,
               letterSpacing: 1.6,
               textTransform: "uppercase",
             }}
-          >
-            {props.clinicName}
-          </Text>
-          <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 4 }}>
-            {clinicMeta}
-          </Text>
+            metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 4 }}
+          />
           <View
             style={{
               flexDirection: "row",
@@ -263,22 +337,20 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
     case "double-rule":
       return (
         <View>
-          <View style={{ alignItems: "center" }}>
-            <Text
-              style={{
-                fontSize: 17,
-                fontFamily: theme.bold,
-                color: colors.accent,
-                letterSpacing: 1.4,
-                textTransform: "uppercase",
-              }}
-            >
-              {props.clinicName}
-            </Text>
-            <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
-              {clinicMeta}
-            </Text>
-          </View>
+          <ClinicBrandBlock
+            props={props}
+            clinicMeta={clinicMeta}
+            align="center"
+            logoSize={40}
+            nameStyle={{
+              fontSize: 17,
+              fontFamily: theme.bold,
+              color: colors.accent,
+              letterSpacing: 1.4,
+              textTransform: "uppercase",
+            }}
+            metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}
+          />
           <View
             style={{ borderBottom: `2.5px solid ${colors.accent}`, marginTop: 12 }}
           />
@@ -301,22 +373,20 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
     default:
       return (
         <View>
-          <View style={{ alignItems: "center" }}>
-            <Text
-              style={{
-                fontSize: 16,
-                fontFamily: theme.bold,
-                color: colors.accent,
-                letterSpacing: 1.2,
-                textTransform: "uppercase",
-              }}
-            >
-              {props.clinicName}
-            </Text>
-            <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}>
-              {clinicMeta}
-            </Text>
-          </View>
+          <ClinicBrandBlock
+            props={props}
+            clinicMeta={clinicMeta}
+            align="center"
+            logoSize={40}
+            nameStyle={{
+              fontSize: 16,
+              fontFamily: theme.bold,
+              color: colors.accent,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+            }}
+            metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}
+          />
           <View
             style={{ borderBottom: `1px solid ${colors.rule}`, marginVertical: 12 }}
           />
@@ -520,12 +590,11 @@ function MedicinesTable({
         }}
       >
         <Text style={[headCell, { width: 22 }]}>#</Text>
-        <Text style={[headCell, { flex: 2.4 }]}>Medicine</Text>
-        <Text style={[headCell, { flex: 1.1 }]}>Dosage</Text>
+        <Text style={[headCell, { flex: 2.6 }]}>Medicine</Text>
+        <Text style={[headCell, { flex: 1.2 }]}>Dosage</Text>
         <Text style={[headCell, { flex: 1.1 }]}>Route</Text>
-        <Text style={[headCell, { flex: 1.4 }]}>Frequency</Text>
-        <Text style={[headCell, { flex: 1.0 }]}>Duration</Text>
-        <Text style={[headCell, { flex: 0.7 }]}>Qty</Text>
+        <Text style={[headCell, { flex: 1.5 }]}>Frequency</Text>
+        <Text style={[headCell, { flex: 1.1 }]}>Duration</Text>
       </View>
       {medicines.map((med, i) => (
         <View
@@ -541,14 +610,13 @@ function MedicinesTable({
             <Text style={[cell, { width: 22, color: colors.muted }]}>
               {i + 1}
             </Text>
-            <Text style={[cell, { flex: 2.4, fontFamily: theme.bold }]}>
+            <Text style={[cell, { flex: 2.6, fontFamily: theme.bold }]}>
               {med.name}
             </Text>
-            <Text style={[cell, { flex: 1.1 }]}>{med.dosage || "—"}</Text>
+            <Text style={[cell, { flex: 1.2 }]}>{med.dosage || "—"}</Text>
             <Text style={[cell, { flex: 1.1 }]}>{med.route || "—"}</Text>
-            <Text style={[cell, { flex: 1.4 }]}>{med.frequency || "—"}</Text>
-            <Text style={[cell, { flex: 1.0 }]}>{med.duration || "—"}</Text>
-            <Text style={[cell, { flex: 0.7 }]}>{med.quantity || "—"}</Text>
+            <Text style={[cell, { flex: 1.5 }]}>{med.frequency || "—"}</Text>
+            <Text style={[cell, { flex: 1.1 }]}>{med.duration || "—"}</Text>
           </View>
           {med.instructions ? (
             <Text
@@ -579,13 +647,7 @@ function MedicinesList({
   return (
     <View>
       {medicines.map((med, i) => {
-        const details = [
-          med.dosage,
-          med.route,
-          med.frequency,
-          med.duration,
-          med.quantity ? `Qty ${med.quantity}` : null,
-        ]
+        const details = [med.dosage, med.route, med.frequency, med.duration]
           .filter(Boolean)
           .join("  ·  ");
         return (
@@ -641,13 +703,7 @@ function MedicinesCards({
   return (
     <View>
       {medicines.map((med, i) => {
-        const details = [
-          med.dosage,
-          med.route,
-          med.frequency,
-          med.duration,
-          med.quantity ? `Qty ${med.quantity}` : null,
-        ]
+        const details = [med.dosage, med.route, med.frequency]
           .filter(Boolean)
           .join("  ·  ");
         return (
@@ -677,10 +733,7 @@ function MedicinesCards({
             </View>
             {details ? (
               <Text style={{ fontSize: 9, color: colors.ink, marginTop: 4 }}>
-                {[med.dosage, med.route, med.frequency]
-                  .filter(Boolean)
-                  .join("  ·  ")}
-                {med.quantity ? `  ·  Qty ${med.quantity}` : ""}
+                {details}
               </Text>
             ) : null}
             {med.instructions ? (
@@ -723,19 +776,26 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
   const isBanner = header === "banner";
   const isSideband = header === "sideband";
 
+  const contentLeft = isBanner ? 48 : isSideband ? 58 : 48;
+  const contentRight = 48;
+  // Room for fixed signature + page footer so body content never collides.
+  const pageBottomPad = 110;
+
   const pageStyle: Style = {
     fontSize: 10,
     fontFamily: theme.body,
     color: colors.ink,
     paddingTop: isBanner ? 0 : 44,
-    paddingBottom: 44,
-    paddingLeft: isBanner ? 0 : isSideband ? 58 : 48,
-    paddingRight: isBanner ? 0 : 48,
+    paddingBottom: pageBottomPad,
+    paddingLeft: isBanner ? 0 : contentLeft,
+    paddingRight: isBanner ? 0 : contentRight,
   };
 
   const bodyStyle: Style = isBanner
     ? { paddingTop: 24, paddingHorizontal: 48 }
     : {};
+
+  const displayDoctorName = props.doctorName.replace(/^Dr\.?\s+/i, "");
 
   return (
     <Document>
@@ -800,24 +860,26 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
               </Text>
             </View>
           ) : null}
+        </View>
 
-          <View wrap={false} style={{ marginTop: 36, alignItems: "flex-end" }}>
-            <View
-              style={{
-                borderTop: `0.75px solid ${colors.muted}`,
-                paddingTop: 6,
-                minWidth: 150,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ fontSize: 9.5, fontFamily: theme.bold }}>
-                Dr. {props.doctorName}
-              </Text>
-              <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 2 }}>
-                Digital signature
-              </Text>
-            </View>
-          </View>
+        <View
+          fixed
+          style={{
+            position: "absolute",
+            bottom: 52,
+            right: contentRight,
+            minWidth: 150,
+            alignItems: "center",
+            borderTop: `0.75px solid ${colors.muted}`,
+            paddingTop: 6,
+          }}
+        >
+          <Text style={{ fontSize: 9.5, fontFamily: theme.bold }}>
+            Dr. {displayDoctorName}
+          </Text>
+          <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 2 }}>
+            Digital signature
+          </Text>
         </View>
 
         <View
@@ -825,8 +887,8 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
           style={{
             position: "absolute",
             bottom: 22,
-            left: isSideband ? 58 : 48,
-            right: 48,
+            left: contentLeft,
+            right: contentRight,
             borderTop: `0.75px solid ${colors.rule}`,
             paddingTop: 6,
             flexDirection: "row",
@@ -834,7 +896,9 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
           }}
         >
           <Text style={{ fontSize: 7, color: colors.muted }}>
-            {props.clinicName} · {props.clinicPhone}
+            {[props.clinicName, props.clinicPhone, props.clinicEmail]
+              .filter(Boolean)
+              .join(" · ")}
           </Text>
           <Text
             style={{ fontSize: 7, color: colors.muted }}

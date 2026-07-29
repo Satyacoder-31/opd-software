@@ -3,13 +3,15 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { LineItem } from "@/lib/types";
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontSize: 11, fontFamily: "Helvetica" },
-  header: { marginBottom: 20 },
+  header: { marginBottom: 20, flexDirection: "row", alignItems: "center" },
+  logo: { width: 40, height: 40, objectFit: "contain", marginRight: 12 },
   clinicName: { fontSize: 18, fontWeight: "bold", color: "#1A85C8" },
   clinicInfo: { fontSize: 9, color: "#5C6B7A", marginTop: 4 },
   title: { fontSize: 14, fontWeight: "bold", marginBottom: 16, color: "#1A2332" },
@@ -27,6 +29,7 @@ type ReceiptPdfProps = {
   clinicPhone: string;
   clinicAddress: string;
   clinicGstin?: string;
+  clinicLogoUrl?: string | null;
   patientName: string;
   lineItems: LineItem[] | null;
   amount: number;
@@ -44,6 +47,7 @@ export function ReceiptDocument({
   clinicPhone,
   clinicAddress,
   clinicGstin,
+  clinicLogoUrl,
   patientName,
   lineItems,
   amount,
@@ -62,12 +66,17 @@ export function ReceiptDocument({
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.clinicName}>{clinicName}</Text>
-          <Text style={styles.clinicInfo}>{clinicAddress}</Text>
-          <Text style={styles.clinicInfo}>Tel: {clinicPhone}</Text>
-          {clinicGstin ? (
-            <Text style={styles.clinicInfo}>GSTIN: {clinicGstin}</Text>
+          {clinicLogoUrl ? (
+            <Image src={clinicLogoUrl} style={styles.logo} />
           ) : null}
+          <View>
+            <Text style={styles.clinicName}>{clinicName}</Text>
+            <Text style={styles.clinicInfo}>{clinicAddress}</Text>
+            <Text style={styles.clinicInfo}>Tel: {clinicPhone}</Text>
+            {clinicGstin ? (
+              <Text style={styles.clinicInfo}>GSTIN: {clinicGstin}</Text>
+            ) : null}
+          </View>
         </View>
 
         <Text style={styles.title}>Payment Receipt</Text>

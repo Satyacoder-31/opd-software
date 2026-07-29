@@ -2,7 +2,7 @@
 
 import { faCheck, faDownload } from "@fortawesome/free-solid-svg-icons";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   previewPrescriptionLayout,
   setPrescriptionLayout,
@@ -43,15 +43,87 @@ const PATIENT_STRUCTURE: Record<LayoutPatientInfoStyle, string> = {
 };
 
 const MEDICINE_STRUCTURE: Record<LayoutMedicinesStyle, string> = {
-  table: "Column medicine table",
-  list: "Numbered medicine list",
-  cards: "Card-style medicines",
+  table: "Table: name, dosage, route, frequency, duration + instructions",
+  list: "List: name with dosage · route · frequency · duration + instructions",
+  cards: "Cards: name with dosage · route · frequency · duration + instructions",
 };
 
+const SAMPLE_CLINIC = {
+  name: "Maple Care Multispecialty Clinic",
+  addressLine1: "2nd Floor, Sunrise Plaza, Gandhi Nagar",
+  addressLine2: "Jammu, Jammu & Kashmir – 180004",
+  phone: "+91 191 245 6789",
+  email: "care@maplecareclinic.com",
+} as const;
+
+const SAMPLE_DOCTOR = {
+  name: "Dr. Aditi Sharma",
+  qualifications: "MBBS, MD (General Medicine)",
+  specialization: "Consultant Physician",
+  experience: "12 Years",
+} as const;
+
+/** Dummy letterhead mark for Maple Care in layout mini-previews. */
+function PreviewClinicLogo({
+  accent,
+  mark = "#FFFFFF",
+  size = 18,
+  className,
+}: {
+  accent: string;
+  mark?: string;
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      className={cn("shrink-0", className)}
+      aria-hidden
+    >
+      <rect width="40" height="40" rx="9" fill={accent} />
+      {/* Classic maple leaf */}
+      <path
+        fill={mark}
+        d="M20 5l1.6 5.2 4.8-3.2-1.2 5.4 5.6-.4-3.2 4.4 5.2 2.2-5 2.4 3.6 4.2-5.4-1.2.8 5.6L20 25.2l-1.8 4.4.8-5.6-5.4 1.2 3.6-4.2-5-2.4 5.2-2.2-3.2-4.4 5.6.4-1.2-5.4 4.8 3.2z"
+      />
+      <rect x="18.7" y="27.5" width="2.6" height="6.5" rx="0.6" fill={mark} />
+      {/* Medical cross */}
+      <path
+        fill={accent}
+        d="M18.6 14.5h2.8v2.8H24v2.8h-2.6v2.8h-2.8v-2.8H16v-2.8h2.6z"
+      />
+    </svg>
+  );
+}
+
 const SAMPLE_MEDS = [
-  { name: "Amoxicillin 500mg", dose: "1-0-1", days: "5d" },
-  { name: "Paracetamol 650", dose: "SOS", days: "3d" },
-  { name: "Pantoprazole 40", dose: "1-0-0", days: "7d" },
+  {
+    name: "Amoxicillin 500 mg",
+    dosage: "1 capsule",
+    route: "Oral",
+    frequency: "Three times daily",
+    duration: "5 days",
+    instructions: "After meals",
+  },
+  {
+    name: "Paracetamol 650 mg",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "As needed",
+    duration: "3 days",
+    instructions: "Max 3 tablets / day",
+  },
+  {
+    name: "Pantoprazole 40 mg",
+    dosage: "1 tablet",
+    route: "Oral",
+    frequency: "Once daily",
+    duration: "7 days",
+    instructions: "Before meals",
+  },
 ] as const;
 
 function structureSummary(layout: PrescriptionLayoutConfig) {
@@ -62,14 +134,68 @@ function structureSummary(layout: PrescriptionLayoutConfig) {
   ];
 }
 
+function PreviewClinicMeta({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div className={className} style={style}>
+      <div>
+        {SAMPLE_CLINIC.addressLine1}, {SAMPLE_CLINIC.addressLine2}
+      </div>
+      <div>
+        {SAMPLE_CLINIC.phone} · {SAMPLE_CLINIC.email}
+      </div>
+    </div>
+  );
+}
+
+function PreviewDoctorBlock({
+  align = "left",
+  nameClassName,
+  metaClassName,
+  nameStyle,
+  metaStyle,
+}: {
+  align?: "left" | "right" | "center";
+  nameClassName: string;
+  metaClassName: string;
+  nameStyle?: CSSProperties;
+  metaStyle?: CSSProperties;
+}) {
+  const alignClass =
+    align === "right"
+      ? "text-right"
+      : align === "center"
+        ? "text-center"
+        : "text-left";
+
+  return (
+    <div className={cn("min-w-0", alignClass)}>
+      <div className={nameClassName} style={nameStyle}>
+        {SAMPLE_DOCTOR.name}
+      </div>
+      <div className={metaClassName} style={metaStyle}>
+        {SAMPLE_DOCTOR.qualifications}
+      </div>
+      <div className={metaClassName} style={metaStyle}>
+        {SAMPLE_DOCTOR.specialization} · {SAMPLE_DOCTOR.experience}
+      </div>
+    </div>
+  );
+}
+
 function PreviewHeader({ layout }: { layout: PrescriptionLayoutConfig }) {
   const { colors, header, font } = layout;
   const onBanner = colors.headerText ?? "#FFFFFF";
   const clinicClass = cn(
     "font-semibold uppercase leading-tight tracking-wide",
-    font === "Times-Roman" ? "font-serif text-[8px]" : "text-[7.5px]"
+    font === "Times-Roman" ? "font-serif text-[7.5px]" : "text-[7px]"
   );
-  const metaClass = "mt-0.5 text-[5px] leading-tight";
+  const metaClass = "mt-0.5 text-[4.5px] leading-snug";
   const doctorClass = "text-[6px] font-semibold leading-tight";
   const doctorMetaClass = "mt-px text-[4.5px] leading-tight";
 
@@ -79,18 +205,23 @@ function PreviewHeader({ layout }: { layout: PrescriptionLayoutConfig }) {
         className="flex items-end justify-between gap-2 px-2.5 py-2"
         style={{ backgroundColor: colors.accent, color: onBanner }}
       >
-        <div className="min-w-0">
-          <div className={clinicClass}>City Care Clinic</div>
-          <div className={metaClass} style={{ opacity: 0.85 }}>
-            12 MG Road · 98765 43210
+        <div className="flex min-w-0 items-center gap-1.5">
+          <PreviewClinicLogo
+            accent={onBanner}
+            mark={colors.accent}
+            size={16}
+          />
+          <div className="min-w-0">
+            <div className={clinicClass}>{SAMPLE_CLINIC.name}</div>
+            <PreviewClinicMeta className={metaClass} style={{ opacity: 0.85 }} />
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <div className={doctorClass}>Dr. Sharma</div>
-          <div className={doctorMetaClass} style={{ opacity: 0.85 }}>
-            MBBS, MD
-          </div>
-        </div>
+        <PreviewDoctorBlock
+          align="right"
+          nameClassName={doctorClass}
+          metaClassName={doctorMetaClass}
+          metaStyle={{ opacity: 0.85 }}
+        />
       </div>
     );
   }
@@ -99,22 +230,25 @@ function PreviewHeader({ layout }: { layout: PrescriptionLayoutConfig }) {
     return (
       <div className="px-2.5 pt-2">
         <div className="flex items-end justify-between gap-2">
-          <div className="min-w-0">
-            <div className={clinicClass} style={{ color: colors.accent }}>
-              City Care Clinic
-            </div>
-            <div className={metaClass} style={{ color: colors.muted }}>
-              12 MG Road · 98765 43210
-            </div>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className={doctorClass} style={{ color: colors.ink }}>
-              Dr. Sharma
-            </div>
-            <div className={doctorMetaClass} style={{ color: colors.muted }}>
-              MBBS, MD
+          <div className="flex min-w-0 items-center gap-1.5">
+            <PreviewClinicLogo accent={colors.accent} size={16} />
+            <div className="min-w-0">
+              <div className={clinicClass} style={{ color: colors.accent }}>
+                {SAMPLE_CLINIC.name}
+              </div>
+              <PreviewClinicMeta
+                className={metaClass}
+                style={{ color: colors.muted }}
+              />
             </div>
           </div>
+          <PreviewDoctorBlock
+            align="right"
+            nameClassName={doctorClass}
+            metaClassName={doctorMetaClass}
+            nameStyle={{ color: colors.ink }}
+            metaStyle={{ color: colors.muted }}
+          />
         </div>
         <div
           className={cn("mt-1.5", header === "split" ? "border-t-2" : "border-t")}
@@ -127,21 +261,25 @@ function PreviewHeader({ layout }: { layout: PrescriptionLayoutConfig }) {
   if (header === "double-rule") {
     return (
       <div className="px-2.5 pt-2 text-center">
-        <div className={clinicClass} style={{ color: colors.accent }}>
-          City Care Clinic
-        </div>
-        <div className={metaClass} style={{ color: colors.muted }}>
-          12 MG Road · 98765 43210
+        <div className="flex flex-col items-center">
+          <PreviewClinicLogo accent={colors.accent} size={16} className="mb-1" />
+          <div className={clinicClass} style={{ color: colors.accent }}>
+            {SAMPLE_CLINIC.name}
+          </div>
+          <PreviewClinicMeta
+            className={metaClass}
+            style={{ color: colors.muted }}
+          />
         </div>
         <div className="mt-1.5 border-t-2" style={{ borderColor: colors.accent }} />
         <div className="mt-0.5 border-t" style={{ borderColor: colors.accent }} />
-        <div className="mt-1.5 text-left">
-          <div className={doctorClass} style={{ color: colors.ink }}>
-            Dr. Sharma
-          </div>
-          <div className={doctorMetaClass} style={{ color: colors.muted }}>
-            MBBS, MD · Reg. 12345
-          </div>
+        <div className="mt-1.5">
+          <PreviewDoctorBlock
+            nameClassName={doctorClass}
+            metaClassName={doctorMetaClass}
+            nameStyle={{ color: colors.ink }}
+            metaStyle={{ color: colors.muted }}
+          />
         </div>
       </div>
     );
@@ -150,24 +288,28 @@ function PreviewHeader({ layout }: { layout: PrescriptionLayoutConfig }) {
   if (header === "minimal") {
     return (
       <div className="px-2.5 pt-2">
-        <div
-          className={cn(clinicClass, "tracking-[0.14em]")}
-          style={{ color: colors.ink }}
-        >
-          City Care Clinic
-        </div>
-        <div className={metaClass} style={{ color: colors.muted }}>
-          12 MG Road · 98765 43210
-        </div>
-        <div className="mt-2 flex items-end justify-between gap-2">
-          <div>
-            <div className={doctorClass} style={{ color: colors.ink }}>
-              Dr. Sharma
+        <div className="flex items-start gap-1.5">
+          <PreviewClinicLogo accent={colors.accent} size={14} className="mt-px" />
+          <div className="min-w-0">
+            <div
+              className={cn(clinicClass, "tracking-[0.1em]")}
+              style={{ color: colors.ink }}
+            >
+              {SAMPLE_CLINIC.name}
             </div>
-            <div className={doctorMetaClass} style={{ color: colors.muted }}>
-              MBBS, MD
-            </div>
+            <PreviewClinicMeta
+              className={metaClass}
+              style={{ color: colors.muted }}
+            />
           </div>
+        </div>
+        <div className="mt-2">
+          <PreviewDoctorBlock
+            nameClassName={doctorClass}
+            metaClassName={doctorMetaClass}
+            nameStyle={{ color: colors.ink }}
+            metaStyle={{ color: colors.muted }}
+          />
         </div>
         <div className="mt-1.5 border-t" style={{ borderColor: colors.rule }} />
       </div>
@@ -177,22 +319,24 @@ function PreviewHeader({ layout }: { layout: PrescriptionLayoutConfig }) {
   // centered
   return (
     <div className="px-2.5 pt-2">
-      <div className="text-center">
+      <div className="flex flex-col items-center text-center">
+        <PreviewClinicLogo accent={colors.accent} size={16} className="mb-1" />
         <div className={clinicClass} style={{ color: colors.accent }}>
-          City Care Clinic
+          {SAMPLE_CLINIC.name}
         </div>
-        <div className={metaClass} style={{ color: colors.muted }}>
-          12 MG Road · 98765 43210
-        </div>
+        <PreviewClinicMeta
+          className={metaClass}
+          style={{ color: colors.muted }}
+        />
       </div>
       <div className="mt-1.5 border-t" style={{ borderColor: colors.rule }} />
       <div className="mt-1.5">
-        <div className={doctorClass} style={{ color: colors.ink }}>
-          Dr. Sharma
-        </div>
-        <div className={doctorMetaClass} style={{ color: colors.muted }}>
-          MBBS, MD · Reg. 12345
-        </div>
+        <PreviewDoctorBlock
+          nameClassName={doctorClass}
+          metaClassName={doctorMetaClass}
+          nameStyle={{ color: colors.ink }}
+          metaStyle={{ color: colors.muted }}
+        />
       </div>
     </div>
   );
@@ -244,6 +388,15 @@ function PreviewPatientBlock({ layout }: { layout: PrescriptionLayoutConfig }) {
   );
 }
 
+const PREVIEW_MED_TABLE_COLS =
+  "grid grid-cols-[1.05fr_0.55fr_0.4fr_0.75fr_0.55fr] gap-x-0.5";
+
+function PreviewMedDetails(med: (typeof SAMPLE_MEDS)[number]) {
+  return [med.dosage, med.route, med.frequency, med.duration]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function PreviewMedicines({ layout }: { layout: PrescriptionLayoutConfig }) {
   const { colors, medicines } = layout;
 
@@ -251,22 +404,50 @@ function PreviewMedicines({ layout }: { layout: PrescriptionLayoutConfig }) {
     return (
       <div>
         <div
-          className="grid grid-cols-[1fr_34px_22px] gap-1 border-b pb-0.5 text-[4.5px] font-semibold uppercase tracking-wide"
+          className={cn(
+            PREVIEW_MED_TABLE_COLS,
+            "border-b pb-0.5 text-[3.5px] font-semibold uppercase tracking-wide"
+          )}
           style={{ borderColor: colors.accent, color: colors.accent }}
         >
           <span>Medicine</span>
-          <span>Dose</span>
-          <span>Days</span>
+          <span>Dosage</span>
+          <span>Route</span>
+          <span>Frequency</span>
+          <span>Duration</span>
         </div>
         {SAMPLE_MEDS.map((med) => (
           <div
             key={med.name}
-            className="grid grid-cols-[1fr_34px_22px] gap-1 border-b py-0.5 text-[5px]"
-            style={{ borderColor: colors.rule, color: colors.ink }}
+            className="border-b py-0.5"
+            style={{ borderColor: colors.rule }}
           >
-            <span className="truncate font-medium">{med.name}</span>
-            <span style={{ color: colors.muted }}>{med.dose}</span>
-            <span style={{ color: colors.muted }}>{med.days}</span>
+            <div
+              className={cn(PREVIEW_MED_TABLE_COLS, "text-[4.5px]")}
+              style={{ color: colors.ink }}
+            >
+              <span className="truncate font-medium">{med.name}</span>
+              <span className="truncate" style={{ color: colors.muted }}>
+                {med.dosage}
+              </span>
+              <span className="truncate" style={{ color: colors.muted }}>
+                {med.route}
+              </span>
+              <span className="truncate" style={{ color: colors.muted }}>
+                {med.frequency}
+              </span>
+              <span className="truncate" style={{ color: colors.muted }}>
+                {med.duration}
+              </span>
+            </div>
+            {med.instructions ? (
+              <div
+                className="mt-px truncate text-[3.5px]"
+                style={{ color: colors.muted }}
+              >
+                {med.instructions}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -299,9 +480,17 @@ function PreviewMedicines({ layout }: { layout: PrescriptionLayoutConfig }) {
                 {med.name}
               </span>
             </div>
-            <div className="mt-0.5 text-[4.5px]" style={{ color: colors.muted }}>
-              {med.dose} · {med.days}
+            <div className="mt-0.5 truncate text-[4px]" style={{ color: colors.ink }}>
+              {PreviewMedDetails(med)}
             </div>
+            {med.instructions ? (
+              <div
+                className="mt-px truncate text-[3.5px]"
+                style={{ color: colors.muted }}
+              >
+                {med.instructions}
+              </div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -325,9 +514,17 @@ function PreviewMedicines({ layout }: { layout: PrescriptionLayoutConfig }) {
             >
               {med.name}
             </div>
-            <div className="text-[4.5px]" style={{ color: colors.muted }}>
-              {med.dose} · for {med.days}
+            <div className="truncate text-[4px]" style={{ color: colors.ink }}>
+              {PreviewMedDetails(med)}
             </div>
+            {med.instructions ? (
+              <div
+                className="truncate text-[3.5px]"
+                style={{ color: colors.muted }}
+              >
+                {med.instructions}
+              </div>
+            ) : null}
           </div>
         </div>
       ))}
@@ -411,23 +608,23 @@ export function PrescriptionLayoutsPageClient({
     text: string;
   } | null>(null);
   const { isPending, run } = usePendingAction<"save" | `preview:${string}`>();
+  const saving = isPending("save");
 
   function handleSelect(id: PrescriptionLayoutId) {
+    if (id === selected || saving) return;
+    const previous = selected;
     setSelected(id);
     setMessage(null);
-  }
-
-  function handleSave() {
-    setMessage(null);
     void run(async () => {
-      const result = await setPrescriptionLayout(selected);
+      const result = await setPrescriptionLayout(id);
       if (!result.success) {
+        setSelected(previous);
         setMessage({ type: "error", text: result.error });
         return;
       }
       setMessage({
         type: "success",
-        text: `“${resolvePrescriptionLayout(selected).name}” is now your clinic prescription layout.`,
+        text: `“${resolvePrescriptionLayout(id).name}” is now your clinic prescription layout.`,
       });
       router.refresh();
     }, "save");
@@ -445,25 +642,13 @@ export function PrescriptionLayoutsPageClient({
     }, `preview:${id}`);
   }
 
-  const dirty = selected !== resolvedCurrent;
-
   return (
     <PageShell>
       <PageHeader
         title="Prescription layouts"
-        description="Each card shows how the page will print — header, patient block, and medicine layout — then the color theme"
+        description="Each card shows how the page will print — header, patient block, and full Rx fields (name, dosage, route, frequency, duration, instructions). Click a layout to use it."
         backHref="/settings"
         backLabel="Back to settings"
-        actions={
-          <Button
-            type="button"
-            onClick={handleSave}
-            loading={isPending("save")}
-            disabled={!dirty}
-          >
-            Use selected layout
-          </Button>
-        }
       />
       <PageBody>
         {message ? (
@@ -484,14 +669,16 @@ export function PrescriptionLayoutsPageClient({
                   "flex flex-col overflow-hidden rounded-xl border bg-card text-left transition-shadow duration-150",
                   isSelected
                     ? "border-primary shadow-md ring-1 ring-primary/30"
-                    : "border-border hover:border-primary/40 hover:shadow-sm"
+                    : "border-border hover:border-primary/40 hover:shadow-sm",
+                  saving && !isSelected && "opacity-60"
                 )}
               >
                 <button
                   type="button"
                   onClick={() => handleSelect(layout.id)}
                   aria-pressed={isSelected}
-                  className="group flex flex-1 flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                  disabled={saving}
+                  className="group flex flex-1 flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary disabled:cursor-wait"
                 >
                   <div className="bg-muted/40 p-3">
                     <LayoutMiniPreview layout={layout} />
@@ -517,7 +704,7 @@ export function PrescriptionLayoutsPageClient({
                       <span
                         aria-hidden
                         className={cn(
-                          "mt-1 size-4 shrink-0 rounded-full border",
+                          "mt-1 inline-flex size-4 shrink-0 items-center justify-center rounded-full border",
                           isSelected
                             ? "border-primary bg-primary"
                             : "border-border bg-transparent"
@@ -526,7 +713,7 @@ export function PrescriptionLayoutsPageClient({
                         {isSelected ? (
                           <Icon
                             icon={faCheck}
-                            className="size-4 p-0.5 text-primary-foreground"
+                            className="size-2.5 text-primary-foreground"
                           />
                         ) : null}
                       </span>

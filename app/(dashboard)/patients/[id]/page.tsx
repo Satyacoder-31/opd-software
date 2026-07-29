@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { getPatientHistory } from "@/actions/patients";
-import { isPatientInActiveQueue } from "@/actions/appointments";
+import {
+  isPatientInActiveQueue,
+  listClinicDoctors,
+} from "@/actions/appointments";
 import { PatientDetailHeader } from "@/components/patients/PatientDetailHeader";
 import { PatientDetailTabs } from "@/components/patients/PatientDetailTabs";
 import { PageShell } from "@/components/ui/PageShell";
@@ -11,9 +14,10 @@ type Props = {
 
 export default async function PatientDetailPage({ params }: Props) {
   const { id } = await params;
-  const [history, alreadyInQueue] = await Promise.all([
+  const [history, alreadyInQueue, doctors] = await Promise.all([
     getPatientHistory(id),
     isPatientInActiveQueue(id),
+    listClinicDoctors(),
   ]);
 
   if (!history) notFound();
@@ -26,6 +30,7 @@ export default async function PatientDetailPage({ params }: Props) {
         patientId={patient.id}
         patientName={patient.name}
         alreadyInQueue={alreadyInQueue}
+        doctors={doctors}
       />
 
       <PatientDetailTabs patient={patient} appointments={appointments} />

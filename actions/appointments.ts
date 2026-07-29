@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { AppointmentStatus, AppointmentType, Role } from "@prisma/client";
+import { AppointmentStatus, AppointmentType, BookingSource, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import {
   parseLocalDateTimeInput,
+  parseLocalDateInput,
   clinicTodayDate,
 } from "@/lib/date-utils";
 import {
@@ -18,6 +19,7 @@ import {
 } from "@/lib/appointment-transitions";
 import { can } from "@/lib/rbac";
 import type { ActionResult } from "@/lib/types";
+import { sendClinicNotification } from "@/lib/integrations/messaging";
 
 const MAX_TOKEN_RETRIES = 5;
 
@@ -44,6 +46,7 @@ export type CreateAppointmentInput = {
   patientId: string;
   type?: AppointmentType;
   scheduledAt?: string | Date | null;
+  doctorId?: string | null;
 };
 
 export async function createAppointment(
@@ -52,12 +55,20 @@ export async function createAppointment(
   scheduledAt?: Date
 ): Promise<ActionResult<{ id: string; tokenNumber: number }>> {
   const session = await requireSessionUser();
-  if (!can(session, "queue.manage")) return permissionDenied();
 
   const input: CreateAppointmentInput =
     typeof patientIdOrInput === "string"
       ? { patientId: patientIdOrInput, type, scheduledAt }
       : patientIdOrInput;
+
+  const appointmentType = input.type ?? AppointmentType.walkin;
+  if (appointmentType === AppointmentType.scheduled) {
+    if (!can(session, "appointments.schedule") && !can(session, "queue.manage")) {
+      return permissionDenied();
+    }
+  } else if (!can(session, "queue.manage")) {
+    return permissionDenied();
+  }
 
   const patient = await prisma.patient.findFirst({
     where: { id: input.patientId, clinicId: session.clinicId },
@@ -67,7 +78,6 @@ export async function createAppointment(
     return { success: false, error: "Patient not found." };
   }
 
-  const appointmentType = input.type ?? AppointmentType.walkin;
   let scheduled: Date | undefined;
 
   if (input.scheduledAt) {
@@ -82,6 +92,23 @@ export async function createAppointment(
 
   if (appointmentType === AppointmentType.scheduled && !scheduled) {
     return { success: false, error: "Scheduled appointments need a date and time." };
+  }
+
+  let doctorId: string | undefined;
+  if (input.doctorId) {
+    const doctor = await prisma.user.findFirst({
+      where: {
+        id: input.doctorId,
+        clinicId: session.clinicId,
+        role: Role.doctor,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    if (!doctor) {
+      return { success: false, error: "Selected doctor is not available." };
+    }
+    doctorId = doctor.id;
   }
 
   const queueDate = scheduled ? dateOnly(scheduled) : todayDate();
@@ -119,7 +146,12 @@ export async function createAppointment(
             tokenNumber,
             queueDate,
             type: appointmentType,
+            bookingSource:
+              appointmentType === AppointmentType.scheduled
+                ? BookingSource.staff
+                : BookingSource.walkin,
             scheduledAt: scheduled,
+            doctorId,
             createdById: session.userId,
           },
         });
@@ -138,10 +170,43 @@ export async function createAppointment(
         action: "create",
         resourceType: "appointment",
         resourceId: appointment.id,
-        metadata: { type: appointmentType, scheduledAt: scheduled?.toISOString() },
+        metadata: {
+          type: appointmentType,
+          scheduledAt: scheduled?.toISOString(),
+          doctorId: doctorId ?? null,
+        },
       });
 
+      if (appointmentType === AppointmentType.scheduled && scheduled) {
+        try {
+          const clinic = await prisma.clinic.findUnique({
+            where: { id: session.clinicId },
+            select: { plan: true, name: true },
+          });
+          if (clinic) {
+            await sendClinicNotification({
+              clinicId: session.clinicId,
+              clinicPlan: clinic.plan,
+              patientId: patient.id,
+              phone: patient.phone,
+              templateKey: "appointment_booked",
+              vars: {
+                patientName: patient.name,
+                when: scheduled.toLocaleString("en-IN"),
+                clinicName: clinic.name,
+              },
+            });
+          }
+        } catch (error) {
+          logger.warn("appointment_notification_failed", {
+            appointmentId: appointment.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
       revalidatePath("/queue");
+      revalidatePath("/appointments");
       revalidatePath(`/patients/${input.patientId}`);
       return {
         success: true,
@@ -499,12 +564,15 @@ export async function setAppointmentOutcome(
 
 export async function getAppointmentById(id: string) {
   const session = await requireSessionUser();
-  if (!can(session, "queue.read")) return null;
+  if (!can(session, "queue.read") && !can(session, "appointments.schedule")) {
+    return null;
+  }
 
   return prisma.appointment.findFirst({
     where: { id, clinicId: session.clinicId },
     include: {
       patient: true,
+      doctor: { select: { id: true, name: true } },
       consultation: {
         include: {
           doctor: { select: { id: true, name: true } },
@@ -515,3 +583,245 @@ export async function getAppointmentById(id: string) {
     },
   });
 }
+
+export async function listScheduledAppointments(input?: {
+  date?: string;
+  from?: string;
+  to?: string;
+}) {
+  const session = await requireSessionUser();
+  if (!can(session, "appointments.schedule") && !can(session, "queue.read")) {
+    return [];
+  }
+
+  const day =
+    (input?.date?.trim()
+      ? parseLocalDateInput(input.date.trim())
+      : null) ?? todayDate();
+
+  const start = input?.from
+    ? parseLocalDateInput(input.from) ?? day
+    : day;
+  const end = input?.to
+    ? parseLocalDateInput(input.to) ?? day
+    : day;
+
+  const startDay = dateOnly(start);
+  const endDay = dateOnly(end);
+
+  return prisma.appointment.findMany({
+    where: {
+      clinicId: session.clinicId,
+      type: AppointmentType.scheduled,
+      queueDate: { gte: startDay, lte: endDay },
+      status: {
+        in: [
+          AppointmentStatus.waiting,
+          AppointmentStatus.in_progress,
+          AppointmentStatus.done,
+          AppointmentStatus.no_show,
+          AppointmentStatus.cancelled,
+        ],
+      },
+    },
+    orderBy: [{ scheduledAt: "asc" }, { tokenNumber: "asc" }],
+    include: {
+      patient: {
+        select: { id: true, name: true, phone: true, mrn: true },
+      },
+      doctor: { select: { id: true, name: true } },
+      consultation: { select: { id: true } },
+    },
+  });
+}
+
+export async function rescheduleAppointment(
+  appointmentId: string,
+  scheduledAt: string | Date,
+  doctorId?: string | null
+): Promise<ActionResult<{ id: string; tokenNumber: number }>> {
+  const session = await requireSessionUser();
+  if (!can(session, "appointments.schedule")) return permissionDenied();
+
+  const scheduled =
+    typeof scheduledAt === "string"
+      ? parseLocalDateTimeInput(scheduledAt)
+      : scheduledAt;
+  if (!scheduled) {
+    return { success: false, error: "Invalid scheduled date/time." };
+  }
+
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: appointmentId, clinicId: session.clinicId },
+  });
+
+  if (!appointment) {
+    return { success: false, error: "Appointment not found." };
+  }
+
+  if (
+    appointment.status !== AppointmentStatus.waiting &&
+    appointment.status !== AppointmentStatus.cancelled
+  ) {
+    return {
+      success: false,
+      error: "Only waiting or cancelled appointments can be rescheduled.",
+    };
+  }
+
+  let resolvedDoctorId = doctorId === undefined ? appointment.doctorId : doctorId;
+  if (resolvedDoctorId) {
+    const doctor = await prisma.user.findFirst({
+      where: {
+        id: resolvedDoctorId,
+        clinicId: session.clinicId,
+        role: Role.doctor,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    if (!doctor) {
+      return { success: false, error: "Selected doctor is not available." };
+    }
+    resolvedDoctorId = doctor.id;
+  }
+
+  const queueDate = dateOnly(scheduled);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const last = await tx.appointment.findFirst({
+      where: { clinicId: session.clinicId, queueDate },
+      orderBy: { tokenNumber: "desc" },
+      select: { tokenNumber: true },
+    });
+    const tokenNumber =
+      appointment.queueDate.getTime() === queueDate.getTime()
+        ? appointment.tokenNumber
+        : (last?.tokenNumber ?? 0) + 1;
+
+    return tx.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        type: AppointmentType.scheduled,
+        scheduledAt: scheduled,
+        queueDate,
+        tokenNumber,
+        doctorId: resolvedDoctorId,
+        status: AppointmentStatus.waiting,
+        checkedInAt: null,
+      },
+    });
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "appointment",
+    resourceId: appointmentId,
+    metadata: { rescheduledAt: scheduled.toISOString() },
+  });
+
+  revalidatePath("/appointments");
+  revalidatePath("/queue");
+  revalidatePath(`/patients/${appointment.patientId}`);
+  return {
+    success: true,
+    data: { id: updated.id, tokenNumber: updated.tokenNumber },
+  };
+}
+
+/**
+ * Check in a scheduled appointment for today's queue.
+ * Moves early arrivals onto today's date with a fresh token when needed.
+ */
+export async function checkInAppointment(
+  appointmentId: string
+): Promise<ActionResult<{ id: string; tokenNumber: number }>> {
+  const session = await requireSessionUser();
+  if (!can(session, "queue.manage") && !can(session, "appointments.schedule")) {
+    return permissionDenied();
+  }
+
+  const appointment = await prisma.appointment.findFirst({
+    where: { id: appointmentId, clinicId: session.clinicId },
+  });
+
+  if (!appointment) {
+    return { success: false, error: "Appointment not found." };
+  }
+
+  if (appointment.status !== AppointmentStatus.waiting) {
+    return { success: false, error: "Only waiting appointments can be checked in." };
+  }
+
+  const today = todayDate();
+  const alreadyToday =
+    dateOnly(appointment.queueDate).getTime() === today.getTime();
+
+  const updated = await prisma.$transaction(async (tx) => {
+    let tokenNumber = appointment.tokenNumber;
+    let queueDate = appointment.queueDate;
+
+    if (!alreadyToday) {
+      const conflict = await tx.appointment.findFirst({
+        where: {
+          clinicId: session.clinicId,
+          patientId: appointment.patientId,
+          queueDate: today,
+          status: {
+            in: [AppointmentStatus.waiting, AppointmentStatus.in_progress],
+          },
+          NOT: { id: appointmentId },
+        },
+        select: { id: true },
+      });
+      if (conflict) {
+        return null;
+      }
+
+      const last = await tx.appointment.findFirst({
+        where: { clinicId: session.clinicId, queueDate: today },
+        orderBy: { tokenNumber: "desc" },
+        select: { tokenNumber: true },
+      });
+      tokenNumber = (last?.tokenNumber ?? 0) + 1;
+      queueDate = today;
+    }
+
+    return tx.appointment.update({
+      where: { id: appointmentId },
+      data: {
+        queueDate,
+        tokenNumber,
+        checkedInAt: new Date(),
+        status: AppointmentStatus.waiting,
+      },
+    });
+  });
+
+  if (!updated) {
+    return {
+      success: false,
+      error: "Patient is already in today's active queue.",
+    };
+  }
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "appointment",
+    resourceId: appointmentId,
+    metadata: { checkedIn: true, tokenNumber: updated.tokenNumber },
+  });
+
+  revalidatePath("/queue");
+  revalidatePath("/appointments");
+  revalidatePath(`/patients/${appointment.patientId}`);
+  return {
+    success: true,
+    data: { id: updated.id, tokenNumber: updated.tokenNumber },
+  };
+}
+

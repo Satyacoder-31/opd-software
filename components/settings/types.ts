@@ -8,6 +8,10 @@ export type StaffMember = {
   isActive: boolean;
   qualifications: string | null;
   registrationNo: string | null;
+  specialty: string | null;
+  consultationFee: string | null;
+  designation: string | null;
+  phone: string | null;
   createdAt: Date;
   updatedAt: Date;
   clinicId: string;

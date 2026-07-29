@@ -42,17 +42,24 @@ describe("rbac permissions", () => {
     expect(can(session(Role.doctor), "settings.access")).toBe(false);
   });
 
-  it("gives receptionist desk, billing, reports, and vitals — not clinical write", () => {
+  it("gives receptionist desk, billing, reports, labs, and vitals — not clinical write", () => {
     const desk = session(Role.receptionist);
     expect(can(desk, "queue.manage")).toBe(true);
     expect(can(desk, "patients.write")).toBe(true);
     expect(can(desk, "appointments.cancel")).toBe(true);
+    expect(can(desk, "appointments.schedule")).toBe(true);
     expect(can(desk, "billing.write")).toBe(true);
     expect(can(desk, "reports.read")).toBe(true);
     expect(can(desk, "consultations.vitals")).toBe(true);
+    expect(can(desk, "labs.read")).toBe(true);
     expect(can(desk, "consultations.write")).toBe(false);
     expect(can(desk, "prescriptions.write")).toBe(false);
     expect(can(desk, "settings.access")).toBe(false);
+  });
+
+  it("gives doctor scheduling and lab order access", () => {
+    expect(can(session(Role.doctor), "appointments.schedule")).toBe(true);
+    expect(can(session(Role.doctor), "labs.manage")).toBe(true);
   });
 
   it("does not include a nurse role", () => {

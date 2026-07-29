@@ -1,5 +1,7 @@
 "use server";
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { revalidatePath, revalidateTag } from "next/cache";
 import type { Gender } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -15,6 +17,18 @@ import { isPrescriptionLayoutId } from "@/lib/prescription-layouts";
 import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
 import { can } from "@/lib/rbac";
 import type { ActionResult, Medicine, VoidActionResult } from "@/lib/types";
+
+/** Dummy Maple Care mark for layout PDF previews (data URI for react-pdf). */
+function sampleClinicLogoDataUri(): string {
+  const logoPath = path.join(
+    process.cwd(),
+    "public",
+    "sample",
+    "maple-care-logo.png"
+  );
+  const bytes = readFileSync(logoPath);
+  return `data:image/png;base64,${bytes.toString("base64")}`;
+}
 
 function formatGender(gender: Gender | null | undefined): string | undefined {
   if (!gender) return undefined;
@@ -151,8 +165,10 @@ export async function generatePrescriptionPdf(
     clinicName: clinic.name,
     clinicPhone: clinic.phone,
     clinicAddress: clinic.address,
+    clinicLogoUrl: clinic.logoUrl,
     doctorName: consultation.doctor.name,
     doctorQualifications: consultation.doctor.qualifications ?? undefined,
+    doctorSpecialization: consultation.doctor.specialty ?? undefined,
     doctorRegistrationNo: consultation.doctor.registrationNo ?? undefined,
     date: formatPrescriptionDate(consultationDate),
     patientName: consultation.patient.name,
@@ -212,11 +228,15 @@ export async function updateDoctorCredentials(
 }
 
 const SAMPLE_PRESCRIPTION: Omit<PrescriptionPdfProps, "layout"> = {
-  clinicName: "Sunrise Family Clinic",
-  clinicPhone: "+91 98765 43210",
-  clinicAddress: "12 MG Road, Bengaluru 560001",
-  doctorName: "Ananya Sharma",
-  doctorQualifications: "MBBS, MD (Internal Medicine)",
+  clinicName: "Maple Care Multispecialty Clinic",
+  clinicPhone: "+91 191 245 6789",
+  clinicAddress:
+    "2nd Floor, Sunrise Plaza, Gandhi Nagar, Jammu, Jammu & Kashmir – 180004, India",
+  clinicEmail: "care@maplecareclinic.com",
+  doctorName: "Aditi Sharma",
+  doctorQualifications: "MBBS, MD (General Medicine)",
+  doctorSpecialization: "Consultant Physician",
+  doctorExperience: "12 Years",
   doctorRegistrationNo: "KMC 45218",
   date: "19 Jul 2026",
   patientName: "Rahul Mehta",
@@ -230,9 +250,9 @@ const SAMPLE_PRESCRIPTION: Omit<PrescriptionPdfProps, "layout"> = {
       name: "Amoxicillin 500 mg",
       dosage: "1 capsule",
       route: "Oral",
-      frequency: "Thrice daily",
+      frequency: "Three times daily",
       duration: "5 days",
-      instructions: "After food",
+      instructions: "After meals",
     },
     {
       name: "Paracetamol 650 mg",
@@ -298,16 +318,11 @@ export async function previewPrescriptionLayout(
     return { success: false, error: "Unknown prescription layout." };
   }
 
-  const clinic = await prisma.clinic.findUniqueOrThrow({
-    where: { id: session.clinicId },
-    select: { name: true, phone: true, address: true },
-  });
-
+  // Layout previews use fixed sample clinic/doctor data so every template
+  // is compared on equal footing (not the logged-in clinic's live address).
   const pdfBytes = await renderPrescriptionPdf({
     ...SAMPLE_PRESCRIPTION,
-    clinicName: clinic.name || SAMPLE_PRESCRIPTION.clinicName,
-    clinicPhone: clinic.phone || SAMPLE_PRESCRIPTION.clinicPhone,
-    clinicAddress: clinic.address || SAMPLE_PRESCRIPTION.clinicAddress,
+    clinicLogoUrl: sampleClinicLogoDataUri(),
     layout: layoutId,
   });
 

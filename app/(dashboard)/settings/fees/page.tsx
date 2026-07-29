@@ -11,6 +11,7 @@ export default async function FeeMasterPage() {
         name: item.name,
         amount: Number(item.amount),
         isActive: item.isActive,
+        hsnSac: item.hsnSac,
       }))}
     />
   );

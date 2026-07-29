@@ -11,9 +11,9 @@ export function LoginForm() {
   const router = useRouter();
   const { handleSubmit, error, fieldError, pending, values, setValue } =
     useServerActionForm(login, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         router.refresh();
-        router.push("/queue");
+        router.push(data?.redirectTo || "/queue");
       },
     });
 

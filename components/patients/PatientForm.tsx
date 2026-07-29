@@ -41,6 +41,8 @@ function patientToValues(patient?: Patient): Record<string, string> {
     address: patient.address ?? "",
     allergies: patient.allergies ?? "",
     chronicConditions: patient.chronicConditions ?? "",
+    abhaNumber: patient.abhaNumber ?? "",
+    abhaAddress: patient.abhaAddress ?? "",
   };
 }
 
@@ -124,6 +126,24 @@ function PatientFields({
         onChange={(next) => setValue("gender", next)}
         error={fieldError("gender")}
       />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="ABHA number"
+          name="abhaNumber"
+          value={values.abhaNumber ?? ""}
+          onChange={(e) => setValue("abhaNumber", e.target.value)}
+          error={fieldError("abhaNumber")}
+          placeholder="14-digit ABHA number"
+        />
+        <Input
+          label="ABHA address"
+          name="abhaAddress"
+          value={values.abhaAddress ?? ""}
+          onChange={(e) => setValue("abhaAddress", e.target.value)}
+          error={fieldError("abhaAddress")}
+          placeholder="name@abdm"
+        />
+      </div>
       <Textarea
         label="Address"
         name="address"

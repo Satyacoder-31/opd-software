@@ -172,28 +172,30 @@ export function DrugDictionaryCard({
               required
             />
           </div>
-          <Input
-            label="Default dose"
-            name="dosage"
-            value={values.dosage ?? ""}
-            onChange={(event) => setValue("dosage", event.target.value)}
-            error={fieldError("dosage")}
-            placeholder="1 tablet"
-          />
-          <Select
-            label="Default route"
-            name="route"
-            value={values.route ?? ""}
-            onChange={(event) => setValue("route", event.target.value)}
-            error={fieldError("route")}
-            options={[
-              { value: "", label: "—" },
-              ...MEDICINE_ROUTES.map((route) => ({
-                value: route,
-                label: route,
-              })),
-            ]}
-          />
+          <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+            <Input
+              label="Default dose"
+              name="dosage"
+              value={values.dosage ?? ""}
+              onChange={(event) => setValue("dosage", event.target.value)}
+              error={fieldError("dosage")}
+              placeholder="1 tablet"
+            />
+            <Select
+              label="Default route"
+              name="route"
+              value={values.route ?? ""}
+              onChange={(event) => setValue("route", event.target.value)}
+              error={fieldError("route")}
+              options={[
+                { value: "", label: "—" },
+                ...MEDICINE_ROUTES.map((route) => ({
+                  value: route,
+                  label: route,
+                })),
+              ]}
+            />
+          </div>
           <Select
             label="Default frequency"
             name="frequency"
@@ -300,29 +302,31 @@ export function DrugDictionaryCard({
                         required
                       />
                     </div>
-                    <Input
-                      label="Dose"
-                      name="dosage"
-                      value={editForm.values.dosage ?? ""}
-                      onChange={(event) =>
-                        editForm.setValue("dosage", event.target.value)
-                      }
-                    />
-                    <Select
-                      label="Route"
-                      name="route"
-                      value={editForm.values.route ?? ""}
-                      onChange={(event) =>
-                        editForm.setValue("route", event.target.value)
-                      }
-                      options={[
-                        { value: "", label: "—" },
-                        ...MEDICINE_ROUTES.map((route) => ({
-                          value: route,
-                          label: route,
-                        })),
-                      ]}
-                    />
+                    <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+                      <Input
+                        label="Dose"
+                        name="dosage"
+                        value={editForm.values.dosage ?? ""}
+                        onChange={(event) =>
+                          editForm.setValue("dosage", event.target.value)
+                        }
+                      />
+                      <Select
+                        label="Route"
+                        name="route"
+                        value={editForm.values.route ?? ""}
+                        onChange={(event) =>
+                          editForm.setValue("route", event.target.value)
+                        }
+                        options={[
+                          { value: "", label: "—" },
+                          ...MEDICINE_ROUTES.map((route) => ({
+                            value: route,
+                            label: route,
+                          })),
+                        ]}
+                      />
+                    </div>
                     <Select
                       label="Frequency"
                       name="frequency"

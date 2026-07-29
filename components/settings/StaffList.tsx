@@ -42,6 +42,11 @@ export function StaffList({ staff }: StaffListProps) {
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {ROLE_LABELS[user.role]}
+                {user.specialty
+                  ? ` · ${user.specialty}`
+                  : user.designation
+                    ? ` · ${user.designation}`
+                    : ""}
               </p>
             </div>
             <Icon

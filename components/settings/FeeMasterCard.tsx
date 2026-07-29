@@ -20,6 +20,7 @@ type FeeRow = {
   name: string;
   amount: number;
   isActive: boolean;
+  hsnSac: string | null;
 };
 
 type FeeMasterCardProps = {
@@ -54,6 +55,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
             name: data.name,
             amount: data.amount,
             isActive: true,
+            hsnSac: data.hsnSac,
           },
           ...prev,
         ]);
@@ -115,6 +117,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
                   currency: "INR",
                 }).format(item.amount)}
                 {!item.isActive ? " · inactive" : ""}
+                {item.hsnSac ? ` · HSN/SAC ${item.hsnSac}` : ""}
               </span>
             </span>
             <Button
@@ -134,7 +137,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
 
       <form
         onSubmit={handleSubmit}
-        className="grid gap-3 border-t border-border pt-4 sm:grid-cols-3"
+        className="grid gap-3 border-t border-border pt-4 sm:grid-cols-4"
       >
         <Input
           label="Fee name"
@@ -144,6 +147,14 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
           onChange={(e) => setValue("name", e.target.value)}
           error={fieldError("name")}
           required
+        />
+        <Input
+          label="HSN / SAC"
+          name="hsnSac"
+          autoComplete="off"
+          value={values.hsnSac ?? ""}
+          onChange={(e) => setValue("hsnSac", e.target.value)}
+          error={fieldError("hsnSac")}
         />
         <Input
           label="Amount (₹)"

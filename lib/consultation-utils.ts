@@ -1,4 +1,5 @@
 import { AppointmentStatus, type Consultation } from "@prisma/client";
+import type { DiagnosisCodeEntry } from "@/lib/icd-catalog";
 import type {
   ClinicalPresentation,
   ConsultationClinicalData,
@@ -6,6 +7,7 @@ import type {
   InvestigationResults,
   MedicalCertificate,
   PatientHistory,
+  ReferralLetter,
   Vitals,
 } from "@/lib/types";
 
@@ -19,6 +21,8 @@ type ConsultationRecord = Pick<
   Consultation,
   | "chiefComplaint"
   | "diagnosis"
+  | "diagnosisCodes"
+  | "referral"
   | "notes"
   | "vitals"
   | "clinicalPresentation"
@@ -34,6 +38,9 @@ export function toConsultationClinicalData(
   return {
     chiefComplaint: consultation.chiefComplaint ?? undefined,
     diagnosis: consultation.diagnosis ?? undefined,
+    diagnosisCodes:
+      (consultation.diagnosisCodes as DiagnosisCodeEntry[] | null) ?? undefined,
+    referral: (consultation.referral as ReferralLetter | null) ?? undefined,
     notes: consultation.notes ?? undefined,
     vitals: (consultation.vitals as Vitals | null) ?? undefined,
     clinicalPresentation:

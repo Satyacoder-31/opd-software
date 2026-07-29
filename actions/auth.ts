@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { headers } from "next/headers";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { redirect } from "next/navigation";
-import { Role } from "@prisma/client";
+import { Plan, Role, SubscriptionStatus } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +17,16 @@ import {
 import { logAudit } from "@/lib/audit";
 import { zodFieldErrors } from "@/lib/form-utils";
 import { loginSchema, clinicProfileSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validation";
+import { CLINIC_SPECIALTIES } from "@/lib/clinic-specialties";
+import {
+  cancelCutoffForClinicType,
+  formatClinicAddress,
+  isValidIndianPincode,
+  mapsUrlFromCoords,
+  parseOptionalCoord,
+  TERMS_VERSION,
+  type ClinicTypeValue,
+} from "@/lib/clinic-onboarding";
 import { logger } from "@/lib/logger";
 import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import {
@@ -26,14 +36,90 @@ import {
 } from "@/lib/rbac";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
 
-const signupSchema = z.object({
-  clinicName: z.string().min(2),
-  clinicPhone: z.string().min(10),
-  clinicAddress: z.string().min(5),
-  adminName: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8),
-});
+const specialtySet = new Set<string>(CLINIC_SPECIALTIES);
+
+const signupSchema = z
+  .object({
+    clinicName: z.string().min(2),
+    clinicPhone: z.string().min(10),
+    addressLine1: z.string().min(3, "Enter street / building address"),
+    addressLine2: z.string().optional(),
+    area: z.string().optional(),
+    city: z.string().min(2, "Select a city"),
+    state: z.string().min(2, "Select a state"),
+    pincode: z
+      .string()
+      .refine(isValidIndianPincode, "Enter a valid 6-digit PIN code"),
+    landmark: z.string().optional(),
+    mapsUrl: z.string().optional(),
+    latitude: z.string().optional(),
+    longitude: z.string().optional(),
+    clinicEmail: z.string().email(),
+    clinicWhatsapp: z
+      .string()
+      .trim()
+      .optional()
+      .refine((v) => !v || v.length >= 10, "Enter a valid WhatsApp number"),
+    specialties: z.array(z.string().min(1)).min(1, "Select at least one specialty"),
+    gstin: z
+      .string()
+      .trim()
+      .optional()
+      .refine(
+        (value) => !value || /^[0-9A-Z]{15}$/i.test(value),
+        "GSTIN must be 15 characters"
+      ),
+    adminName: z.string().min(2),
+    email: z.string().email(),
+    password: z.string().min(8),
+    isConsultingDoctor: z.boolean(),
+    doctorSpecialty: z.string().optional(),
+    qualifications: z.string().optional(),
+    registrationNo: z.string().optional(),
+    consultationFee: z.string().optional(),
+    acceptTerms: z.boolean().refine((value) => value === true, {
+      message: "You must accept the Terms and Privacy Policy",
+    }),
+  })
+  .superRefine((data, ctx) => {
+    for (const s of data.specialties) {
+      if (!specialtySet.has(s)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid specialty",
+          path: ["specialties"],
+        });
+        break;
+      }
+    }
+    if (data.isConsultingDoctor) {
+      if (!data.doctorSpecialty?.trim() || !specialtySet.has(data.doctorSpecialty)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select your specialty",
+          path: ["doctorSpecialty"],
+        });
+      }
+      const feeRaw = data.consultationFee?.trim() ?? "";
+      const fee = feeRaw === "" ? NaN : Number(feeRaw);
+      if (!feeRaw || Number.isNaN(fee) || fee < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter a valid consultation fee",
+          path: ["consultationFee"],
+        });
+      }
+    }
+    const lat = data.latitude?.trim();
+    const lng = data.longitude?.trim();
+    if ((lat && !lng) || (!lat && lng)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Capture both latitude and longitude",
+        path: ["latitude"],
+      });
+    }
+  });
 
 async function enforceAuthRateLimit(
   action: "login" | "signup" | "forgot-password"
@@ -67,10 +153,38 @@ export async function signup(
   const parsed = signupSchema.safeParse({
     clinicName: formData.get("clinicName"),
     clinicPhone: formData.get("clinicPhone"),
-    clinicAddress: formData.get("clinicAddress"),
+    addressLine1: formData.get("addressLine1"),
+    addressLine2: optionalText(formData.get("addressLine2")),
+    area: optionalText(formData.get("area")),
+    city: formData.get("city"),
+    state: formData.get("state"),
+    pincode: formData.get("pincode"),
+    landmark: optionalText(formData.get("landmark")),
+    mapsUrl: optionalText(formData.get("mapsUrl")),
+    latitude: optionalText(formData.get("latitude")),
+    longitude: optionalText(formData.get("longitude")),
+    clinicEmail: formData.get("clinicEmail"),
+    clinicWhatsapp: optionalText(formData.get("clinicWhatsapp")),
+    specialties: formData
+      .getAll("specialties")
+      .map((value) => String(value).trim())
+      .filter(Boolean),
+    gstin: optionalText(formData.get("gstin")),
     adminName: formData.get("adminName"),
     email: formData.get("email"),
     password: formData.get("password"),
+    isConsultingDoctor:
+      formData.get("isConsultingDoctor") === "on" ||
+      formData.get("isConsultingDoctor") === "true",
+    doctorSpecialty: optionalText(formData.get("doctorSpecialty")),
+    qualifications: optionalText(formData.get("qualifications")),
+    registrationNo: optionalText(formData.get("registrationNo")),
+    consultationFee: optionalText(formData.get("consultationFee")),
+    acceptTerms:
+      formData.get("acceptTerms") === "on" ||
+      formData.get("acceptTerms") === "true"
+        ? true
+        : false,
   });
 
   if (!parsed.success) {
@@ -81,8 +195,73 @@ export async function signup(
     };
   }
 
-  const { clinicName, clinicPhone, clinicAddress, adminName, email, password } =
-    parsed.data;
+  const {
+    clinicName,
+    clinicPhone,
+    addressLine1,
+    addressLine2,
+    area,
+    city,
+    state,
+    pincode,
+    landmark,
+    mapsUrl,
+    latitude,
+    longitude,
+    clinicEmail,
+    clinicWhatsapp,
+    specialties,
+    gstin,
+    adminName,
+    email,
+    password,
+    isConsultingDoctor,
+    doctorSpecialty,
+    qualifications,
+    registrationNo,
+    consultationFee,
+  } = parsed.data;
+
+  const lat = parseOptionalCoord(latitude, "lat");
+  const lng = parseOptionalCoord(longitude, "lng");
+  if ((latitude && lat == null) || (longitude && lng == null)) {
+    return {
+      success: false,
+      error: "Invalid map coordinates. Use GPS or paste a Maps link.",
+      fieldErrors: { latitude: "Invalid coordinates" },
+    };
+  }
+
+  let resolvedMapsUrl: string | null = null;
+  if (mapsUrl) {
+    try {
+      const url = new URL(mapsUrl);
+      if (url.protocol === "http:" || url.protocol === "https:") {
+        resolvedMapsUrl = url.toString();
+      }
+    } catch {
+      resolvedMapsUrl = null;
+    }
+    if (!resolvedMapsUrl) {
+      return {
+        success: false,
+        error: "Enter a valid Maps URL (https://…).",
+        fieldErrors: { mapsUrl: "Enter a valid https URL" },
+      };
+    }
+  } else if (lat != null && lng != null) {
+    resolvedMapsUrl = mapsUrlFromCoords(lat, lng);
+  }
+
+  const clinicAddress = formatClinicAddress({
+    addressLine1,
+    addressLine2,
+    area,
+    city,
+    state,
+    pincode,
+    landmark,
+  });
 
   const admin = createAdminClient();
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
@@ -112,17 +291,49 @@ export async function signup(
   }
 
   try {
+    const feeNumber =
+      isConsultingDoctor && consultationFee
+        ? Number(consultationFee)
+        : null;
+
     const clinic = await prisma.clinic.create({
       data: {
         name: clinicName,
         phone: clinicPhone,
         address: clinicAddress,
+        addressLine1,
+        addressLine2: addressLine2 || null,
+        area: area || null,
+        state,
+        pincode,
+        landmark: landmark || null,
+        mapsUrl: resolvedMapsUrl,
+        latitude: lat,
+        longitude: lng,
+        email: clinicEmail,
+        whatsapp: clinicWhatsapp || null,
+        city,
+        specialties,
+        gstin: gstin?.toUpperCase() || null,
+        termsAcceptedAt: new Date(),
+        termsVersion: TERMS_VERSION,
         users: {
           create: {
             name: adminName,
             email,
             role: Role.owner,
             supabaseAuthId: authData.user.id,
+            specialty: isConsultingDoctor ? doctorSpecialty ?? null : null,
+            qualifications: isConsultingDoctor
+              ? qualifications ?? null
+              : null,
+            registrationNo: isConsultingDoctor
+              ? registrationNo ?? null
+              : null,
+            consultationFee:
+              isConsultingDoctor && feeNumber != null && !Number.isNaN(feeNumber)
+                ? feeNumber
+                : null,
           },
         },
       },
@@ -164,7 +375,7 @@ export async function signup(
 
 export async function login(
   formData: FormData
-): Promise<VoidActionResult> {
+): Promise<ActionResult<{ redirectTo: string }>> {
   const rateLimited = await enforceAuthRateLimit("login");
   if (rateLimited) return rateLimited;
 
@@ -195,7 +406,14 @@ export async function login(
     };
   }
 
-  const dbUser = await prisma.user.findUnique({ where: { email } });
+  const dbUser = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      isActive: true,
+      role: true,
+      clinicId: true,
+    },
+  });
   if (dbUser && !dbUser.isActive) {
     await supabase.auth.signOut();
     return {
@@ -205,7 +423,29 @@ export async function login(
   }
 
   await ensureUserFromAuth();
-  return { success: true };
+
+  let redirectTo = "/queue";
+  if (
+    dbUser &&
+    (dbUser.role === Role.owner || dbUser.role === Role.admin)
+  ) {
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: dbUser.clinicId },
+      select: {
+        onboardingCompletedAt: true,
+        onboardingSkippedAt: true,
+      },
+    });
+    if (
+      clinic &&
+      !clinic.onboardingCompletedAt &&
+      !clinic.onboardingSkippedAt
+    ) {
+      redirectTo = "/onboarding";
+    }
+  }
+
+  return { success: true, data: { redirectTo } };
 }
 
 export async function requestPasswordReset(
@@ -301,7 +541,20 @@ const inviteSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
   role: z.enum(["admin", "doctor", "receptionist"]),
+  phone: z.string().optional(),
+  specialty: z.string().optional(),
+  qualifications: z.string().optional(),
+  registrationNo: z.string().optional(),
+  consultationFee: z.string().optional(),
+  designation: z.string().optional(),
 });
+
+function optionalFormText(formData: FormData, key: string): string | undefined {
+  const value = formData.get(key);
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
 
 export async function inviteStaff(
   formData: FormData
@@ -318,6 +571,12 @@ export async function inviteStaff(
     email: formData.get("email"),
     name: formData.get("name"),
     role: formData.get("role"),
+    phone: optionalFormText(formData, "phone"),
+    specialty: optionalFormText(formData, "specialty"),
+    qualifications: optionalFormText(formData, "qualifications"),
+    registrationNo: optionalFormText(formData, "registrationNo"),
+    consultationFee: optionalFormText(formData, "consultationFee"),
+    designation: optionalFormText(formData, "designation"),
   });
 
   if (!parsed.success) {
@@ -328,7 +587,8 @@ export async function inviteStaff(
     };
   }
 
-  const { email, name, role } = parsed.data;
+  const { email, name, role, phone, specialty, qualifications, registrationNo, designation } =
+    parsed.data;
 
   if (!isInvitableRole(role)) {
     return { success: false, error: "Invalid staff role." };
@@ -339,6 +599,22 @@ export async function inviteStaff(
       success: false,
       error: "You do not have permission to invite admins.",
     };
+  }
+
+  if (role === Role.doctor && !specialty) {
+    return {
+      success: false,
+      error: "Choose a specialty for the doctor.",
+      fieldErrors: { specialty: "Specialty is required for doctors." },
+    };
+  }
+
+  let consultationFee: number | null = null;
+  if (role === Role.doctor && parsed.data.consultationFee) {
+    consultationFee = Number(parsed.data.consultationFee);
+    if (Number.isNaN(consultationFee) || consultationFee < 0) {
+      return { success: false, error: "Enter a valid consultation fee." };
+    }
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -359,6 +635,12 @@ export async function inviteStaff(
       email,
       role,
       supabaseAuthId: pendingAuthId,
+      phone: phone ?? null,
+      specialty: role === Role.doctor ? specialty ?? null : null,
+      qualifications: role === Role.doctor ? qualifications ?? null : null,
+      registrationNo: role === Role.doctor ? registrationNo ?? null : null,
+      consultationFee: role === Role.doctor ? consultationFee : null,
+      designation: role !== Role.doctor ? designation ?? null : null,
     },
   });
 
@@ -426,7 +708,25 @@ export async function updateClinicProfile(
   const parsed = clinicProfileSchema.safeParse({
     name: formData.get("name"),
     phone: formData.get("phone"),
-    address: formData.get("address"),
+    address: optionalText(formData.get("address")),
+    addressLine1: optionalText(formData.get("addressLine1")),
+    addressLine2: optionalText(formData.get("addressLine2")),
+    area: optionalText(formData.get("area")),
+    state: optionalText(formData.get("state")),
+    pincode: optionalText(formData.get("pincode")),
+    city: optionalText(formData.get("city")),
+    email: optionalText(formData.get("email")) ?? "",
+    whatsapp: optionalText(formData.get("whatsapp")),
+    clinicType: formData.get("clinicType") || "solo",
+    timezone: formData.get("timezone") || "Asia/Kolkata",
+    logoUrl: optionalText(formData.get("logoUrl")),
+    website: optionalText(formData.get("website")),
+    mapsUrl: optionalText(formData.get("mapsUrl")),
+    landmark: optionalText(formData.get("landmark")),
+    latitude: optionalText(formData.get("latitude")),
+    longitude: optionalText(formData.get("longitude")),
+    pan: optionalText(formData.get("pan")),
+    businessEntity: optionalText(formData.get("businessEntity")) ?? "",
     gstin: optionalText(formData.get("gstin")),
   });
 
@@ -438,15 +738,146 @@ export async function updateClinicProfile(
     };
   }
 
-  const { name, phone, address, gstin } = parsed.data;
+  const {
+    name,
+    phone,
+    address,
+    addressLine1,
+    addressLine2,
+    area,
+    state,
+    pincode,
+    city,
+    email,
+    whatsapp,
+    clinicType,
+    timezone,
+    logoUrl,
+    website,
+    mapsUrl,
+    landmark,
+    latitude,
+    longitude,
+    pan,
+    businessEntity,
+    gstin,
+  } = parsed.data;
+
+  function asHttpUrl(value: string | undefined): string | null {
+    if (!value) return null;
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  if (logoUrl && !asHttpUrl(logoUrl)) {
+    return {
+      success: false,
+      error: "Enter a valid logo URL (https://…).",
+      fieldErrors: { logoUrl: "Enter a valid https URL" },
+    };
+  }
+  if (website && !asHttpUrl(website)) {
+    return {
+      success: false,
+      error: "Enter a valid website URL (https://…).",
+      fieldErrors: { website: "Enter a valid https URL" },
+    };
+  }
+  const lat = parseOptionalCoord(latitude, "lat");
+  const lng = parseOptionalCoord(longitude, "lng");
+  if ((latitude && lat == null) || (longitude && lng == null)) {
+    return {
+      success: false,
+      error: "Invalid map coordinates. Use GPS or paste a Maps link.",
+      fieldErrors: { latitude: "Invalid coordinates" },
+    };
+  }
+  if ((lat != null && lng == null) || (lat == null && lng != null)) {
+    return {
+      success: false,
+      error: "Capture both latitude and longitude.",
+      fieldErrors: { latitude: "Incomplete coordinates" },
+    };
+  }
+
+  let resolvedMapsUrl = mapsUrl ? asHttpUrl(mapsUrl) : null;
+  if (mapsUrl && !resolvedMapsUrl) {
+    return {
+      success: false,
+      error: "Enter a valid maps URL (https://…).",
+      fieldErrors: { mapsUrl: "Enter a valid https URL" },
+    };
+  }
+  if (!resolvedMapsUrl && lat != null && lng != null) {
+    resolvedMapsUrl = mapsUrlFromCoords(lat, lng);
+  }
+
+  const existing = await prisma.clinic.findUniqueOrThrow({
+    where: { id: session.clinicId },
+    select: { city: true, address: true },
+  });
+
+  const nextCity = city || existing.city;
+  const syncedAddress =
+    formatClinicAddress({
+      addressLine1,
+      addressLine2,
+      area,
+      city: nextCity,
+      state,
+      pincode,
+      landmark,
+    }) ||
+    address ||
+    existing.address;
+
+  if (!syncedAddress || syncedAddress.length < 5) {
+    return {
+      success: false,
+      error: "Enter a street address (line 1) or full address.",
+    };
+  }
 
   await prisma.clinic.update({
     where: { id: session.clinicId },
     data: {
       name,
       phone,
-      address,
+      address: syncedAddress,
+      addressLine1: addressLine1 || null,
+      addressLine2: addressLine2 || null,
+      area: area || null,
+      state: state || null,
+      pincode: pincode || null,
+      city: nextCity,
+      email: email || null,
+      whatsapp: whatsapp || null,
+      clinicType,
+      timezone,
+      logoUrl: asHttpUrl(logoUrl),
+      website: asHttpUrl(website),
+      mapsUrl: resolvedMapsUrl,
+      landmark: landmark || null,
+      latitude: lat,
+      longitude: lng,
+      pan: pan ? pan.toUpperCase() : null,
+      businessEntity: businessEntity
+        ? (businessEntity as
+            | "sole_prop"
+            | "partnership"
+            | "pvt_ltd"
+            | "trust"
+            | "other")
+        : null,
       gstin: gstin?.toUpperCase() || null,
+      cancelCutoffHours: cancelCutoffForClinicType(
+        clinicType as ClinicTypeValue,
+      ),
     },
   });
 
@@ -460,9 +891,56 @@ export async function updateClinicProfile(
 
   revalidateTag("clinic-profile");
   revalidateTag("clinic-name");
+  revalidateTag("clinic-dashboard");
   revalidatePath("/settings");
   revalidatePath("/settings/clinic");
   revalidatePath("/settings/clinic/edit");
+  return { success: true };
+}
+
+/** Temporary plan switcher until Razorpay billing is live (owner only). */
+export async function setClinicPlan(formData: FormData): Promise<VoidActionResult> {
+  const session = await requireSessionUser();
+  if (!can(session, "subscription.manage")) {
+    return { success: false, error: "Only the clinic owner can change the plan." };
+  }
+
+  const parsed = z
+    .object({
+      plan: z.enum(["free", "starter", "pro"]),
+    })
+    .safeParse({ plan: formData.get("plan") });
+
+  if (!parsed.success) {
+    return { success: false, error: "Choose a valid plan." };
+  }
+
+  const nextPlan = parsed.data.plan as Plan;
+
+  await prisma.clinic.update({
+    where: { id: session.clinicId },
+    data: {
+      plan: nextPlan,
+      subscriptionStatus:
+        nextPlan === Plan.free
+          ? SubscriptionStatus.trialing
+          : SubscriptionStatus.active,
+    },
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "clinic",
+    resourceId: session.clinicId,
+    metadata: { plan: nextPlan },
+  });
+
+  revalidateTag("clinic-profile");
+  revalidatePath("/settings/subscription");
+  revalidatePath("/settings/availability");
+  revalidatePath("/clinics");
   return { success: true };
 }
 
@@ -475,7 +953,27 @@ const getCachedClinicProfile = unstable_cache(
         name: true,
         phone: true,
         address: true,
+        email: true,
+        whatsapp: true,
         gstin: true,
+        clinicType: true,
+        timezone: true,
+        logoUrl: true,
+        website: true,
+        mapsUrl: true,
+        landmark: true,
+        addressLine1: true,
+        addressLine2: true,
+        area: true,
+        state: true,
+        pincode: true,
+        pan: true,
+        businessEntity: true,
+        phoneVerifiedAt: true,
+        latitude: true,
+        longitude: true,
+        city: true,
+        razorpayKeyId: true,
         prescriptionLayout: true,
         plan: true,
         subscriptionStatus: true,
@@ -502,6 +1000,10 @@ const staffSelect = {
   isActive: true,
   qualifications: true,
   registrationNo: true,
+  specialty: true,
+  consultationFee: true,
+  designation: true,
+  phone: true,
   createdAt: true,
   updatedAt: true,
   clinicId: true,
@@ -513,11 +1015,13 @@ export async function getStaffList() {
     return [];
   }
 
-  return prisma.user.findMany({
+  const rows = await prisma.user.findMany({
     where: { clinicId: session.clinicId },
     orderBy: { createdAt: "asc" },
     select: staffSelect,
   });
+
+  return rows.map(serializeStaffMember);
 }
 
 export async function getStaffMember(userId: string) {
@@ -526,10 +1030,106 @@ export async function getStaffMember(userId: string) {
     return null;
   }
 
-  return prisma.user.findFirst({
+  const row = await prisma.user.findFirst({
     where: { id: userId, clinicId: session.clinicId },
     select: staffSelect,
   });
+  return row ? serializeStaffMember(row) : null;
+}
+
+function serializeStaffMember(row: {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  qualifications: string | null;
+  registrationNo: string | null;
+  specialty: string | null;
+  consultationFee: { toString(): string } | null;
+  designation: string | null;
+  phone: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  clinicId: string;
+}) {
+  return {
+    ...row,
+    consultationFee:
+      row.consultationFee != null ? row.consultationFee.toString() : null,
+  };
+}
+
+/** Update role-specific profile fields for any staff member. */
+export async function updateStaffProfile(
+  userId: string,
+  formData: FormData,
+): Promise<VoidActionResult> {
+  const session = await requireSessionUser();
+  if (!can(session, "staff.manage")) {
+    return { success: false, error: "Only clinic managers can update staff profiles." };
+  }
+
+  const target = await prisma.user.findFirst({
+    where: { id: userId, clinicId: session.clinicId },
+    select: { id: true, role: true },
+  });
+  if (!target) return { success: false, error: "Staff member not found." };
+
+  const phone = optionalFormText(formData, "phone") ?? null;
+
+  if (target.role === Role.doctor) {
+    const specialty = optionalFormText(formData, "specialty") ?? null;
+    if (!specialty) {
+      return {
+        success: false,
+        error: "Specialty is required for doctors.",
+        fieldErrors: { specialty: "Choose a specialty." },
+      };
+    }
+    const feeRaw = optionalFormText(formData, "consultationFee");
+    let consultationFee: number | null = null;
+    if (feeRaw) {
+      consultationFee = Number(feeRaw);
+      if (Number.isNaN(consultationFee) || consultationFee < 0) {
+        return { success: false, error: "Enter a valid consultation fee." };
+      }
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phone,
+        specialty,
+        qualifications: optionalFormText(formData, "qualifications") ?? null,
+        registrationNo: optionalFormText(formData, "registrationNo") ?? null,
+        consultationFee,
+      },
+    });
+  } else {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phone,
+        designation: optionalFormText(formData, "designation") ?? null,
+      },
+    });
+  }
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "user",
+    resourceId: userId,
+    metadata: { profile: true },
+  });
+
+  revalidatePath("/settings/staff");
+  revalidatePath(`/settings/staff/${userId}`);
+  revalidatePath("/settings/availability/schedules");
+  revalidatePath("/settings/availability/schedules/edit");
+  revalidatePath("/clinics");
+  return { success: true };
 }
 
 function optionalText(value: FormDataEntryValue | null): string | undefined {
