@@ -51,6 +51,9 @@ export async function bookPortalAppointment(input: {
   slotStartIso: string;
   reasonForVisit?: string;
   patientName?: string;
+  age?: number | string;
+  dateOfBirth?: string;
+  gender?: string;
 }) {
   return bookAppointment(input);
 }

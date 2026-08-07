@@ -2,32 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { faIndianRupeeSign, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { createFeeItem, setFeeItemActive } from "@/actions/fees";
 import {
-  createFeeItem,
-  setFeeItemActive,
-} from "@/actions/fees";
+  FeeItemLabel,
+  type FeeRow,
+} from "@/components/settings/FeeMasterView";
+import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
-import { Banner } from "@/components/ui/Banner";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import { useServerActionForm } from "@/hooks/useServerActionForm";
 
-type FeeRow = {
-  id: string;
-  name: string;
-  amount: number;
-  isActive: boolean;
-  hsnSac: string | null;
-};
-
-type FeeMasterCardProps = {
+type FeeMasterEditProps = {
   initialItems: FeeRow[];
 };
 
-export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
+export function FeeMasterEdit({ initialItems }: FeeMasterEditProps) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [toggleError, setToggleError] = useState<string | null>(null);
@@ -93,33 +85,12 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
   return (
     <div className="flex flex-col gap-4">
       <ul className="flex flex-col gap-3">
-        {items.length === 0 && (
-          <li>
-            <EmptyState
-              icon={faIndianRupeeSign}
-              title="No fee items yet"
-              description="Add consultation and procedure fees below."
-              compact
-            />
-          </li>
-        )}
         {items.map((item) => (
           <li
             key={item.id}
             className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
           >
-            <span className="min-w-0 break-words">
-              {item.name}{" "}
-              <span className="tabular-nums text-muted-foreground">
-                ·{" "}
-                {new Intl.NumberFormat("en-IN", {
-                  style: "currency",
-                  currency: "INR",
-                }).format(item.amount)}
-                {!item.isActive ? " · inactive" : ""}
-                {item.hsnSac ? ` · HSN/SAC ${item.hsnSac}` : ""}
-              </span>
-            </span>
+            <FeeItemLabel item={item} />
             <Button
               type="button"
               variant="ghost"
@@ -133,7 +104,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
         ))}
       </ul>
 
-      {toggleError && <Banner variant="error">{toggleError}</Banner>}
+      {toggleError ? <Banner variant="error">{toggleError}</Banner> : null}
 
       <form
         onSubmit={handleSubmit}
@@ -175,7 +146,7 @@ export function FeeMasterCard({ initialItems }: FeeMasterCardProps) {
           </Button>
         </div>
       </form>
-      {error && <Banner variant="error">{error}</Banner>}
+      {error ? <Banner variant="error">{error}</Banner> : null}
     </div>
   );
 }

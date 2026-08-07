@@ -18,12 +18,8 @@ import {
   parseOptionalCoord,
   type BusinessEntityValue,
 } from "@/lib/clinic-onboarding";
-import type { MessagingConfig } from "@/lib/integrations/messaging";
 import { sendClinicNotification } from "@/lib/integrations/messaging";
 import { NotificationChannel } from "@prisma/client";
-import {
-  isPrescriptionLayoutId,
-} from "@/lib/prescription-layouts";
 import { hashOtp, normalizePhone } from "@/lib/portal-session";
 import { can } from "@/lib/rbac";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
@@ -181,79 +177,6 @@ export async function saveOnboardingBillingAddress(
 
   revalidatePath("/onboarding");
   revalidatePath("/settings/clinic");
-  revalidateTag("clinic-profile");
-  return { success: true };
-}
-
-export async function saveOnboardingOpsDefaults(
-  formData: FormData,
-): Promise<VoidActionResult> {
-  const session = await requireSessionUser();
-  if (!can(session, "clinic.manage")) return permissionDenied();
-
-  const layout = String(formData.get("prescriptionLayout") ?? "classic").trim();
-  if (!isPrescriptionLayoutId(layout)) {
-    return { success: false, error: "Select a valid prescription layout." };
-  }
-
-  const senderId = optionalText(formData.get("senderId"));
-  const smsEnabled =
-    formData.get("smsEnabled") === "on" ||
-    formData.get("smsEnabled") === "true";
-  const whatsappEnabled =
-    formData.get("whatsappEnabled") === "on" ||
-    formData.get("whatsappEnabled") === "true";
-  const appointmentReminders =
-    formData.get("appointmentReminders") === "on" ||
-    formData.get("appointmentReminders") === "true";
-  const dryRun =
-    formData.get("dryRun") === "on" || formData.get("dryRun") === "true";
-
-  const razorpayKeyId = optionalText(formData.get("razorpayKeyId"));
-  if (razorpayKeyId && !/^rzp_(live|test)_[A-Za-z0-9]+$/.test(razorpayKeyId)) {
-    return {
-      success: false,
-      error: "Enter a valid Razorpay key id (rzp_live_… or rzp_test_…).",
-      fieldErrors: { razorpayKeyId: "Invalid key id" },
-    };
-  }
-
-  const existing = await prisma.clinic.findUniqueOrThrow({
-    where: { id: session.clinicId },
-    select: { messagingConfig: true },
-  });
-  const prev = (existing.messagingConfig ?? {}) as MessagingConfig;
-  const messagingConfig: MessagingConfig = {
-    ...prev,
-    smsEnabled,
-    whatsappEnabled,
-    appointmentReminders,
-    dryRun,
-    senderId: senderId ?? prev.senderId,
-  };
-
-  await prisma.clinic.update({
-    where: { id: session.clinicId },
-    data: {
-      prescriptionLayout: layout,
-      messagingConfig,
-      razorpayKeyId: razorpayKeyId || null,
-    },
-  });
-
-  await logAudit({
-    clinicId: session.clinicId,
-    actorId: session.userId,
-    action: "update",
-    resourceType: "clinic",
-    resourceId: session.clinicId,
-    metadata: { onboarding: "ops_defaults", layout },
-  });
-
-  revalidatePath("/onboarding");
-  revalidatePath("/settings/prescriptions");
-  revalidatePath("/settings/notifications");
-  revalidatePath("/settings/subscription");
   revalidateTag("clinic-profile");
   return { success: true };
 }

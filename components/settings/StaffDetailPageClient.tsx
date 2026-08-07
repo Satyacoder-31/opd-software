@@ -1,20 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { setStaffActive, updateStaffProfile } from "@/actions/auth";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { setStaffActive } from "@/actions/auth";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { DetailRow } from "@/components/ui/DetailRow";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { Icon } from "@/components/ui/Icon";
 import { PageBody, PageHeader, PageShell } from "@/components/ui/PageShell";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import { ROLE_LABELS } from "@/lib/rbac";
-import {
-  designationOptionsForRole,
-  DOCTOR_SPECIALTY_OPTIONS,
-} from "@/lib/staff-profile";
 import type { StaffMember } from "@/components/settings/types";
 
 type StaffDetailPageClientProps = {
@@ -30,26 +27,7 @@ export function StaffDetailPageClient({
   const isSelf = member.id === currentUserId;
   const isDoctor = member.role === "doctor";
   const [error, setError] = useState<string | null>(null);
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [specialty, setSpecialty] = useState(member.specialty ?? "");
-  const [designation, setDesignation] = useState(member.designation ?? "");
-  const [profileMessage, setProfileMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
   const { pending: statusPending, run: runStatus } = usePendingAction();
-  const { pending: profilePending, run: runProfile } = usePendingAction();
-  const designationOptions = designationOptionsForRole(member.role);
-  const specialtyOptions = (() => {
-    const base = [...DOCTOR_SPECIALTY_OPTIONS];
-    if (
-      member.specialty &&
-      !base.some((option) => option.value === member.specialty)
-    ) {
-      base.unshift({ value: member.specialty, label: member.specialty });
-    }
-    return base;
-  })();
 
   function handleToggleActive() {
     const action = member.isActive ? "deactivate" : "reactivate";
@@ -74,20 +52,6 @@ export function StaffDetailPageClient({
     });
   }
 
-  function handleProfileSubmit(formData: FormData) {
-    setProfileMessage(null);
-    void runProfile(async () => {
-      const result = await updateStaffProfile(member.id, formData);
-      if (result.success) {
-        setProfileMessage({ type: "success", text: "Profile saved." });
-        setEditingProfile(false);
-        router.refresh();
-        return;
-      }
-      setProfileMessage({ type: "error", text: result.error });
-    });
-  }
-
   return (
     <PageShell>
       <PageHeader
@@ -101,6 +65,16 @@ export function StaffDetailPageClient({
         }
         backHref="/settings/staff"
         backLabel="Back to staff"
+        actions={
+          <Button
+            nativeButton={false}
+            render={<Link href={`/settings/staff/${member.id}/edit`} />}
+            size="sm"
+          >
+            <Icon icon={faPen} data-icon="inline-start" />
+            Edit
+          </Button>
+        }
       />
       <PageBody className="max-w-2xl">
         <div className="flex flex-col gap-6">
@@ -134,161 +108,37 @@ export function StaffDetailPageClient({
             >
               {isDoctor ? "Doctor profile" : "Desk profile"}
             </h2>
-
-            {profileMessage && (
-              <Banner
-                variant={profileMessage.type === "success" ? "success" : "error"}
-              >
-                {profileMessage.text}
-              </Banner>
-            )}
-
-            {editingProfile ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleProfileSubmit(new FormData(e.currentTarget));
-                }}
-                className="grid gap-3 md:grid-cols-2"
-              >
-                <Input
-                  label="Phone"
-                  name="phone"
-                  type="tel"
-                  defaultValue={member.phone ?? ""}
-                  className="md:col-span-2"
+            <dl>
+              {isDoctor ? (
+                <>
+                  <DetailRow
+                    label="Specialty"
+                    value={member.specialty || "—"}
+                  />
+                  <DetailRow
+                    label="Qualifications"
+                    value={member.qualifications || "—"}
+                  />
+                  <DetailRow
+                    label="Registration no."
+                    value={member.registrationNo || "—"}
+                  />
+                  <DetailRow
+                    label="Consultation fee"
+                    value={
+                      member.consultationFee
+                        ? `₹${Number(member.consultationFee).toFixed(0)}`
+                        : "—"
+                    }
+                  />
+                </>
+              ) : (
+                <DetailRow
+                  label="Designation"
+                  value={member.designation || "—"}
                 />
-                {isDoctor ? (
-                  <>
-                    <div className="md:col-span-2">
-                      <Select
-                        label="Specialty"
-                        name="specialty"
-                        value={specialty}
-                        onChange={(e) => setSpecialty(e.target.value)}
-                        options={specialtyOptions}
-                        required
-                        allowClear={false}
-                      />
-                    </div>
-                    <Input
-                      label="Qualifications"
-                      name="qualifications"
-                      defaultValue={member.qualifications ?? ""}
-                      placeholder="MBBS, MD…"
-                    />
-                    <Input
-                      label="Registration no."
-                      name="registrationNo"
-                      defaultValue={member.registrationNo ?? ""}
-                      spellCheck={false}
-                    />
-                    <Input
-                      label="Consultation fee (₹)"
-                      name="consultationFee"
-                      type="number"
-                      min={0}
-                      step="1"
-                      defaultValue={member.consultationFee ?? ""}
-                    />
-                  </>
-                ) : (
-                  <div className="md:col-span-2">
-                    <Select
-                      label="Designation"
-                      name="designation"
-                      value={designation}
-                      onChange={(e) => setDesignation(e.target.value)}
-                      options={
-                        designation &&
-                        !designationOptions.some(
-                          (option) => option.value === designation,
-                        )
-                          ? [
-                              {
-                                value: designation,
-                                label: designation,
-                              },
-                              ...designationOptions,
-                            ]
-                          : designationOptions
-                      }
-                      clearLabel="Select designation…"
-                    />
-                  </div>
-                )}
-                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap md:col-span-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingProfile(false);
-                      setProfileMessage(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    variant="secondary"
-                    loading={profilePending}
-                  >
-                    Save profile
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <dl>
-                  {isDoctor ? (
-                    <>
-                      <DetailRow
-                        label="Specialty"
-                        value={member.specialty || "—"}
-                      />
-                      <DetailRow
-                        label="Qualifications"
-                        value={member.qualifications || "—"}
-                      />
-                      <DetailRow
-                        label="Registration no."
-                        value={member.registrationNo || "—"}
-                      />
-                      <DetailRow
-                        label="Consultation fee"
-                        value={
-                          member.consultationFee
-                            ? `₹${Number(member.consultationFee).toFixed(0)}`
-                            : "—"
-                        }
-                      />
-                    </>
-                  ) : (
-                    <DetailRow
-                      label="Designation"
-                      value={member.designation || "—"}
-                    />
-                  )}
-                </dl>
-                <div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setProfileMessage(null);
-                      setSpecialty(member.specialty ?? "");
-                      setDesignation(member.designation ?? "");
-                      setEditingProfile(true);
-                    }}
-                  >
-                    Edit profile
-                  </Button>
-                </div>
-              </>
-            )}
+              )}
+            </dl>
           </section>
 
           <section className="flex flex-col gap-2">

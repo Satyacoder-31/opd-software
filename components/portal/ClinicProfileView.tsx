@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ClinicBookingPanel } from "@/components/portal/ClinicBookingPanel";
 import { ClinicLogo } from "@/components/ui/ClinicLogo";
-import { parseClinicHours, type ClinicHourRow } from "@/lib/clinic-onboarding";
+import {
+  dedupeAddressSegments,
+  parseClinicHours,
+  type ClinicHourRow,
+} from "@/lib/clinic-onboarding";
 import { formatHm12Hour } from "@/lib/date-utils";
 
 type Doctor = {
@@ -66,8 +70,8 @@ export function ClinicProfileView({
   const hours = formatClinicHours(parseClinicHours(clinic.clinicHours));
 
   return (
-    <div className="flex flex-col gap-10">
-      <section className="relative overflow-hidden rounded-[1.75rem] border border-border/60 bg-surface-deep text-white shadow-[0_30px_80px_-40px_rgba(8,62,104,0.8)]">
+    <div className="flex flex-col gap-10 pb-10">
+      <section className="relative overflow-hidden border-b border-border/60 bg-surface-deep text-white shadow-[0_30px_80px_-40px_rgba(8,62,104,0.8)]">
         <div
           aria-hidden
           className="absolute inset-0 opacity-40"
@@ -76,7 +80,7 @@ export function ClinicProfileView({
               "radial-gradient(circle at 12% 20%, rgba(224,148,16,0.35), transparent 42%), radial-gradient(circle at 88% 10%, rgba(212,234,248,0.28), transparent 36%)",
           }}
         />
-        <div className="relative grid gap-6 px-6 py-8 sm:px-10 sm:py-12 lg:grid-cols-[1.4fr_0.8fr] lg:items-end">
+        <div className="relative mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.4fr_0.8fr] lg:items-end">
           <div>
             <div className="flex items-start gap-4">
               <ClinicLogo
@@ -100,7 +104,7 @@ export function ClinicProfileView({
               </p>
             ) : null}
             <p className="mt-5 text-sm text-white/70">
-              {clinic.address}
+              {dedupeAddressSegments(clinic.address)}
               {clinic.landmark ? (
                 <>
                   <span className="mx-2 text-white/40">·</span>
@@ -210,7 +214,7 @@ export function ClinicProfileView({
       </section>
 
       <section aria-labelledby="doctors-heading" className="flex flex-col gap-4">
-        <div>
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <h2
             id="doctors-heading"
             className="font-display text-2xl font-semibold text-ink"
@@ -223,11 +227,11 @@ export function ClinicProfileView({
         </div>
 
         {!clinic.users.length ? (
-          <p className="rounded-2xl border border-dashed border-border bg-white/60 p-8 text-center text-muted-foreground">
+          <p className="border-y border-dashed border-border bg-white/60 px-4 py-8 text-center text-muted-foreground sm:px-6">
             No doctors are listed yet.
           </p>
         ) : (
-          <ul className="grid gap-4">
+          <ul className="divide-y divide-border/80 border-y border-border/80">
             {clinic.users.map((doctor) => {
               const days = [
                 ...new Set(doctor.availabilities.map((a) => a.dayOfWeek)),
@@ -238,7 +242,7 @@ export function ClinicProfileView({
               return (
                 <li
                   key={doctor.id}
-                  className="min-w-0 overflow-hidden rounded-2xl border border-border/80 bg-white/90 p-5 sm:p-6"
+                  className="min-w-0 overflow-hidden bg-white/90 px-4 py-5 sm:px-6 sm:py-6"
                 >
                   <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">

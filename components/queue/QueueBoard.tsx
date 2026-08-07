@@ -8,7 +8,6 @@ import {
   faCircleCheck,
   faClipboardList,
   faEye,
-  faPlus,
   faReceipt,
   faUserClock,
 } from "@fortawesome/free-solid-svg-icons";
@@ -28,10 +27,7 @@ import { Select } from "@/components/ui/Select";
 import { cn, formatPhone } from "@/lib/utils";
 import { formatPatientAge } from "@/lib/date-utils";
 import { usePendingAction } from "@/hooks/usePendingAction";
-import {
-  useAppointmentRealtime,
-  type RealtimeConnectionStatus,
-} from "@/hooks/useAppointmentRealtime";
+import { useAppointmentRealtime } from "@/hooks/useAppointmentRealtime";
 
 type QueueItem = Awaited<ReturnType<typeof getQueue>>[number];
 type CompletedItem = Awaited<ReturnType<typeof getCompletedQueue>>[number];
@@ -71,8 +67,6 @@ export function QueueBoard({
     defaultDoctorId ?? doctors[0]?.id ?? ""
   );
   const { isPending, run } = usePendingAction<string>();
-  const [connectionStatus, setConnectionStatus] =
-    useState<RealtimeConnectionStatus>("disconnected");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const refreshQueue = useCallback(async () => {
@@ -85,7 +79,7 @@ export function QueueBoard({
     }
   }, []);
 
-  useAppointmentRealtime(clinicId, refreshQueue, setConnectionStatus);
+  useAppointmentRealtime(clinicId, refreshQueue);
 
   useEffect(() => {
     setQueue(initialQueue);
@@ -120,20 +114,6 @@ export function QueueBoard({
   const inProgress = queue.filter((q) => q.status === "in_progress");
   const waiting = queue.filter((q) => q.status === "waiting");
 
-  const liveTone =
-    connectionStatus === "connected"
-      ? "live"
-      : connectionStatus === "error"
-        ? "pending"
-        : "offline";
-
-  const statusLabel =
-    connectionStatus === "connected"
-      ? "Live"
-      : connectionStatus === "error"
-        ? "Reconnecting…"
-        : "Offline";
-
   const tabs: { id: QueueTab; label: string }[] = [
     { id: "waiting", label: "Waiting" },
     { id: "in_progress", label: "In consult" },
@@ -145,20 +125,15 @@ export function QueueBoard({
       <PageHeader
         className="sm:items-center"
         title={
-          <span className="flex w-full items-center justify-between gap-3">
+          <span className="flex w-full items-baseline justify-between gap-3">
             <span>Today&apos;s queue</span>
-            <LiveChip tone={liveTone} label={statusLabel} />
+            <Link
+              href="/patients/new"
+              className="shrink-0 font-sans text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              Register patient
+            </Link>
           </span>
-        }
-        actions={
-          <Button
-            nativeButton={false}
-            render={<Link href="/patients/new" />}
-            size="sm"
-          >
-            <Icon icon={faPlus} data-icon="inline-start" />
-            Register patient
-          </Button>
         }
       />
 
@@ -233,7 +208,7 @@ export function QueueBoard({
               className="bg-card"
             />
           ) : (
-            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {waiting.map((item) => (
                 <QueueCard
                   key={item.id}
@@ -268,7 +243,7 @@ export function QueueBoard({
               className="bg-card"
             />
           ) : (
-            <div className="grid gap-px bg-border md:grid-cols-2">
+            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {inProgress.map((item) => (
                 <QueueCard
                   key={item.id}
@@ -299,7 +274,7 @@ export function QueueBoard({
               className="bg-card"
             />
           ) : (
-            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {completed.map((item) => (
                 <CompletedCard
                   key={item.id}
@@ -335,40 +310,6 @@ function QueueTabSummary({
         {count === 1 ? singular : plural}
       </p>
     </div>
-  );
-}
-
-function LiveChip({
-  tone,
-  label,
-}: {
-  tone: "live" | "pending" | "offline";
-  label: string;
-}) {
-  return (
-    <span
-      role="status"
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium",
-        tone === "live" &&
-          "border-success/30 bg-success/10 text-success",
-        tone === "pending" &&
-          "border-accent/30 bg-accent/10 text-accent-foreground",
-        tone === "offline" &&
-          "border-border bg-muted text-muted-foreground"
-      )}
-    >
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          tone === "live" && "bg-success",
-          tone === "pending" && "animate-pulse bg-accent",
-          tone === "offline" && "bg-muted-foreground/50"
-        )}
-        aria-hidden
-      />
-      {label}
-    </span>
   );
 }
 

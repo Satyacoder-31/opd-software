@@ -8,133 +8,134 @@ import {
   faUsers,
   faBell,
   faFlask,
-  faCalendarDays,
-  faGlobe,
+  faCalendarCheck,
+  faRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
+import { logout } from "@/actions/auth";
 import { SettingsOverviewLink } from "@/components/settings/SettingsOverviewLink";
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 
-export function SettingsOverview() {
+type SettingsOverviewProps = {
+  showClinicAdmin: boolean;
+};
+
+function SettingsSection({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-1">
+      <h2
+        id={id}
+        className="font-nav px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+      >
+        {title}
+      </h2>
+      <div className="divide-y divide-border/80 border-y border-border/80">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+export function SettingsOverview({ showClinicAdmin }: SettingsOverviewProps) {
   return (
     <PageShell>
       <PageHeader
         title="Settings"
-        description="Clinic administration — profile, people, billing, and governance"
+        description={
+          showClinicAdmin
+            ? "Clinic administration — profile, people, billing, and governance"
+            : "Account"
+        }
       />
 
-      <div className="flex flex-col gap-8 px-6 pb-8 md:px-8">
-        <section aria-labelledby="settings-clinic-heading" className="flex flex-col gap-3">
-          <h2
-            id="settings-clinic-heading"
-            className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            Clinic
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SettingsOverviewLink
-              href="/settings/clinic"
-              title="Clinic profile"
-              description="Name, phone, address, and GSTIN used on invoices"
-              icon={faBuilding}
-            />
-            <SettingsOverviewLink
-              href="/settings/availability"
-              title="Public booking"
-              description="Clinic directory listing, specialties, and online booking"
-              icon={faGlobe}
-            />
-            <SettingsOverviewLink
-              href="/settings/availability/schedules"
-              title="Doctor schedules"
-              description="Weekly hours, slot length, and leave days for booking"
-              icon={faCalendarDays}
-            />
-            <SettingsOverviewLink
-              href="/settings/prescriptions"
-              title="Prescription layouts"
-              description="Choose the printed look of clinic prescriptions"
-              icon={faFileLines}
-            />
-            <SettingsOverviewLink
-              href="/settings/medicines"
-              title="Medicine dictionary"
-              description="Manage quick suggestions used while prescribing"
-              icon={faPills}
-            />
-            <SettingsOverviewLink
-              href="/settings/labs"
-              title="Lab catalog"
-              description="Manage tests, sample types, fees, and billing codes"
-              icon={faFlask}
-            />
-            <SettingsOverviewLink
-              href="/settings/notifications"
-              title="Patient notifications"
-              description="Configure SMS and WhatsApp delivery"
-              icon={faBell}
-            />
-          </div>
-        </section>
+      <div className="font-nav flex max-w-xl flex-col gap-8 px-6 pb-8 md:px-8">
+        {showClinicAdmin ? (
+          <>
+            <SettingsSection id="settings-clinic-heading" title="Clinic">
+              <SettingsOverviewLink
+                href="/settings/clinic"
+                title="Clinic profile"
+                icon={faBuilding}
+              />
+              <SettingsOverviewLink
+                href="/settings/availability"
+                title="Booking & schedules"
+                icon={faCalendarCheck}
+              />
+              <SettingsOverviewLink
+                href="/settings/prescriptions"
+                title="Prescription layouts"
+                icon={faFileLines}
+              />
+              <SettingsOverviewLink
+                href="/settings/medicines"
+                title="Medicine dictionary"
+                icon={faPills}
+              />
+              <SettingsOverviewLink
+                href="/settings/labs"
+                title="Lab catalog"
+                icon={faFlask}
+              />
+              <SettingsOverviewLink
+                href="/settings/notifications"
+                title="Patient notifications"
+                icon={faBell}
+              />
+            </SettingsSection>
 
-        <section aria-labelledby="settings-people-heading" className="flex flex-col gap-3">
-          <h2
-            id="settings-people-heading"
-            className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            People
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SettingsOverviewLink
-              href="/settings/staff"
-              title="Staff & access"
-              description="Invite teammates and manage active accounts"
-              icon={faUsers}
-            />
-          </div>
-        </section>
+            <SettingsSection id="settings-people-heading" title="People">
+              <SettingsOverviewLink
+                href="/settings/staff"
+                title="Staff & access"
+                icon={faUsers}
+              />
+            </SettingsSection>
 
-        <section aria-labelledby="settings-billing-heading" className="flex flex-col gap-3">
-          <h2
-            id="settings-billing-heading"
-            className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            Billing
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SettingsOverviewLink
-              href="/settings/fees"
-              title="Fee master"
-              description="Consultation and procedure fees used in billing"
-              icon={faIndianRupeeSign}
-            />
-            <SettingsOverviewLink
-              href="/settings/subscription"
-              title="Subscription"
-              description="Current plan and billing status"
-              icon={faCreditCard}
-            />
-          </div>
-        </section>
+            <SettingsSection id="settings-billing-heading" title="Billing">
+              <SettingsOverviewLink
+                href="/settings/fees"
+                title="Fee master"
+                icon={faIndianRupeeSign}
+              />
+              <SettingsOverviewLink
+                href="/settings/subscription"
+                title="Subscription"
+                icon={faCreditCard}
+              />
+            </SettingsSection>
 
-        <section
-          aria-labelledby="settings-governance-heading"
-          className="flex flex-col gap-3"
-        >
-          <h2
-            id="settings-governance-heading"
-            className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground"
-          >
-            Governance
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SettingsOverviewLink
-              href="/settings/audit"
-              title="Audit log"
-              description="Who accessed or changed clinic records"
-              icon={faScroll}
-            />
-          </div>
-        </section>
+            <SettingsSection id="settings-governance-heading" title="Governance">
+              <SettingsOverviewLink
+                href="/settings/audit"
+                title="Audit log"
+                icon={faScroll}
+              />
+            </SettingsSection>
+          </>
+        ) : null}
+
+        <SettingsSection id="settings-account-heading" title="Account">
+          <form action={logout} className="px-1 py-2">
+            <Button
+              type="submit"
+              variant="secondary"
+              className="w-full justify-start sm:w-auto"
+            >
+              <Icon icon={faRightFromBracket} data-icon="inline-start" />
+              Sign out
+            </Button>
+          </form>
+        </SettingsSection>
       </div>
     </PageShell>
   );

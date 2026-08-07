@@ -2,8 +2,11 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { CLINIC_SPECIALTIES } from "@/lib/clinic-specialties";
+import { cn } from "@/lib/utils";
 
 const fieldClass =
   "h-11 w-full min-w-0 rounded-lg border-0 bg-transparent px-3 text-sm text-ink outline-none placeholder:text-muted-foreground/80 focus-visible:bg-white/70";
@@ -79,10 +82,7 @@ export function ClinicDirectoryFilters({
             Search clinics
           </label>
           <span aria-hidden className="pl-3 text-muted-foreground">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3.5-3.5" />
-            </svg>
+            <Icon icon={faMagnifyingGlass} className="size-4" />
           </span>
           <input
             id="clinic-q"
@@ -116,7 +116,7 @@ export function ClinicDirectoryFilters({
           <SelectChevron />
         </div>
 
-        <div className="bg-white/90">
+        <div className="flex items-center bg-white/90">
           <label className="sr-only" htmlFor="doctor-filter">
             Doctor
           </label>
@@ -128,11 +128,29 @@ export function ClinicDirectoryFilters({
             placeholder="Doctor name"
             className={fieldClass}
           />
+          <button
+            type="submit"
+            aria-label="Search"
+            disabled={pending}
+            className="mr-1.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-primary text-white transition-colors hover:bg-primary/90 disabled:opacity-60 sm:hidden"
+          >
+            <Icon icon={faMagnifyingGlass} className="size-4" />
+          </button>
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <Button type="submit" loading={pending} size="sm" className="h-11 px-4">
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-2",
+          !hasFilters && "hidden sm:flex",
+        )}
+      >
+        <Button
+          type="submit"
+          loading={pending}
+          size="sm"
+          className="hidden h-11 px-4 sm:inline-flex"
+        >
           Search
         </Button>
         {hasFilters ? (

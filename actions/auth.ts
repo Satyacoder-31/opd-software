@@ -21,7 +21,6 @@ import { CLINIC_SPECIALTIES } from "@/lib/clinic-specialties";
 import {
   cancelCutoffForClinicType,
   formatClinicAddress,
-  isValidIndianPincode,
   mapsUrlFromCoords,
   parseOptionalCoord,
   TERMS_VERSION,
@@ -42,33 +41,8 @@ const signupSchema = z
   .object({
     clinicName: z.string().min(2),
     clinicPhone: z.string().min(10),
-    addressLine1: z.string().min(3, "Enter street / building address"),
-    addressLine2: z.string().optional(),
-    area: z.string().optional(),
-    city: z.string().min(2, "Select a city"),
-    state: z.string().min(2, "Select a state"),
-    pincode: z
-      .string()
-      .refine(isValidIndianPincode, "Enter a valid 6-digit PIN code"),
-    landmark: z.string().optional(),
-    mapsUrl: z.string().optional(),
-    latitude: z.string().optional(),
-    longitude: z.string().optional(),
     clinicEmail: z.string().email(),
-    clinicWhatsapp: z
-      .string()
-      .trim()
-      .optional()
-      .refine((v) => !v || v.length >= 10, "Enter a valid WhatsApp number"),
     specialties: z.array(z.string().min(1)).min(1, "Select at least one specialty"),
-    gstin: z
-      .string()
-      .trim()
-      .optional()
-      .refine(
-        (value) => !value || /^[0-9A-Z]{15}$/i.test(value),
-        "GSTIN must be 15 characters"
-      ),
     adminName: z.string().min(2),
     email: z.string().email(),
     password: z.string().min(8),
@@ -110,15 +84,6 @@ const signupSchema = z
         });
       }
     }
-    const lat = data.latitude?.trim();
-    const lng = data.longitude?.trim();
-    if ((lat && !lng) || (!lat && lng)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Capture both latitude and longitude",
-        path: ["latitude"],
-      });
-    }
   });
 
 async function enforceAuthRateLimit(
@@ -153,23 +118,11 @@ export async function signup(
   const parsed = signupSchema.safeParse({
     clinicName: formData.get("clinicName"),
     clinicPhone: formData.get("clinicPhone"),
-    addressLine1: formData.get("addressLine1"),
-    addressLine2: optionalText(formData.get("addressLine2")),
-    area: optionalText(formData.get("area")),
-    city: formData.get("city"),
-    state: formData.get("state"),
-    pincode: formData.get("pincode"),
-    landmark: optionalText(formData.get("landmark")),
-    mapsUrl: optionalText(formData.get("mapsUrl")),
-    latitude: optionalText(formData.get("latitude")),
-    longitude: optionalText(formData.get("longitude")),
     clinicEmail: formData.get("clinicEmail"),
-    clinicWhatsapp: optionalText(formData.get("clinicWhatsapp")),
     specialties: formData
       .getAll("specialties")
       .map((value) => String(value).trim())
       .filter(Boolean),
-    gstin: optionalText(formData.get("gstin")),
     adminName: formData.get("adminName"),
     email: formData.get("email"),
     password: formData.get("password"),
@@ -198,20 +151,8 @@ export async function signup(
   const {
     clinicName,
     clinicPhone,
-    addressLine1,
-    addressLine2,
-    area,
-    city,
-    state,
-    pincode,
-    landmark,
-    mapsUrl,
-    latitude,
-    longitude,
     clinicEmail,
-    clinicWhatsapp,
     specialties,
-    gstin,
     adminName,
     email,
     password,
@@ -221,47 +162,6 @@ export async function signup(
     registrationNo,
     consultationFee,
   } = parsed.data;
-
-  const lat = parseOptionalCoord(latitude, "lat");
-  const lng = parseOptionalCoord(longitude, "lng");
-  if ((latitude && lat == null) || (longitude && lng == null)) {
-    return {
-      success: false,
-      error: "Invalid map coordinates. Use GPS or paste a Maps link.",
-      fieldErrors: { latitude: "Invalid coordinates" },
-    };
-  }
-
-  let resolvedMapsUrl: string | null = null;
-  if (mapsUrl) {
-    try {
-      const url = new URL(mapsUrl);
-      if (url.protocol === "http:" || url.protocol === "https:") {
-        resolvedMapsUrl = url.toString();
-      }
-    } catch {
-      resolvedMapsUrl = null;
-    }
-    if (!resolvedMapsUrl) {
-      return {
-        success: false,
-        error: "Enter a valid Maps URL (https://…).",
-        fieldErrors: { mapsUrl: "Enter a valid https URL" },
-      };
-    }
-  } else if (lat != null && lng != null) {
-    resolvedMapsUrl = mapsUrlFromCoords(lat, lng);
-  }
-
-  const clinicAddress = formatClinicAddress({
-    addressLine1,
-    addressLine2,
-    area,
-    city,
-    state,
-    pincode,
-    landmark,
-  });
 
   const admin = createAdminClient();
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
@@ -300,21 +200,10 @@ export async function signup(
       data: {
         name: clinicName,
         phone: clinicPhone,
-        address: clinicAddress,
-        addressLine1,
-        addressLine2: addressLine2 || null,
-        area: area || null,
-        state,
-        pincode,
-        landmark: landmark || null,
-        mapsUrl: resolvedMapsUrl,
-        latitude: lat,
-        longitude: lng,
+        // Address / GSTIN collected in onboarding (Billing & address step).
+        address: "",
         email: clinicEmail,
-        whatsapp: clinicWhatsapp || null,
-        city,
         specialties,
-        gstin: gstin?.toUpperCase() || null,
         termsAcceptedAt: new Date(),
         termsVersion: TERMS_VERSION,
         users: {
@@ -777,8 +666,8 @@ export async function updateClinicProfile(
   if (logoUrl && !asHttpUrl(logoUrl)) {
     return {
       success: false,
-      error: "Enter a valid logo URL (https://…).",
-      fieldErrors: { logoUrl: "Enter a valid https URL" },
+      error: "Invalid logo. Upload an image again.",
+      fieldErrors: { logoUrl: "Upload a valid image" },
     };
   }
   if (website && !asHttpUrl(website)) {
@@ -1126,6 +1015,7 @@ export async function updateStaffProfile(
 
   revalidatePath("/settings/staff");
   revalidatePath(`/settings/staff/${userId}`);
+  revalidatePath(`/settings/staff/${userId}/edit`);
   revalidatePath("/settings/availability/schedules");
   revalidatePath("/settings/availability/schedules/edit");
   revalidatePath("/clinics");

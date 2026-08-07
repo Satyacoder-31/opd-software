@@ -1,5 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AvailabilityManager } from "@/components/settings/AvailabilityManager";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { AvailabilityScheduleView } from "@/components/settings/AvailabilityScheduleView";
+import { Button } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/Icon";
 import { PageBody, PageHeader, PageShell } from "@/components/ui/PageShell";
 import { requireSessionUser } from "@/lib/auth";
 import { loadDoctorScheduleData } from "@/lib/doctor-schedule-data";
@@ -18,12 +22,27 @@ export default async function DoctorSchedulesSettingsPage() {
       <PageHeader
         title="Doctor schedules"
         description="Weekly hours and leave days used for online booking."
-        backHref="/settings"
-        backLabel="Back to settings"
-        className="px-4 py-5 md:px-5 md:py-6"
+        backHref="/settings/availability"
+        backLabel="Back to booking & schedules"
+        actions={
+          data.doctors.length > 0 ? (
+            <Button
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/settings/availability/schedules/edit?doctor=${data.defaultDoctorId ?? data.doctors[0].id}`}
+                />
+              }
+              size="sm"
+            >
+              <Icon icon={faPen} data-icon="inline-start" />
+              Edit
+            </Button>
+          ) : null
+        }
       />
-      <PageBody className="flex w-full min-w-0 flex-col gap-6 px-4 pb-6 md:px-5 md:pb-8">
-        <AvailabilityManager mode="view" {...data} />
+      <PageBody className="flex w-full min-w-0 flex-col gap-6">
+        <AvailabilityScheduleView {...data} />
       </PageBody>
     </PageShell>
   );

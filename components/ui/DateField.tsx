@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { faCalendarDays } from "@fortawesome/free-solid-svg-icons";
 import { Icon } from "@/components/ui/Icon";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,6 +36,7 @@ function formatDisplayDate(value: string): string | null {
   });
 }
 
+/** Date of birth picker — year/month dropdowns for wide past range. */
 export function DateField({
   label,
   name,
@@ -47,16 +48,21 @@ export function DateField({
   className,
 }: DateFieldProps) {
   const [open, setOpen] = useState(false);
-  const inputId = label.toLowerCase().replace(/\s+/g, "-");
+  const reactId = useId();
+  const inputId = `${label.toLowerCase().replace(/\s+/g, "-")}-${reactId}`;
   const selectedDate = useMemo(
     () => parseLocalDateInput(value) ?? undefined,
-    [value]
+    [value],
   );
   const displayValue = formatDisplayDate(value);
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
   const startMonth = useMemo(
     () => new Date(today.getFullYear() - 150, 0),
-    [today]
+    [today],
   );
 
   return (
@@ -77,8 +83,8 @@ export function DateField({
               aria-invalid={!!error || undefined}
               aria-describedby={error ? `${inputId}-error` : undefined}
               className={cn(
-                "h-11 w-full justify-start font-normal",
-                !displayValue && "text-muted-foreground"
+                "h-11 w-full justify-start rounded-sm font-normal",
+                !displayValue && "text-muted-foreground",
               )}
             >
               <Icon icon={faCalendarDays} data-icon="inline-start" />

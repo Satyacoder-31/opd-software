@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveClinicRazorpayKeyId } from "@/actions/onboarding-medium";
@@ -35,6 +36,7 @@ export function RazorpayKeyForm({
             return;
           }
           setMessage({ type: "success", text: "Razorpay key saved." });
+          router.push("/settings/subscription");
           router.refresh();
         });
       }}
@@ -55,9 +57,17 @@ export function RazorpayKeyForm({
           {message.text}
         </Banner>
       ) : null}
-      <Button type="submit" loading={pending} size="sm">
-        Save payment key
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" loading={pending} size="sm">
+          Save payment key
+        </Button>
+        <Link
+          href="/settings/subscription"
+          className="inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Cancel
+        </Link>
+      </div>
     </form>
   );
 }

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AvailabilityManager } from "@/components/settings/AvailabilityManager";
+import { AvailabilityScheduleEdit } from "@/components/settings/AvailabilityScheduleEdit";
 import { Button } from "@/components/ui/Button";
 import { PageBody, PageHeader, PageShell } from "@/components/ui/PageShell";
 import { requireSessionUser } from "@/lib/auth";
@@ -44,7 +44,7 @@ export default async function EditDoctorSchedulesSettingsPage({
         }
       />
       <PageBody className="flex w-full min-w-0 flex-col gap-6 px-4 pb-6 md:px-5 md:pb-8">
-        <AvailabilityManager mode="edit" {...data} defaultDoctorId={defaultDoctorId} />
+        <AvailabilityScheduleEdit {...data} defaultDoctorId={defaultDoctorId} />
       </PageBody>
     </PageShell>
   );

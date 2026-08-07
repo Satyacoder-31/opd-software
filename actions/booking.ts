@@ -5,6 +5,7 @@ import {
   AppointmentStatus,
   AppointmentType,
   BookingSource,
+  Gender,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -19,7 +20,11 @@ import {
 } from "@/lib/portal-session";
 import { generateDaySlots } from "@/lib/slots";
 import { bookableClinicianWhere } from "@/lib/bookable-clinicians";
-import { clinicTodayDate } from "@/lib/date-utils";
+import {
+  ageFromDob,
+  clinicTodayDate,
+  parseLocalDateInput,
+} from "@/lib/date-utils";
 import type { ActionResult } from "@/lib/types";
 import { randomInt } from "crypto";
 
@@ -57,7 +62,18 @@ async function ensureClinicPatient(args: {
   clinicId: string;
   name: string;
   phone: string;
+  age?: number | null;
+  dateOfBirth?: Date | null;
+  gender?: Gender | null;
 }) {
+  const demographics = {
+    ...(args.age != null ? { age: args.age } : {}),
+    ...(args.dateOfBirth !== undefined
+      ? { dateOfBirth: args.dateOfBirth }
+      : {}),
+    ...(args.gender ? { gender: args.gender } : {}),
+  };
+
   const existing = await prisma.clinicPatient.findUnique({
     where: {
       portalAccountId_clinicId: {
@@ -67,7 +83,18 @@ async function ensureClinicPatient(args: {
     },
     include: { patient: true },
   });
-  if (existing) return existing.patient;
+  if (existing) {
+    if (Object.keys(demographics).length || args.name !== existing.patient.name) {
+      return prisma.patient.update({
+        where: { id: existing.patient.id },
+        data: {
+          ...demographics,
+          ...(args.name.trim().length >= 2 ? { name: args.name.trim() } : {}),
+        },
+      });
+    }
+    return existing.patient;
+  }
 
   const byPhone = await prisma.patient.findFirst({
     where: {
@@ -86,7 +113,15 @@ async function ensureClinicPatient(args: {
       },
       update: { portalAccountId: args.portalAccountId },
     });
-    return byPhone;
+    return prisma.patient.update({
+      where: { id: byPhone.id },
+      data: {
+        ...demographics,
+        ...(args.name.trim().length >= 2 && !byPhone.name
+          ? { name: args.name.trim() }
+          : {}),
+      },
+    });
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -98,6 +133,7 @@ async function ensureClinicPatient(args: {
           name: args.name,
           phone: normalizePhone(args.phone),
           mrn,
+          ...demographics,
         },
       });
       await prisma.clinicPatient.create({
@@ -347,6 +383,9 @@ export async function bookPortalAppointment(input: {
   slotStartIso: string;
   reasonForVisit?: string;
   patientName?: string;
+  age?: number | string;
+  dateOfBirth?: string;
+  gender?: string;
 }): Promise<ActionResult<{ id: string; tokenNumber: number }>> {
   const session = await readPortalSession();
   if (!session) return { success: false, error: "Sign in to book an appointment." };
@@ -360,6 +399,35 @@ export async function bookPortalAppointment(input: {
     (input.patientName?.trim() || account.name || "").trim();
   if (name.length < 2) {
     return { success: false, error: "Enter your name before booking." };
+  }
+
+  const genderRaw = (input.gender ?? "").trim().toLowerCase();
+  if (
+    genderRaw !== Gender.male &&
+    genderRaw !== Gender.female &&
+    genderRaw !== Gender.other
+  ) {
+    return { success: false, error: "Select your gender." };
+  }
+  const gender = genderRaw as Gender;
+
+  const dobInput = input.dateOfBirth?.trim() || "";
+  const dateOfBirth = dobInput ? parseLocalDateInput(dobInput) : null;
+  if (dobInput && !dateOfBirth) {
+    return { success: false, error: "Enter a valid date of birth." };
+  }
+
+  let age: number | null = null;
+  if (dateOfBirth) {
+    age = ageFromDob(dateOfBirth);
+  } else if (input.age !== undefined && String(input.age).trim() !== "") {
+    const parsedAge = Number(input.age);
+    if (!Number.isInteger(parsedAge) || parsedAge < 0 || parsedAge > 150) {
+      return { success: false, error: "Enter a valid age in years." };
+    }
+    age = parsedAge;
+  } else {
+    return { success: false, error: "Enter your age or date of birth." };
   }
 
   const clinic = await prisma.clinic.findFirst({
@@ -425,6 +493,9 @@ export async function bookPortalAppointment(input: {
     clinicId: clinic.id,
     name,
     phone: account.phone,
+    age,
+    dateOfBirth,
+    gender,
   });
 
   const maxPerSlot = Math.max(

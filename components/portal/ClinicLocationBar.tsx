@@ -277,7 +277,7 @@ export function ClinicLocationBar({ initial }: ClinicLocationBarProps) {
       aria-label="Your location"
       className="overflow-hidden rounded-xl border border-border/80 bg-white/90"
     >
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-3.5">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 sm:gap-3 sm:px-3.5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Icon
             icon={faLocationDot}
@@ -299,8 +299,8 @@ export function ClinicLocationBar({ initial }: ClinicLocationBarProps) {
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          {status !== "detecting" ? (
+        {status !== "detecting" ? (
+          <div className="flex shrink-0 items-center">
             <Button
               type="button"
               variant="ghost"
@@ -318,20 +318,8 @@ export function ClinicLocationBar({ initial }: ClinicLocationBarProps) {
               <Icon icon={editing ? faXmark : faPen} data-icon="inline-start" />
               {editing ? "Close" : label ? "Change" : "Set"}
             </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2.5 text-xs"
-            loading={status === "detecting" || pending}
-            onClick={() => void detectLocation()}
-            disabled={status === "detecting"}
-          >
-            <Icon icon={faLocationArrow} data-icon="inline-start" />
-            My location
-          </Button>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {message && !editing ? (
@@ -403,6 +391,18 @@ export function ClinicLocationBar({ initial }: ClinicLocationBarProps) {
               onClick={applyManual}
             >
               Apply
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-9 px-3"
+              loading={status === "detecting" || pending}
+              onClick={() => void detectLocation()}
+              disabled={status === "detecting"}
+            >
+              <Icon icon={faLocationArrow} data-icon="inline-start" />
+              My location
             </Button>
             {label ? (
               <Button

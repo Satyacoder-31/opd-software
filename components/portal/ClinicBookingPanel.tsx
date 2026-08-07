@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { getDoctorAvailableSlots } from "@/actions/clinics-public";
 import { bookPortalAppointment } from "@/actions/portal";
+import { AgeField } from "@/components/patients/AgeField";
+import { GenderField } from "@/components/patients/GenderField";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
+import { DateField } from "@/components/ui/DateField";
 import { Input } from "@/components/ui/Input";
+import { ScheduleDateField } from "@/components/ui/ScheduleDateField";
 import { toDateInputValue } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +41,21 @@ export function ClinicBookingPanel({
     d.setDate(d.getDate() + 1);
     return toDateInputValue(d);
   }, []);
+  const todayValue = useMemo(() => toDateInputValue(new Date()), []);
+  const maxBookableDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 90);
+    return toDateInputValue(d);
+  }, []);
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState(tomorrow);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [name, setName] = useState(accountName ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -80,6 +93,11 @@ export function ClinicBookingPanel({
     );
   }
 
+  const canConfirm =
+    Boolean(selected) &&
+    Boolean(gender) &&
+    (Boolean(dateOfBirth) || age.trim() !== "");
+
   return (
     <div className="w-full min-w-0 max-w-full sm:max-w-md lg:ml-auto">
       {!open ? (
@@ -87,7 +105,7 @@ export function ClinicBookingPanel({
           Book with {doctorName.split(" ")[0]}
         </Button>
       ) : (
-        <div className="flex min-w-0 flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface-muted/50 p-4">
+        <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-border bg-surface-muted/50 p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold text-ink">Choose a slot</p>
             <button
@@ -98,13 +116,13 @@ export function ClinicBookingPanel({
               Close
             </button>
           </div>
-          <Input
+          <ScheduleDateField
             label="Date"
-            type="date"
             value={date}
-            min={toDateInputValue(new Date())}
-            onChange={(e) => setDate(e.target.value)}
-            className="min-w-0 max-w-full"
+            onChange={setDate}
+            minDate={todayValue}
+            maxDate={maxBookableDate}
+            placeholder="Select appointment date"
           />
           {!accountName ? (
             <Input
@@ -116,6 +134,22 @@ export function ClinicBookingPanel({
               className="min-w-0 max-w-full"
             />
           ) : null}
+
+          <DateField
+            label="Date of birth"
+            value={dateOfBirth}
+            onChange={(next) => {
+              setDateOfBirth(next);
+              if (next) setAge("");
+            }}
+          />
+          <AgeField
+            value={age}
+            onChange={setAge}
+            disabled={!!dateOfBirth}
+          />
+          <GenderField value={gender} onChange={setGender} />
+
           <Input
             label="Reason for visit (optional)"
             value={reason}
@@ -167,9 +201,9 @@ export function ClinicBookingPanel({
           <Button
             type="button"
             loading={pending}
-            disabled={!selected}
+            disabled={!canConfirm}
             onClick={() => {
-              if (!selected) return;
+              if (!canConfirm || !selected) return;
               setMessage(null);
               setError(null);
               startTransition(async () => {
@@ -179,6 +213,9 @@ export function ClinicBookingPanel({
                   slotStartIso: selected,
                   reasonForVisit: reason,
                   patientName: name,
+                  age: dateOfBirth ? undefined : age,
+                  dateOfBirth: dateOfBirth || undefined,
+                  gender,
                 });
                 if (!result.success) {
                   setError(result.error);

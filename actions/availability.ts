@@ -109,6 +109,8 @@ export async function updateClinicPublicListing(
   });
 
   revalidatePath("/settings/availability");
+  revalidatePath("/settings/availability/listing");
+  revalidatePath("/settings/availability/listing/edit");
   revalidatePath("/settings/clinic");
   revalidatePath("/clinics");
   if (slug) revalidatePath(`/clinics/${slug}`);

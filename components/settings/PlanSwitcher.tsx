@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Plan } from "@prisma/client";
@@ -36,6 +37,7 @@ export function PlanSwitcher({ currentPlan }: { currentPlan: Plan }) {
             return;
           }
           setMessage({ type: "success", text: `Switched to ${PLAN_LABELS[plan]}.` });
+          router.push("/settings/subscription");
           router.refresh();
         });
       }}
@@ -71,9 +73,17 @@ export function PlanSwitcher({ currentPlan }: { currentPlan: Plan }) {
       {message ? (
         <Banner variant={message.type === "error" ? "error" : "success"}>{message.text}</Banner>
       ) : null}
-      <Button type="submit" loading={pending} disabled={plan === currentPlan}>
-        Save plan
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" loading={pending} disabled={plan === currentPlan}>
+          Save plan
+        </Button>
+        <Link
+          href="/settings/subscription"
+          className="inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Cancel
+        </Link>
+      </div>
     </form>
   );
 }

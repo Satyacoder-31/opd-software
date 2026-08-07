@@ -25,11 +25,14 @@ function MetaCell({
 }) {
   const display = value?.trim();
   return (
-    <div className="w-max max-w-none">
+    <div className="min-w-0">
       <dt className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd className="mt-0.5 whitespace-nowrap text-sm font-medium text-ink">
+      <dd
+        className="mt-0.5 truncate text-sm font-medium text-ink"
+        title={display || undefined}
+      >
         {display || <span className="font-normal text-muted-foreground">—</span>}
       </dd>
     </div>
@@ -70,7 +73,7 @@ export function PatientContextRail({
         ) : null}
 
         <div className="overflow-x-auto overscroll-x-contain scrollbar-hide">
-          <dl className="grid w-max grid-flow-col grid-rows-2 auto-cols-max gap-x-6 gap-y-3">
+          <dl className="grid w-full min-w-[36rem] grid-cols-4 gap-x-6 gap-y-3 lg:min-w-0">
             <MetaCell label="UHID" value={uhid} />
             <MetaCell label="Episode" value={episodeNo} />
             <MetaCell
@@ -90,7 +93,7 @@ export function PatientContextRail({
               }
             />
             {patientHref ? (
-              <div className="w-max">
+              <div className="min-w-0">
                 <dt className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                   Record
                 </dt>

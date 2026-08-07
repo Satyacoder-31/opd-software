@@ -99,7 +99,7 @@ export function StateCombobox({
       : undefined;
 
   return (
-    <Field className={className}>
+    <Field data-invalid={!!error || undefined}>
       <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
       <div className={cn("relative", open && "z-50")}>
         <input type="hidden" name={name} value={value} />
@@ -121,7 +121,8 @@ export function StateCombobox({
           aria-controls={listboxId}
           aria-activedescendant={activeOptionId}
           aria-required={required}
-          className="h-11"
+          aria-invalid={!!error || undefined}
+          className={cn("h-11", className)}
         />
 
         {open ? (

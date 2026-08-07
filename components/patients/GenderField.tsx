@@ -1,14 +1,16 @@
 "use client";
 
 import {
-  Select as SelectRoot,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcn/select";
-import { Field, FieldError, FieldLabel } from "@/components/ui/shadcn/field";
+  Field,
+  FieldError,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "@/components/ui/shadcn/field";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/shadcn/radio-group";
 import { cn } from "@/lib/utils";
 
 const GENDER_OPTIONS = [
@@ -16,19 +18,6 @@ const GENDER_OPTIONS = [
   { value: "female", label: "Female" },
   { value: "other", label: "Other" },
 ] as const;
-
-const CLEAR_VALUE = "__clear__";
-
-const GENDER_ITEMS = [
-  { value: CLEAR_VALUE, label: "Select…" },
-  ...GENDER_OPTIONS.map((option) => ({
-    value: option.value,
-    label: option.label,
-  })),
-];
-
-const GENDER_TRIGGER_CLASS = "h-11 w-full px-3.5";
-const GENDER_OPTION_CLASS = "py-2.5 pl-3 pr-9";
 
 type GenderFieldProps = {
   name?: string;
@@ -47,7 +36,7 @@ export function GenderField({
   disabled,
   className,
 }: GenderFieldProps) {
-  const inputId = "gender";
+  const errorId = "gender-error";
 
   return (
     <Field
@@ -55,44 +44,45 @@ export function GenderField({
       data-disabled={disabled || undefined}
       className={className}
     >
-      <FieldLabel htmlFor={inputId}>Gender</FieldLabel>
-      <SelectRoot
-        name={name}
-        value={value || null}
-        disabled={disabled}
-        items={GENDER_ITEMS}
-        onValueChange={(nextValue) => {
-          onChange(
-            nextValue === CLEAR_VALUE || nextValue == null ? "" : nextValue
-          );
-        }}
-      >
-        <SelectTrigger
-          id={inputId}
-          className={cn(GENDER_TRIGGER_CLASS)}
+      <FieldSet className="gap-2.5">
+        <FieldLegend variant="label">Gender</FieldLegend>
+        <RadioGroup
+          name={name}
+          value={value || undefined}
+          disabled={disabled}
+          onValueChange={(next) => onChange(next ?? "")}
+          className="flex flex-wrap gap-x-5 gap-y-2"
           aria-invalid={!!error || undefined}
-          aria-describedby={error ? `${inputId}-error` : undefined}
+          aria-describedby={error ? errorId : undefined}
         >
-          <SelectValue placeholder="Select…" />
-        </SelectTrigger>
-        <SelectContent align="start" className="p-1.5">
-          <SelectGroup className="p-0">
-            <SelectItem value={CLEAR_VALUE} className={GENDER_OPTION_CLASS}>
-              Select…
-            </SelectItem>
-            {GENDER_OPTIONS.map((option) => (
-              <SelectItem
+          {GENDER_OPTIONS.map((option) => {
+            const id = `gender-${option.value}`;
+            return (
+              <Field
                 key={option.value}
-                value={option.value}
-                className={GENDER_OPTION_CLASS}
+                orientation="horizontal"
+                className="w-auto items-center gap-2"
               >
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </SelectRoot>
-      {error ? <FieldError id={`${inputId}-error`}>{error}</FieldError> : null}
+                <RadioGroupItem
+                  id={id}
+                  value={option.value}
+                  aria-invalid={!!error || undefined}
+                />
+                <FieldLabel
+                  htmlFor={id}
+                  className={cn(
+                    "font-normal text-ink",
+                    disabled && "pointer-events-none opacity-50"
+                  )}
+                >
+                  {option.label}
+                </FieldLabel>
+              </Field>
+            );
+          })}
+        </RadioGroup>
+      </FieldSet>
+      {error ? <FieldError id={errorId}>{error}</FieldError> : null}
     </Field>
   );
 }

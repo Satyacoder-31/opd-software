@@ -28,7 +28,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps) {
         description={`Scheduled visits for ${dateLabel}`}
       />
       <AppointmentsDatePicker date={date} />
-      <div className="px-6 py-3 text-sm text-muted-foreground md:px-8">
+      <div className="px-4 py-3 text-sm text-muted-foreground sm:px-6 md:px-8">
         Book from a{" "}
         <Link href="/patients" className="text-primary hover:underline">
           patient profile

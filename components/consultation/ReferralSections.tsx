@@ -51,7 +51,6 @@ export function ReferralSections({
       title="Referral letter"
       summary={sectionSummary(completion)}
       filled={completion.filled}
-      defaultOpen
     >
       <div className="flex flex-col gap-3">
         <div className="grid gap-3 md:grid-cols-2">

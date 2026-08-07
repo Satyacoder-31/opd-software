@@ -1,4 +1,5 @@
 import { normalizeDrugName } from "@/lib/drug-catalog";
+import { meaningfulAllergyText } from "@/lib/consultation-utils";
 import {
   isBlankMedicineRow,
   isPartialMedicineRow,
@@ -54,19 +55,10 @@ export function findAllergyConflicts(
   medicines: Medicine[],
   allergies?: string | null
 ): PrescriptionSafetyCue[] {
-  const allergyText = allergies?.trim();
+  const allergyText = meaningfulAllergyText(allergies);
   if (!allergyText) return [];
 
   const allergyNormalized = normalizeDrugName(allergyText);
-  if (
-    allergyNormalized === "nkda" ||
-    allergyNormalized === "nil" ||
-    allergyNormalized === "none" ||
-    allergyNormalized === "no known drug allergies"
-  ) {
-    return [];
-  }
-
   const cues: PrescriptionSafetyCue[] = [];
 
   medicines.forEach((medicine, index) => {

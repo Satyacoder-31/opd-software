@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { updateClinicProfile } from "@/actions/auth";
-import { uploadClinicLogo } from "@/actions/onboarding";
 import {
   ClinicAddressFields,
   type ClinicAddressValue,
 } from "@/components/settings/ClinicAddressFields";
+import { ClinicLogoUpload } from "@/components/settings/ClinicLogoUpload";
 import { Button } from "@/components/ui/Button";
-import { ClinicLogo } from "@/components/ui/ClinicLogo";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Banner } from "@/components/ui/Banner";
@@ -66,7 +65,6 @@ export function ClinicProfileForm({
     clinic.businessEntity ?? "",
   );
   const [logoUrl, setLogoUrl] = useState(clinic.logoUrl ?? "");
-  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [address, setAddress] = useState<ClinicAddressValue>({
     addressLine1: clinic.addressLine1 ?? clinic.address ?? "",
     addressLine2: clinic.addressLine2 ?? "",
@@ -93,39 +91,6 @@ export function ClinicProfileForm({
       }
       setMessage({ type: "error", text: result.error });
     });
-  }
-
-  function onLogoFile(file: File | null) {
-    if (!file) return;
-    setMessage(null);
-    setUploadingLogo(true);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result ?? "");
-      const base64 = result.includes(",") ? result.split(",")[1] : result;
-      void (async () => {
-        try {
-          const upload = await uploadClinicLogo({
-            fileName: file.name,
-            mimeType: file.type || "image/png",
-            base64,
-          });
-          if (!upload.success) {
-            setMessage({ type: "error", text: upload.error });
-            return;
-          }
-          setLogoUrl(upload.data.logoUrl);
-          setMessage({ type: "success", text: "Logo uploaded." });
-        } finally {
-          setUploadingLogo(false);
-        }
-      })();
-    };
-    reader.onerror = () => {
-      setUploadingLogo(false);
-      setMessage({ type: "error", text: "Could not read that image file." });
-    };
-    reader.readAsDataURL(file);
   }
 
   return (
@@ -204,38 +169,13 @@ export function ClinicProfileForm({
         inputMode="tel"
         defaultValue={clinic.whatsapp ?? ""}
       />
-      <div className="flex flex-col gap-2">
-        <Input
-          label="Logo URL (optional)"
-          name="logoUrl"
-          value={logoUrl}
-          onChange={(e) => setLogoUrl(e.target.value)}
-          placeholder="https://"
-        />
-        <label className="text-sm text-muted-foreground">
-          Or upload an image from your device
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-            className="mt-1 block w-full text-sm"
-            disabled={uploadingLogo || pending}
-            onChange={(e) => {
-              onLogoFile(e.target.files?.[0] ?? null);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        {uploadingLogo ? (
-          <p className="text-xs text-muted-foreground" role="status">
-            Uploading logo…
-          </p>
-        ) : null}
-        <ClinicLogo
-          src={logoUrl.trim() || null}
-          alt="Clinic logo preview"
-          size="lg"
-        />
-      </div>
+      <ClinicLogoUpload
+        value={logoUrl}
+        onChange={setLogoUrl}
+        onMessage={setMessage}
+        includeHiddenField
+        disabled={pending}
+      />
       <Input
         label="Website (optional)"
         name="website"

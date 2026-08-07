@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { cn } from "@/lib/utils";
 
-const ITEM_HEIGHT = 40;
-const VISIBLE_COUNT = 5;
+const ITEM_WIDTH = 44;
 
 type NumberWheelProps = {
   min: number;
@@ -14,6 +20,7 @@ type NumberWheelProps = {
   disabled?: boolean;
   className?: string;
   suffix?: string;
+  "aria-label"?: string;
 };
 
 export function NumberWheel({
@@ -24,7 +31,9 @@ export function NumberWheel({
   disabled,
   className,
   suffix,
+  "aria-label": ariaLabel = "Select a number",
 }: NumberWheelProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const suppressScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
@@ -40,15 +49,13 @@ export function NumberWheel({
   const [activeIndex, setActiveIndex] = useState(() =>
     value == null ? defaultIndex : value - min
   );
-
-  const wheelHeight = ITEM_HEIGHT * VISIBLE_COUNT;
-  const edgePad = (wheelHeight - ITEM_HEIGHT) / 2;
+  const [edgePad, setEdgePad] = useState(ITEM_WIDTH * 2);
 
   const scrollToIndex = useCallback(
     (index: number, behavior: ScrollBehavior = "auto") => {
       const el = containerRef.current;
       if (!el) return;
-      el.scrollTo({ top: index * ITEM_HEIGHT, behavior });
+      el.scrollTo({ left: index * ITEM_WIDTH, behavior });
     },
     []
   );
@@ -66,6 +73,20 @@ export function NumberWheel({
     [items, onChange, scrollToIndex]
   );
 
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const updatePad = () => {
+      setEdgePad(Math.max(0, (root.clientWidth - ITEM_WIDTH) / 2));
+    };
+
+    updatePad();
+    const observer = new ResizeObserver(updatePad);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     const index =
       value == null
@@ -81,7 +102,7 @@ export function NumberWheel({
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [defaultIndex, items.length, min, scrollToIndex, value]);
+  }, [defaultIndex, edgePad, items.length, min, scrollToIndex, value]);
 
   function handleScroll() {
     if (suppressScrollRef.current || disabled) return;
@@ -89,7 +110,7 @@ export function NumberWheel({
     const el = containerRef.current;
     if (!el) return;
 
-    const index = Math.round(el.scrollTop / ITEM_HEIGHT);
+    const index = Math.round(el.scrollLeft / ITEM_WIDTH);
     const clamped = Math.min(items.length - 1, Math.max(0, index));
     setActiveIndex(clamped);
 
@@ -111,10 +132,10 @@ export function NumberWheel({
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (disabled) return;
 
-    if (event.key === "ArrowUp") {
+    if (event.key === "ArrowLeft") {
       event.preventDefault();
       commitIndex(activeIndex - 1);
-    } else if (event.key === "ArrowDown") {
+    } else if (event.key === "ArrowRight") {
       event.preventDefault();
       commitIndex(activeIndex + 1);
     }
@@ -122,72 +143,76 @@ export function NumberWheel({
 
   return (
     <div
-      className={cn("relative select-none", className)}
-      style={{ height: wheelHeight }}
+      ref={rootRef}
+      className={cn("relative h-11 w-full select-none", className)}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-2 top-1/2 z-10 -translate-y-1/2 rounded-lg border border-primary/25 bg-primary/5"
-        style={{ height: ITEM_HEIGHT }}
+        className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-11 -translate-x-1/2 rounded-sm border border-primary/25 bg-primary/5"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-14 bg-linear-to-b from-background via-background/80 to-transparent"
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-linear-to-r from-background via-background/85 to-transparent"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-14 bg-linear-to-t from-background via-background/80 to-transparent"
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-linear-to-l from-background via-background/85 to-transparent"
       />
 
       <div
         ref={containerRef}
         role="listbox"
-        aria-label="Select a number"
+        aria-label={ariaLabel}
         aria-activedescendant={`number-wheel-option-${items[activeIndex]}`}
         tabIndex={disabled ? -1 : 0}
         onPointerDown={() => {
           userInteractedRef.current = true;
         }}
-        onWheel={() => {
+        onWheel={(event) => {
           userInteractedRef.current = true;
+          if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            event.currentTarget.scrollLeft += event.deltaY;
+          }
         }}
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}
         className={cn(
-          "scrollbar-hide h-full overflow-y-auto scroll-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+          "scrollbar-hide h-full overflow-x-auto overflow-y-hidden scroll-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
           disabled && "pointer-events-none opacity-50"
         )}
         style={{
-          scrollSnapType: "y mandatory",
-          paddingTop: edgePad,
-          paddingBottom: edgePad,
+          scrollSnapType: "x mandatory",
+          paddingLeft: edgePad,
+          paddingRight: edgePad,
         }}
       >
-        {items.map((num, index) => {
-          const isActive = index === activeIndex;
-          return (
-            <div
-              key={num}
-              id={`number-wheel-option-${num}`}
-              role="option"
-              aria-selected={isActive}
-              className={cn(
-                "flex snap-center items-center justify-center text-base tabular-nums transition-[color,font-size]",
-                isActive
-                  ? "font-semibold text-ink"
-                  : "text-muted-foreground/70"
-              )}
-              style={{ height: ITEM_HEIGHT }}
-            >
-              {num}
-              {suffix && isActive ? (
-                <span className="ml-1 text-sm font-normal text-muted-foreground">
-                  {suffix}
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
+        <div className="flex h-full">
+          {items.map((num, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <div
+                key={num}
+                id={`number-wheel-option-${num}`}
+                role="option"
+                aria-selected={isActive}
+                className={cn(
+                  "flex shrink-0 snap-center items-center justify-center text-base tabular-nums transition-[color,font-weight]",
+                  isActive
+                    ? "font-semibold text-ink"
+                    : "text-muted-foreground/70"
+                )}
+                style={{ width: ITEM_WIDTH }}
+              >
+                {num}
+                {suffix && isActive ? (
+                  <span className="ml-0.5 text-xs font-normal text-muted-foreground">
+                    {suffix}
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -1,24 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  faMagnifyingGlass,
-  faPills,
-  faPlus,
-} from "@fortawesome/free-solid-svg-icons";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import {
   createDrugCatalogItem,
   setDrugCatalogItemActive,
   updateDrugCatalogItem,
 } from "@/actions/drug-catalog";
 import { DurationField } from "@/components/consultation/DurationField";
+import type { DrugDictionaryRow } from "@/components/settings/DrugDictionaryView";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
-import { SearchField } from "@/components/ui/SearchField";
 import { Select } from "@/components/ui/Select";
 import {
   defaultsFromEntry,
@@ -32,23 +27,6 @@ import {
 import { usePendingAction } from "@/hooks/usePendingAction";
 import { useServerActionForm } from "@/hooks/useServerActionForm";
 
-export type DrugDictionaryRow = {
-  id: string;
-  name: string;
-  isActive: boolean;
-  usageCount: number;
-  dosage: string | null;
-  route: string | null;
-  frequency: string | null;
-  duration: string | null;
-  quantity: string | null;
-  instructions: string | null;
-};
-
-type DrugDictionaryCardProps = {
-  initialItems: DrugDictionaryRow[];
-};
-
 const EMPTY_DEFAULTS = {
   name: "",
   dosage: "",
@@ -59,12 +37,13 @@ const EMPTY_DEFAULTS = {
   instructions: "",
 };
 
-export function DrugDictionaryCard({
-  initialItems,
-}: DrugDictionaryCardProps) {
+type DrugDictionaryEditProps = {
+  initialItems: DrugDictionaryRow[];
+};
+
+export function DrugDictionaryEdit({ initialItems }: DrugDictionaryEditProps) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
-  const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [toggleError, setToggleError] = useState<string | null>(null);
   const { isPending, run } = usePendingAction<string>();
@@ -72,14 +51,6 @@ export function DrugDictionaryCard({
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
-
-  const filteredItems = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase("en");
-    if (!normalizedQuery) return items;
-    return items.filter((item) =>
-      item.name.toLocaleLowerCase("en").includes(normalizedQuery)
-    );
-  }, [items, query]);
 
   const {
     handleSubmit,
@@ -149,12 +120,6 @@ export function DrugDictionaryCard({
 
   return (
     <div className="flex flex-col gap-5">
-      <Banner variant="info">
-        Common medicines include typical dose, route, frequency, and
-        instructions. Clinic entries learn from what you prescribe — pick a
-        medicine in Rx and those fields fill in automatically.
-      </Banner>
-
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-3 border-b border-border pb-5"
@@ -246,35 +211,15 @@ export function DrugDictionaryCard({
           </Button>
         </div>
       </form>
-      {error && <Banner variant="error">{error}</Banner>}
+      {error ? <Banner variant="error">{error}</Banner> : null}
 
-      <SearchField
-        label="Find clinic medicines"
-        name="medicine-search"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search by name or strength"
-      />
-
-      {toggleError && <Banner variant="error">{toggleError}</Banner>}
-      {editForm.error && <Banner variant="error">{editForm.error}</Banner>}
+      {toggleError ? <Banner variant="error">{toggleError}</Banner> : null}
+      {editForm.error ? (
+        <Banner variant="error">{editForm.error}</Banner>
+      ) : null}
 
       <ul className="flex flex-col gap-2">
-        {filteredItems.length === 0 && (
-          <li>
-            <EmptyState
-              icon={query ? faMagnifyingGlass : faPills}
-              title={query ? "No matching medicines" : "No clinic medicines yet"}
-              description={
-                query
-                  ? "Try another name or strength."
-                  : "Add one above, or save a prescription to build the clinic dictionary."
-              }
-              compact
-            />
-          </li>
-        )}
-        {filteredItems.map((item) => {
+        {items.map((item) => {
           const summary = formatDrugDefaultsSummary(defaultsFromEntry(item));
           const isEditing = editingId === item.id;
 

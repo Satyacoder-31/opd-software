@@ -58,12 +58,3 @@ export const PLAN_BLURBS: Record<Plan, string> = {
   starter: "Everything in Free, plus messaging and lab orders.",
   pro: "Everything in Starter, plus online payments, ABHA, and MIS reports.",
 };
-
-export function planTrialBlurb(plan: Plan, status: string): string {
-  const label = PLAN_LABELS[plan] ?? "Free";
-  const feature = PLAN_BLURBS[plan] ?? PLAN_BLURBS.free;
-  if (status === "trialing") {
-    return `You're on the ${label} plan (trial). ${feature}`;
-  }
-  return `You're on the ${label} plan. ${feature}`;
-}

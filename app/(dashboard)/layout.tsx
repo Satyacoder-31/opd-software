@@ -1,11 +1,12 @@
 import { unstable_cache } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { listClinicAlerts } from "@/actions/clinic-alerts";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { can } from "@/lib/rbac";
+import { AppShell } from "@/components/nav/AppShell";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
-import { MobileNav } from "@/components/ui/MobileNav";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import { OnboardingSetupBanner } from "@/components/onboarding/OnboardingSetupBanner";
 
@@ -32,9 +33,11 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await requireSessionUser();
-  const clinic = await getClinicDashboardMeta(session.clinicId);
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const onOnboarding = pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+  const onOnboarding =
+    pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+
+  const clinic = await getClinicDashboardMeta(session.clinicId);
 
   if (
     pathname &&
@@ -46,6 +49,25 @@ export default async function DashboardLayout({
     redirect("/onboarding");
   }
 
+  // Focused full-page setup — no sidebar, search, or clinic chrome until ready.
+  // fixed inset-0 pulls setup out of document flow so the page itself cannot scroll.
+  if (onOnboarding) {
+    return (
+      <div className="fixed inset-0 z-40 flex flex-col overflow-hidden overscroll-none bg-background text-foreground">
+        <NavigationProgress />
+        <OfflineBanner />
+        <main
+          id="main-content"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  const alerts = await listClinicAlerts();
+
   const showSetupBanner =
     can(session, "clinic.manage") && !clinic.onboardingCompletedAt;
 
@@ -53,17 +75,22 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <NavigationProgress />
       <OfflineBanner />
-      <MobileNav
+      <AppShell
         session={session}
         clinicName={clinic.name}
         clinicLogoUrl={clinic.logoUrl}
-      />
-      {showSetupBanner && !onOnboarding ? (
-        <OnboardingSetupBanner skipped={Boolean(clinic.onboardingSkippedAt)} />
-      ) : null}
-      <main id="main-content" className="flex-1 overflow-auto tint-soft">
-        {children}
-      </main>
+        alerts={alerts}
+      >
+        {showSetupBanner ? (
+          <OnboardingSetupBanner skipped={Boolean(clinic.onboardingSkippedAt)} />
+        ) : null}
+        <main
+          id="main-content"
+          className="flex-1 overflow-auto tint-soft pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0"
+        >
+          {children}
+        </main>
+      </AppShell>
     </div>
   );
 }

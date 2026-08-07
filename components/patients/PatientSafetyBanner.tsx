@@ -1,4 +1,5 @@
 import { Banner } from "@/components/ui/Banner";
+import { meaningfulAllergyText } from "@/lib/consultation-utils";
 
 type PatientSafetyBannerProps = {
   allergies?: string | null;
@@ -9,8 +10,8 @@ export function PatientSafetyBanner({
   allergies,
   chronicConditions,
 }: PatientSafetyBannerProps) {
-  const allergyText = allergies?.trim();
-  const chronicText = chronicConditions?.trim();
+  const allergyText = meaningfulAllergyText(allergies);
+  const chronicText = chronicConditions?.trim() || null;
 
   if (!allergyText && !chronicText) return null;
 

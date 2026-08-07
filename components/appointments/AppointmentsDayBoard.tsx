@@ -75,24 +75,32 @@ export function AppointmentsDayBoard({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {message ? <Banner variant="success">{message}</Banner> : null}
-      {error ? <Banner variant="error">{error}</Banner> : null}
+    <div className="flex flex-col gap-3">
+      {message ? (
+        <div className="px-4 sm:px-6 md:px-8">
+          <Banner variant="success">{message}</Banner>
+        </div>
+      ) : null}
+      {error ? (
+        <div className="px-4 sm:px-6 md:px-8">
+          <Banner variant="error">{error}</Banner>
+        </div>
+      ) : null}
 
       {appointments.length === 0 ? (
-        <p className="px-6 text-sm text-muted-foreground md:px-8">
+        <p className="px-4 text-sm text-muted-foreground sm:px-6 md:px-8">
           No scheduled appointments for {dateLabel}.
         </p>
       ) : (
-        <ul className="divide-y divide-border border-y border-border bg-white">
+        <ul className="divide-y divide-border border-y border-border bg-white xl:grid xl:grid-cols-2 xl:gap-px xl:divide-y-0 xl:bg-border">
           {appointments.map((appt) => (
             <li
               key={appt.id}
-              className="flex flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between md:px-8"
+              className="flex flex-col gap-3 bg-white px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between md:px-6 xl:px-8"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-ink">
+                  <span className="font-medium tabular-nums text-ink">
                     {formatTime(appt.scheduledAt)}
                   </span>
                   <StatusBadge status={appt.status} />

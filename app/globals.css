@@ -13,23 +13,38 @@
   }
 }
 
+@keyframes caret-blink {
+  0%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  50% {
+    opacity: 0;
+  }
+}
+
 @theme {
-  --color-surface: #f7fafd;
-  --color-surface-muted: #ecf3f9;
-  --color-surface-tint: #d4eaf8;
-  --color-surface-rich: #0d5a92;
-  --color-surface-deep: #083e68;
+  /* Palette: pale_sky / frozen_water / pacific_blue / fresh_sky / yale_blue */
+  --color-surface: #f5fbff; /* pale_sky 900 */
+  --color-surface-muted: #e5f6f6; /* frozen_water 800 */
+  --color-surface-tint: #ebf7ff; /* pale_sky 800 */
+  --color-surface-rich: #2b74a1; /* yale_blue 600 */
+  --color-surface-deep: #1b4965; /* yale_blue */
   --color-surface-ochre: #a04d06;
-  --color-primary: #1a85c8;
+  --color-primary: #5fa8d3; /* fresh_sky */
   --color-accent: #e09410;
   --color-accent-foreground: #8b5a08;
-  --color-ink: #152536;
+  --color-ink: #0b1d28; /* yale_blue 200 */
   --color-danger: #c53d32;
   --color-success: #178a5c;
   --color-destructive: var(--destructive);
-  --color-border: #d6e3ee;
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --color-border: #c0e2ea; /* pacific_blue 800 */
+  --font-display: var(--font-roboto-serif), "Roboto Serif", Georgia, serif;
+  --font-sans: var(--font-roboto), Roboto, system-ui, sans-serif;
+  --font-nav: var(--font-roboto), Roboto, system-ui, sans-serif;
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
 }
 
 @utility scrollbar-hide {
@@ -51,6 +66,18 @@
     @apply antialiased bg-background text-foreground;
   }
 
+  /* Native form controls often ignore inherited fonts — force Roboto. */
+  input,
+  textarea,
+  select,
+  button,
+  [data-slot="input"],
+  [data-slot="textarea"],
+  [data-slot="select-trigger"],
+  [data-slot="select-value"] {
+    font-family: var(--font-sans);
+  }
+
   .font-display {
     font-family: var(--font-display);
   }
@@ -59,14 +86,14 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   }
 
-  /* Rich, saturated section bands — deep ocean blues + one warm ochre */
+  /* Rich section bands — yale depth into pacific midtones + warm ochre */
   .tint-hero {
     background-color: var(--color-surface-deep);
     background-image: linear-gradient(
       165deg,
-      #062f52 0%,
-      #0a4a7c 55%,
-      #0d5a92 100%
+      #0b1d28 0%,
+      #1b4965 55%,
+      #2b74a1 100%
     );
   }
 
@@ -156,40 +183,40 @@
 }
 
 :root {
-  --background: #f7fafd;
-  --foreground: #152536;
+  --background: #f5fbff; /* pale_sky 900 */
+  --foreground: #0b1d28; /* yale_blue 200 */
   --card: #ffffff;
-  --card-foreground: #152536;
+  --card-foreground: #0b1d28;
   --popover: #ffffff;
-  --popover-foreground: #152536;
-  --primary: #1a85c8;
+  --popover-foreground: #0b1d28;
+  --primary: #5fa8d3; /* fresh_sky */
   --primary-foreground: #ffffff;
-  --secondary: #ecf3f9;
-  --secondary-foreground: #152536;
+  --secondary: #e5f6f6; /* frozen_water 800 */
+  --secondary-foreground: #0b1d28;
   /* Surface wash for bg-muted — not for body text */
-  --muted: #ecf3f9;
-  /* Secondary copy: darker than before so it stays readable on blue tints */
-  --muted-foreground: #3d5268;
+  --muted: #e5f6f6; /* frozen_water 800 */
+  /* Secondary copy: readable on pale teal / sky washes */
+  --muted-foreground: #1e4e5a; /* pacific_blue 200 */
   --accent: #e09410;
   --accent-foreground: #8b5a08;
   --destructive: #c53d32;
-  --border: #d6e3ee;
-  --input: #d6e3ee;
-  --ring: #1a85c8;
-  --chart-1: #1a85c8;
+  --border: #c0e2ea; /* pacific_blue 800 */
+  --input: #c0e2ea;
+  --ring: #62b6cb; /* pacific_blue */
+  --chart-1: #5fa8d3; /* fresh_sky */
   --chart-2: #178a5c;
   --chart-3: #e09410;
-  --chart-4: #5a7088;
+  --chart-4: #1b4965; /* yale_blue */
   --chart-5: #c53d32;
   --radius: 0.625rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #152536;
-  --sidebar-primary: #1a85c8;
+  --sidebar-foreground: #0b1d28;
+  --sidebar-primary: #1b4965; /* yale_blue */
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ecf3f9;
-  --sidebar-accent-foreground: #152536;
-  --sidebar-border: #d6e3ee;
-  --sidebar-ring: #1a85c8;
+  --sidebar-accent: #e5f6f6;
+  --sidebar-accent-foreground: #0b1d28;
+  --sidebar-border: #c0e2ea;
+  --sidebar-ring: #62b6cb;
 }
 
 .dark {

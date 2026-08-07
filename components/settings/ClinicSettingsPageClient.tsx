@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { faChevronLeft, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
 import type { Clinic } from "@prisma/client";
 import { ClinicProfile } from "@/components/settings/ClinicProfile";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Icon } from "@/components/ui/Icon";
-import { PageShell } from "@/components/ui/PageShell";
+import { PageBody, PageHeader, PageShell } from "@/components/ui/PageShell";
 
 type ClinicSettingsPageClientProps = {
   clinic: Pick<
@@ -42,20 +42,11 @@ export function ClinicSettingsPageClient({
 }: ClinicSettingsPageClientProps) {
   return (
     <PageShell>
-      <div className="px-6 py-4 md:px-8">
-        <Link
-          href="/settings"
-          aria-label="Back to settings"
-          className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <Icon icon={faChevronLeft} className="size-4 shrink-0" aria-hidden />
-          <span>Back to settings</span>
-        </Link>
-      </div>
-      <Card
-        title="Clinic details"
-        flush
-        className="border-y border-border"
+      <PageHeader
+        title="Clinic profile"
+        description="Name, phone, address, and GSTIN used on invoices"
+        backHref="/settings"
+        backLabel="Back to settings"
         actions={
           <Button
             nativeButton={false}
@@ -66,11 +57,12 @@ export function ClinicSettingsPageClient({
             Edit
           </Button>
         }
-      >
-        <div className="px-5 py-5">
+      />
+      <PageBody className="max-w-3xl">
+        <Card title="Clinic details" className="border border-border">
           <ClinicProfile clinic={clinic} />
-        </div>
-      </Card>
+        </Card>
+      </PageBody>
     </PageShell>
   );
 }

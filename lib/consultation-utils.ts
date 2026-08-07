@@ -1,4 +1,5 @@
 import { AppointmentStatus, type Consultation } from "@prisma/client";
+import { normalizeDrugName } from "@/lib/drug-catalog";
 import type { DiagnosisCodeEntry } from "@/lib/icd-catalog";
 import type {
   ClinicalPresentation,
@@ -10,6 +11,29 @@ import type {
   ReferralLetter,
   Vitals,
 } from "@/lib/types";
+
+/** Free-text notes that mean “no allergy alert”, not a real sensitivity. */
+const NON_ALLERGY_NOTES = new Set([
+  "nkda",
+  "nka",
+  "nil",
+  "none",
+  "no known drug allergies",
+  "no known allergies",
+]);
+
+/**
+ * Returns trimmed allergy text only when it should surface as a safety alert.
+ * Empty and NKDA-style notes return null.
+ */
+export function meaningfulAllergyText(
+  allergies?: string | null
+): string | null {
+  const text = allergies?.trim();
+  if (!text) return null;
+  if (NON_ALLERGY_NOTES.has(normalizeDrugName(text))) return null;
+  return text;
+}
 
 export function isConsultationEditable(
   appointmentStatus: AppointmentStatus
@@ -83,5 +107,8 @@ export function hasPatientSafetyAlerts(patient: {
   allergies?: string | null;
   chronicConditions?: string | null;
 }): boolean {
-  return Boolean(patient.allergies?.trim() || patient.chronicConditions?.trim());
+  return Boolean(
+    meaningfulAllergyText(patient.allergies) ||
+      patient.chronicConditions?.trim()
+  );
 }

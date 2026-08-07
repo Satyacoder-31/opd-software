@@ -14,7 +14,7 @@ export default async function PortalLayout({
     <div className="portal-shell min-h-screen text-ink">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_#d4eaf8_0%,_#f7fafd_42%,_#ecf3f9_100%)]"
+        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_#cae9ff_0%,_#f5fbff_42%,_#e5f6f6_100%)]"
       />
       <div
         aria-hidden
@@ -49,9 +49,7 @@ export default async function PortalLayout({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        {children}
-      </main>
+      <main className="w-full">{children}</main>
     </div>
   );
 }

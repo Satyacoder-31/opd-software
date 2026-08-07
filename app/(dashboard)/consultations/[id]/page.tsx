@@ -38,9 +38,36 @@ export default async function ConsultationPage({ params }: Props) {
     tokenNumber: consultation.appointment.tokenNumber,
   });
 
+  const robotoScope =
+    "font-nav [&_.font-display]:font-nav [&_.font-sans]:font-nav";
+
   if (editable) {
     return (
-      <ConsultationWorkspace
+      <div className={robotoScope}>
+        <ConsultationWorkspace
+          consultationId={consultation.id}
+          patientId={consultation.patient.id}
+          patientName={consultation.patient.name}
+          uhid={uhid}
+          episodeNo={episodeNo}
+          patientPhone={consultation.patient.phone}
+          patientAge={patientAge}
+          patientGender={patientGender}
+          doctorName={consultation.doctor.name}
+          clinical={clinical}
+          medicines={medicines}
+          advice={consultation.prescription?.advice}
+          followUp={consultation.prescription?.followUp}
+          patientAllergies={consultation.patient.allergies}
+          patientChronicConditions={consultation.patient.chronicConditions}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={robotoScope}>
+      <VisitSummaryView
         consultationId={consultation.id}
         patientId={consultation.patient.id}
         patientName={consultation.patient.name}
@@ -56,30 +83,10 @@ export default async function ConsultationPage({ params }: Props) {
         followUp={consultation.prescription?.followUp}
         patientAllergies={consultation.patient.allergies}
         patientChronicConditions={consultation.patient.chronicConditions}
+        amendmentReason={consultation.amendmentReason}
+        amendedAt={consultation.amendedAt}
+        canAmend={consultation.appointment.status === "done"}
       />
-    );
-  }
-
-  return (
-    <VisitSummaryView
-      consultationId={consultation.id}
-      patientId={consultation.patient.id}
-      patientName={consultation.patient.name}
-      uhid={uhid}
-      episodeNo={episodeNo}
-      patientPhone={consultation.patient.phone}
-      patientAge={patientAge}
-      patientGender={patientGender}
-      doctorName={consultation.doctor.name}
-      clinical={clinical}
-      medicines={medicines}
-      advice={consultation.prescription?.advice}
-      followUp={consultation.prescription?.followUp}
-      patientAllergies={consultation.patient.allergies}
-      patientChronicConditions={consultation.patient.chronicConditions}
-      amendmentReason={consultation.amendmentReason}
-      amendedAt={consultation.amendedAt}
-      canAmend={consultation.appointment.status === "done"}
-    />
+    </div>
   );
 }

@@ -156,7 +156,6 @@ export function medicineSummary(med: Medicine): string | undefined {
     med.route,
     med.frequency,
     med.duration,
-    med.quantity ? `Qty ${med.quantity}` : undefined,
   ].filter((part) => part?.trim());
   return parts.length > 0 ? parts.join(" · ") : undefined;
 }

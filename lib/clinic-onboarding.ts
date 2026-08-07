@@ -90,18 +90,37 @@ export const CLINIC_LANGUAGE_OPTIONS = [
   "Assamese",
 ] as const;
 
+/** Amenities patients use when choosing a local OPD / polyclinic. Sorted A–Z. */
 export const CLINIC_FACILITY_OPTIONS = [
-  "Parking",
-  "Wheelchair access",
-  "In-house lab",
-  "ECG",
-  "Ultrasound",
-  "X-ray",
-  "Pharmacy nearby",
-  "Waiting lounge",
   "AC waiting area",
+  "ECG",
+  "In-house lab",
+  "In-house pharmacy",
+  "Minor procedure room",
   "Online reports",
+  "Parking",
+  "Physiotherapy",
+  "Sample collection",
+  "Ultrasound",
+  "Wheelchair access",
+  "X-ray",
 ] as const;
+
+/** Collapse duplicate comma-separated segments (e.g. area repeated in line 1). */
+export function dedupeAddressSegments(address: string): string {
+  const seen = new Set<string>();
+  return address
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => {
+      const key = p.toLocaleLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .join(", ");
+}
 
 /** Build legacy single-line address from structured parts (+ optional city). */
 export function formatClinicAddress(parts: {
@@ -113,18 +132,20 @@ export function formatClinicAddress(parts: {
   pincode?: string | null;
   landmark?: string | null;
 }): string {
-  return [
-    parts.addressLine1,
-    parts.addressLine2,
-    parts.area,
-    parts.landmark ? `Near ${parts.landmark}` : null,
-    parts.city,
-    parts.state,
-    parts.pincode,
-  ]
-    .map((p) => (p ?? "").trim())
-    .filter(Boolean)
-    .join(", ");
+  return dedupeAddressSegments(
+    [
+      parts.addressLine1,
+      parts.addressLine2,
+      parts.area,
+      parts.landmark ? `Near ${parts.landmark}` : null,
+      parts.city,
+      parts.state,
+      parts.pincode,
+    ]
+      .map((p) => (p ?? "").trim())
+      .filter(Boolean)
+      .join(", "),
+  );
 }
 
 export function isValidIndianPincode(value: string): boolean {
@@ -266,8 +287,24 @@ export async function reverseGeocodeNominatim(
   if (!addressLine1) addressLine1 = "Clinic location";
 
   // --- Area / locality ---
-  const area =
-    a.suburb || a.neighbourhood || a.residential || a.village || a.hamlet;
+  // Prefer a locality that isn't already baked into addressLine1 (common when
+  // Nominatim has no road and line 1 was built from hamlet/village/suburb).
+  const areaCandidates = [
+    a.suburb,
+    a.neighbourhood,
+    a.residential,
+    a.village,
+    a.hamlet,
+  ].filter(Boolean) as string[];
+  const line1Parts = new Set(
+    addressLine1
+      .split(",")
+      .map((p) => p.trim().toLocaleLowerCase())
+      .filter(Boolean),
+  );
+  const area = areaCandidates.find(
+    (candidate) => !line1Parts.has(candidate.trim().toLocaleLowerCase()),
+  );
 
   // --- City ---
   const city =

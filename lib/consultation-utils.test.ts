@@ -24,6 +24,14 @@ describe("patient safety helpers", () => {
     expect(hasPatientSafetyAlerts({})).toBe(false);
   });
 
+  it("ignores NKDA-style allergy notes", () => {
+    expect(
+      hasPatientSafetyAlerts({ allergies: "No known drug allergies" })
+    ).toBe(false);
+    expect(hasPatientSafetyAlerts({ allergies: "NKDA" })).toBe(false);
+    expect(hasPatientSafetyAlerts({ allergies: "none" })).toBe(false);
+  });
+
   it("prefills empty history fields from patient alerts", () => {
     const merged = mergePatientAlertsIntoClinical(
       { patientHistory: {} },

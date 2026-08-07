@@ -4,12 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { signup } from "@/actions/auth";
-import {
-  ClinicAddressFields,
-  EMPTY_CLINIC_ADDRESS,
-  type ClinicAddressValue,
-} from "@/components/settings/ClinicAddressFields";
 import { Button } from "@/components/ui/Button";
+import { CheckboxOption } from "@/components/ui/CheckboxOption";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { useServerActionForm } from "@/hooks/useServerActionForm";
@@ -18,7 +14,6 @@ import { CLINIC_SPECIALTIES } from "@/lib/clinic-specialties";
 export function SignupForm() {
   const router = useRouter();
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [address, setAddress] = useState<ClinicAddressValue>(EMPTY_CLINIC_ADDRESS);
   const [selectedSpecialties, setSelectedSpecialties] = useState<Set<string>>(
     () => new Set(),
   );
@@ -91,57 +86,25 @@ export function SignupForm() {
           error={fieldError("clinicEmail")}
           required
         />
-        <Input
-          label="WhatsApp (optional)"
-          name="clinicWhatsapp"
-          type="tel"
-          value={values.clinicWhatsapp ?? ""}
-          onChange={(e) => setValue("clinicWhatsapp", e.target.value)}
-          error={fieldError("clinicWhatsapp")}
-        />
-        <div>
-          <p className="mb-2 text-sm font-medium text-ink">Clinic address</p>
-          <ClinicAddressFields
-            value={address}
-            onChange={setAddress}
-            errors={{
-              addressLine1: fieldError("addressLine1"),
-              city: fieldError("city"),
-              state: fieldError("state"),
-              pincode: fieldError("pincode"),
-              mapsUrl: fieldError("mapsUrl"),
-              latitude: fieldError("latitude"),
-            }}
-          />
-        </div>
         <fieldset>
           <legend className="mb-2 text-sm font-medium text-ink">
             Specialties <span className="text-danger">*</span>
           </legend>
-          <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto rounded-xl border border-border p-3">
-            {CLINIC_SPECIALTIES.map((specialty) => {
-              const checked = selectedSpecialties.has(specialty);
-              return (
-                <label
-                  key={specialty}
-                  className={`cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
-                    checked
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    name="specialties"
-                    value={specialty}
-                    checked={checked}
-                    onChange={() => toggleSpecialty(specialty)}
-                    className="sr-only"
-                  />
-                  {specialty}
-                </label>
-              );
-            })}
+          <p className="mb-3 text-xs text-muted-foreground">
+            Select all that apply for your clinic.
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {CLINIC_SPECIALTIES.map((specialty) => (
+              <CheckboxOption
+                key={specialty}
+                name="specialties"
+                value={specialty}
+                checked={selectedSpecialties.has(specialty)}
+                onChange={() => toggleSpecialty(specialty)}
+              >
+                {specialty}
+              </CheckboxOption>
+            ))}
           </div>
           {fieldError("specialties") ? (
             <p className="mt-1 text-sm text-danger" role="alert">
@@ -149,14 +112,6 @@ export function SignupForm() {
             </p>
           ) : null}
         </fieldset>
-        <Input
-          label="GSTIN (optional)"
-          name="gstin"
-          value={values.gstin ?? ""}
-          onChange={(e) => setValue("gstin", e.target.value.toUpperCase())}
-          error={fieldError("gstin")}
-          maxLength={15}
-        />
       </section>
 
       <section className="flex flex-col gap-4">
@@ -206,20 +161,20 @@ export function SignupForm() {
       </section>
 
       <section className="flex flex-col gap-4">
-        <label className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 text-sm">
+        <label className="flex items-start gap-3 rounded-sm border border-border bg-card p-3 text-sm text-muted-foreground has-focus-visible:border-transparent has-focus-visible:ring-3 has-focus-visible:ring-ring/50">
           <input
             type="checkbox"
             name="isConsultingDoctor"
             value="true"
             checked={isConsultingDoctor}
             onChange={(e) => setIsConsultingDoctor(e.target.checked)}
-            className="mt-1 size-4"
+            className="mt-1 size-4 rounded-sm border border-input accent-primary outline-none focus:border-transparent focus:ring-3 focus:ring-ring/50"
           />
           <span>
-            <span className="font-medium text-ink">
+            <span className="font-medium text-muted-foreground">
               I am a consulting doctor at this clinic
             </span>
-            <span className="mt-1 block text-muted-foreground">
+            <span className="mt-1 block text-muted-foreground/80">
               Enables your profile for online booking. You can invite other
               doctors later.
             </span>
@@ -270,13 +225,13 @@ export function SignupForm() {
         ) : null}
       </section>
 
-      <label className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 text-sm">
+      <label className="flex items-start gap-3 rounded-sm border border-border bg-card p-3 text-sm text-muted-foreground has-focus-visible:border-transparent has-focus-visible:ring-3 has-focus-visible:ring-ring/50">
         <input
           type="checkbox"
           name="acceptTerms"
           value="true"
           required
-          className="mt-1 size-4"
+          className="mt-1 size-4 rounded-sm border border-input accent-primary outline-none focus:border-transparent focus:ring-3 focus:ring-ring/50"
         />
         <span>
           I agree to the{" "}

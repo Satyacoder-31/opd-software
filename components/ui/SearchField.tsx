@@ -43,7 +43,7 @@ export function SearchField({
             "placeholder:text-muted-foreground/65",
             "transition-[border-color,box-shadow,background-color,color] duration-200 ease-out",
             "hover:border-primary/25",
-            "focus-visible:border-primary/45 focus-visible:ring-[3px] focus-visible:ring-primary/18",
+            "focus-visible:border-transparent focus-visible:ring-[3px] focus-visible:ring-primary/18",
             "[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
             className
           )}

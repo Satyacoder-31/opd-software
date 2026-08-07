@@ -20,22 +20,24 @@ export default async function PatientPortalPage({
 
   if (!data) {
     return (
-      <div className="mx-auto grid max-w-lg gap-6 pt-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Use your phone number. We&apos;ll send a one-time code — no password.
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mx-auto grid max-w-lg gap-6 pt-4">
+          <div>
+            <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Use your phone number. We&apos;ll send a one-time code — no password.
+            </p>
+          </div>
+          <Card title="OTP login" className="border border-border bg-card">
+            <PortalLoginForm redirectTo={params.next} />
+          </Card>
+          <p className="text-center text-sm text-muted-foreground">
+            Looking for a clinic?{" "}
+            <Link href="/clinics" className="font-medium text-primary hover:underline">
+              Browse the directory
+            </Link>
           </p>
         </div>
-        <Card title="OTP login" className="border border-border bg-card">
-          <PortalLoginForm redirectTo={params.next} />
-        </Card>
-        <p className="text-center text-sm text-muted-foreground">
-          Looking for a clinic?{" "}
-          <Link href="/clinics" className="font-medium text-primary hover:underline">
-            Browse the directory
-          </Link>
-        </p>
       </div>
     );
   }
@@ -51,7 +53,7 @@ export default async function PatientPortalPage({
   const past = appointments.filter((a) => !upcoming.includes(a));
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-3xl font-semibold text-ink sm:text-4xl">

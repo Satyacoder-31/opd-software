@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Sans } from "next/font/google";
+import { Roboto, Roboto_Serif } from "next/font/google";
 import "@/lib/fontawesome";
 import "./globals.css";
 import { SkipLink } from "@/components/ui/SkipLink";
 
-const fraunces = Fraunces({
+const roboto = Roboto({
   subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["600", "700"],
+  variable: "--font-roboto",
+  weight: ["400", "500", "600", "700"],
 });
 
-const ibmPlexSans = IBM_Plex_Sans({
+const robotoSerif = Roboto_Serif({
   subsets: ["latin"],
-  variable: "--font-ibm-plex-sans",
-  weight: ["400", "500", "600"],
+  variable: "--font-roboto-serif",
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -34,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${ibmPlexSans.variable} font-sans`}
+      className={`${roboto.variable} ${robotoSerif.variable} font-sans`}
     >
       <body>
         <SkipLink />

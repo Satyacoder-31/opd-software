@@ -22,6 +22,8 @@ type CollapsibleSectionProps = {
   contentClassName?: string;
   /** Compact headers for dense clinical/Rx workspaces. */
   density?: "default" | "compact";
+  /** Header actions outside the toggle (e.g. Remove). */
+  actions?: React.ReactNode;
 };
 
 export function CollapsibleSection({
@@ -34,6 +36,7 @@ export function CollapsibleSection({
   flush,
   contentClassName,
   density = "default",
+  actions,
 }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
@@ -53,44 +56,53 @@ export function CollapsibleSection({
         className,
       )}
     >
-      <CollapsibleTrigger
+      <div
         className={cn(
-          "flex w-full items-center text-left transition-[background-color,transform] duration-150 hover:bg-muted/60 active:scale-[0.995] active:bg-muted/80",
-          compact ? "min-h-10 gap-2 px-3 py-2 md:px-4" : "gap-3 px-4 py-3",
+          "flex items-center",
+          compact ? "min-h-10 gap-1 pr-2 md:pr-3" : "gap-1 pr-3",
         )}
-        aria-controls={panelId}
       >
-        <Icon
-          icon={faChevronRight}
+        <CollapsibleTrigger
           className={cn(
-            "shrink-0 text-muted-foreground transition-transform",
-            compact ? "size-4" : null,
-            open && "rotate-90",
+            "flex min-w-0 flex-1 items-center text-left transition-[background-color,transform] duration-150 hover:bg-muted/60 active:scale-[0.995] active:bg-muted/80",
+            compact ? "min-h-10 gap-2 px-3 py-2 md:px-4" : "gap-3 px-4 py-3",
+            actions && (compact ? "pr-1" : "pr-2"),
           )}
-          data-icon="inline-start"
-        />
-        <span className="min-w-0 flex-1">
-          <span
-            className={cn(
-              "block font-medium",
-              compact ? "text-sm leading-tight" : "text-sm",
-            )}
-          >
-            {title}
-          </span>
-          {summary && (
-            <span className="block truncate text-xs text-muted-foreground">
-              {summary}
-            </span>
-          )}
-        </span>
-        <Badge
-          variant={filled ? "default" : "secondary"}
-          className={cn("shrink-0", compact && "px-1.5 text-[10px]")}
+          aria-controls={panelId}
         >
-          {filled ? "Filled" : "Empty"}
-        </Badge>
-      </CollapsibleTrigger>
+          <Icon
+            icon={faChevronRight}
+            className={cn(
+              "shrink-0 text-muted-foreground transition-transform",
+              compact ? "size-4" : null,
+              open && "rotate-90",
+            )}
+            data-icon="inline-start"
+          />
+          <span className="min-w-0 flex-1">
+            <span
+              className={cn(
+                "block font-medium",
+                compact ? "text-sm leading-tight" : "text-sm",
+              )}
+            >
+              {title}
+            </span>
+            {summary && (
+              <span className="block truncate text-xs text-muted-foreground">
+                {summary}
+              </span>
+            )}
+          </span>
+          <Badge
+            variant={filled ? "default" : "secondary"}
+            className={cn("shrink-0", compact && "px-1.5 text-[10px]")}
+          >
+            {filled ? "Filled" : "Empty"}
+          </Badge>
+        </CollapsibleTrigger>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
+      </div>
       <CollapsibleContent
         id={panelId}
         className={cn(

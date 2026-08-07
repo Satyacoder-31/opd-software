@@ -1,13 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { faChevronLeft } from "@fortawesome/free-solid-svg-icons";
 import type { Clinic } from "@prisma/client";
 import { ClinicProfileForm } from "@/components/settings/ClinicProfileForm";
 import { Card } from "@/components/ui/Card";
-import { Icon } from "@/components/ui/Icon";
-import { PageShell } from "@/components/ui/PageShell";
+import { PageBody, PageHeader, PageShell } from "@/components/ui/PageShell";
 
 type ClinicEditPageClientProps = {
   clinic: Pick<
@@ -44,18 +41,14 @@ export function ClinicEditPageClient({ clinic }: ClinicEditPageClientProps) {
 
   return (
     <PageShell>
-      <div className="px-6 py-4 md:px-8">
-        <Link
-          href="/settings/clinic"
-          aria-label="Back to clinic profile"
-          className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <Icon icon={faChevronLeft} className="size-4 shrink-0" aria-hidden />
-          <span>Back to clinic profile</span>
-        </Link>
-      </div>
-      <Card title="Edit Clinic Details" flush className="border-y border-border">
-        <div className="px-5 py-5">
+      <PageHeader
+        title="Edit clinic profile"
+        description="Update clinic details used on invoices and the public listing"
+        backHref="/settings/clinic"
+        backLabel="Back to clinic profile"
+      />
+      <PageBody className="max-w-3xl">
+        <Card title="Clinic details" className="border border-border">
           <ClinicProfileForm
             clinic={clinic}
             cancelHref="/settings/clinic"
@@ -64,8 +57,8 @@ export function ClinicEditPageClient({ clinic }: ClinicEditPageClientProps) {
               router.refresh();
             }}
           />
-        </div>
-      </Card>
+        </Card>
+      </PageBody>
     </PageShell>
   );
 }

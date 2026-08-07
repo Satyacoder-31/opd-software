@@ -16,7 +16,7 @@ export function OnboardingSetupBanner({
         <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span>
             {skipped
-              ? "Clinic setup is incomplete. Finish listing and schedule so patients can book."
+              ? "Clinic setup is incomplete. Finish your listing so patients can find and book you."
               : "Finish clinic setup to appear in the patient directory and accept online bookings."}
           </span>
           <Link

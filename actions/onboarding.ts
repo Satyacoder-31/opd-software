@@ -2,14 +2,12 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { ClinicType, Plan, Role } from "@prisma/client";
+import { ClinicType, Plan } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { bookableClinicianWhere } from "@/lib/bookable-clinicians";
 import {
   cancelCutoffForClinicType,
-  CLINIC_TIMEZONE_OPTIONS,
   CLINIC_TYPE_OPTIONS,
   type ClinicHourRow,
   type ClinicTypeValue,
@@ -17,7 +15,6 @@ import {
   parseClinicHours,
 } from "@/lib/clinic-onboarding";
 import { logger } from "@/lib/logger";
-import { planTrialBlurb } from "@/lib/plan-features";
 import { can } from "@/lib/rbac";
 import { ensureUniqueSlug, slugify } from "@/lib/slug";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -33,12 +30,19 @@ const ALLOWED_LOGO_TYPES = new Set([
   "image/svg+xml",
 ]);
 
-const timezoneSet = new Set(
-  CLINIC_TIMEZONE_OPTIONS.map((o) => o.value as string),
-);
 const clinicTypeSet = new Set(
   CLINIC_TYPE_OPTIONS.map((o) => o.value as string),
 );
+
+function resolveClinicTimezone(raw: string): string {
+  const timezone = raw.trim() || "Asia/Kolkata";
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    return timezone;
+  } catch {
+    return "Asia/Kolkata";
+  }
+}
 
 async function ensureClinicLogosBucket(
   admin: ReturnType<typeof createAdminClient>,
@@ -137,27 +141,10 @@ export type OnboardingState = {
     businessEntity: string | null;
     languages: string[];
     facilities: string[];
-    prescriptionLayout: string;
-    razorpayKeyId: string | null;
     phoneVerifiedAt: Date | null;
-    messagingConfig: {
-      smsEnabled?: boolean;
-      whatsappEnabled?: boolean;
-      senderId?: string;
-      dryRun?: boolean;
-      appointmentReminders?: boolean;
-    };
     feeItemCount: number;
   };
-  consultingDoctors: {
-    id: string;
-    name: string;
-    specialty: string | null;
-  }[];
-  staffCount: number;
-  hasAvailability: boolean;
   suggestedSlug: string;
-  planBlurb: string;
 };
 
 function parseHttpUrl(value: string): string | null {
@@ -229,37 +216,10 @@ export async function getOnboardingState(): Promise<OnboardingState | null> {
       businessEntity: true,
       languages: true,
       facilities: true,
-      prescriptionLayout: true,
-      razorpayKeyId: true,
       phoneVerifiedAt: true,
-      messagingConfig: true,
       _count: { select: { feeItems: true } },
     },
   });
-
-  const consultingDoctors = await prisma.user.findMany({
-    where: bookableClinicianWhere(session.clinicId),
-    select: { id: true, name: true, specialty: true },
-    orderBy: { name: "asc" },
-  });
-
-  const staffCount = await prisma.user.count({
-    where: {
-      clinicId: session.clinicId,
-      isActive: true,
-      NOT: { role: Role.owner },
-    },
-  });
-
-  const availabilityCount = consultingDoctors.length
-    ? await prisma.doctorAvailability.count({
-        where: {
-          clinicId: session.clinicId,
-          doctorId: { in: consultingDoctors.map((d) => d.id) },
-          isActive: true,
-        },
-      })
-    : 0;
 
   const taken = new Set(
     (
@@ -276,20 +236,15 @@ export async function getOnboardingState(): Promise<OnboardingState | null> {
   );
 
   const hours = parseClinicHours(clinic.clinicHours);
-  const { _count, messagingConfig, businessEntity, ...clinicRest } = clinic;
+  const { _count, businessEntity, ...clinicRest } = clinic;
   return {
     clinic: {
       ...clinicRest,
       businessEntity: businessEntity,
       clinicHours: hours.length ? hours : DEFAULT_CLINIC_HOURS,
-      messagingConfig: (messagingConfig ?? {}) as OnboardingState["clinic"]["messagingConfig"],
       feeItemCount: _count.feeItems,
     },
-    consultingDoctors,
-    staffCount,
-    hasAvailability: availabilityCount > 0,
     suggestedSlug: clinic.slug || ensureUniqueSlug(clinic.name, taken),
-    planBlurb: planTrialBlurb(clinic.plan, clinic.subscriptionStatus),
   };
 }
 
@@ -305,23 +260,15 @@ export async function saveOnboardingIdentity(
   }
   const clinicType = clinicTypeRaw as ClinicTypeValue;
 
-  const timezone = String(formData.get("timezone") ?? "Asia/Kolkata").trim();
-  if (!timezoneSet.has(timezone)) {
-    return { success: false, error: "Select a valid timezone." };
-  }
-
-  const logoUrlRaw = String(formData.get("logoUrl") ?? "").trim();
-  const logoUrl = logoUrlRaw ? parseHttpUrl(logoUrlRaw) : null;
-  if (logoUrlRaw && !logoUrl) {
-    return { success: false, error: "Enter a valid logo URL (https://…)." };
-  }
+  const timezone = resolveClinicTimezone(
+    String(formData.get("timezone") ?? ""),
+  );
 
   await prisma.clinic.update({
     where: { id: session.clinicId },
     data: {
       clinicType: clinicType as ClinicType,
       timezone,
-      logoUrl,
       cancelCutoffHours: cancelCutoffForClinicType(clinicType),
     },
   });
@@ -412,7 +359,7 @@ export async function uploadClinicLogo(input: {
       error:
         uploadError.message.includes("Bucket not found")
           ? "Storage bucket clinic-logos is missing. Create a public bucket named clinic-logos in Supabase → Storage, then try again."
-          : "Logo upload failed. You can paste an image URL instead, or check Supabase Storage.",
+          : "Logo upload failed. Check Supabase Storage (clinic-logos bucket) and try again.",
     };
   }
 
@@ -431,6 +378,33 @@ export async function uploadClinicLogo(input: {
   revalidateTag("clinic-name");
   revalidateTag("clinic-dashboard");
   return { success: true, data: { logoUrl } };
+}
+
+export async function clearClinicLogo(): Promise<VoidActionResult> {
+  const session = await requireSessionUser();
+  if (!can(session, "clinic.manage")) return permissionDenied();
+
+  await prisma.clinic.update({
+    where: { id: session.clinicId },
+    data: { logoUrl: null },
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "clinic",
+    resourceId: session.clinicId,
+    metadata: { logoCleared: true },
+  });
+
+  revalidatePath("/onboarding");
+  revalidatePath("/settings/clinic");
+  revalidatePath("/clinics");
+  revalidateTag("clinic-profile");
+  revalidateTag("clinic-name");
+  revalidateTag("clinic-dashboard");
+  return { success: true };
 }
 
 export async function saveOnboardingPublicProfile(
@@ -532,87 +506,6 @@ export async function saveOnboardingPublicProfile(
   revalidatePath("/clinics");
   if (slug) revalidatePath(`/clinics/${slug}`);
   return { success: true };
-}
-
-export async function saveOnboardingSchedule(
-  formData: FormData,
-): Promise<ActionResult<{ created: number }>> {
-  const session = await requireSessionUser();
-  if (!can(session, "clinic.manage") && !can(session, "appointments.schedule")) {
-    return permissionDenied();
-  }
-
-  const doctorId = String(formData.get("doctorId") ?? "").trim();
-  const startTime = String(formData.get("startTime") ?? "09:00").trim();
-  const endTime = String(formData.get("endTime") ?? "17:00").trim();
-  const slotDuration = Math.min(
-    120,
-    Math.max(5, Number(formData.get("slotDuration") ?? 15) || 15),
-  );
-  const days = formData
-    .getAll("days")
-    .map((v) => Number(v))
-    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
-
-  if (!doctorId) {
-    return { success: false, error: "Select a doctor." };
-  }
-  if (!TIME_RE.test(startTime) || !TIME_RE.test(endTime) || startTime >= endTime) {
-    return { success: false, error: "Enter a valid start and end time." };
-  }
-  if (!days.length) {
-    return { success: false, error: "Select at least one weekday." };
-  }
-
-  const doctor = await prisma.user.findFirst({
-    where: {
-      id: doctorId,
-      ...bookableClinicianWhere(session.clinicId),
-    },
-    select: { id: true },
-  });
-  if (!doctor) {
-    return { success: false, error: "Doctor not found." };
-  }
-
-  let created = 0;
-  for (const dayOfWeek of days) {
-    await prisma.doctorAvailability.upsert({
-      where: {
-        doctorId_dayOfWeek_startTime: { doctorId, dayOfWeek, startTime },
-      },
-      create: {
-        clinicId: session.clinicId,
-        doctorId,
-        dayOfWeek,
-        startTime,
-        endTime,
-        slotDuration,
-        maxPerSlot: 1,
-        isActive: true,
-      },
-      update: {
-        endTime,
-        slotDuration,
-        maxPerSlot: 1,
-        isActive: true,
-      },
-    });
-    created += 1;
-  }
-
-  await logAudit({
-    clinicId: session.clinicId,
-    actorId: session.userId,
-    action: "update",
-    resourceType: "clinic",
-    resourceId: session.clinicId,
-    metadata: { onboarding: "schedule", doctorId, days, created },
-  });
-
-  revalidatePath("/onboarding");
-  revalidatePath("/settings/availability/schedules");
-  return { success: true, data: { created } };
 }
 
 export async function completeOnboarding(): Promise<VoidActionResult> {

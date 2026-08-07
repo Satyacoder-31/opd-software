@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { updateClinicPublicListing } from "@/actions/availability";
 import { CityCombobox } from "@/components/settings/CityCombobox";
 import { Banner } from "@/components/ui/Banner";
@@ -84,18 +84,11 @@ export function ClinicPublicListingForm({
           setMessage({ type: "success", text: "Public listing saved." });
           setIsPublicListed(isPublicListed);
           setBookingEnabled(bookingEnabled);
+          router.push("/settings/availability/listing");
           router.refresh();
         });
       }}
     >
-      <Banner variant="info">
-        Listed clinics with booking enabled appear on{" "}
-        <Link href="/clinics" className="font-medium underline underline-offset-2">
-          /clinics
-        </Link>{" "}
-        for patients to discover and book.
-      </Banner>
-
       {!phoneVerified ? (
         <Banner variant="error">
           Verify clinic phone{clinic.phone ? ` (${clinic.phone})` : ""} above
@@ -240,9 +233,17 @@ export function ClinicPublicListingForm({
         <Banner variant={message.type === "error" ? "error" : "success"}>{message.text}</Banner>
       ) : null}
 
-      <Button type="submit" loading={pending}>
-        Save public listing
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" loading={pending}>
+          Save public listing
+        </Button>
+        <Link
+          href="/settings/availability/listing"
+          className="inline-flex min-h-11 items-center px-3 text-sm text-muted-foreground underline-offset-4 hover:underline"
+        >
+          Cancel
+        </Link>
+      </div>
 
       {clinic.slug && clinic.isPublicListed ? (
         <p className="text-sm text-muted-foreground">

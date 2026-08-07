@@ -41,8 +41,6 @@ function patientToValues(patient?: Patient): Record<string, string> {
     address: patient.address ?? "",
     allergies: patient.allergies ?? "",
     chronicConditions: patient.chronicConditions ?? "",
-    abhaNumber: patient.abhaNumber ?? "",
-    abhaAddress: patient.abhaAddress ?? "",
   };
 }
 
@@ -101,49 +99,29 @@ function PatientFields({
           . Continue only if this is a new registration.
         </Banner>
       )}
-      <div className="grid grid-cols-2 gap-4">
-        <DateField
-          label="Date of birth"
-          name="dateOfBirth"
-          value={values.dateOfBirth ?? ""}
-          onChange={(next) => {
-            setValue("dateOfBirth", next);
-            if (next) setValue("age", "");
-          }}
-          error={fieldError("dateOfBirth")}
-        />
-        <AgeField
-          name="age"
-          value={values.age ?? ""}
-          onChange={(next) => setValue("age", next)}
-          error={fieldError("age")}
-          disabled={!!values.dateOfBirth}
-        />
-      </div>
+      <DateField
+        label="Date of birth"
+        name="dateOfBirth"
+        value={values.dateOfBirth ?? ""}
+        onChange={(next) => {
+          setValue("dateOfBirth", next);
+          if (next) setValue("age", "");
+        }}
+        error={fieldError("dateOfBirth")}
+      />
+      <AgeField
+        name="age"
+        value={values.age ?? ""}
+        onChange={(next) => setValue("age", next)}
+        error={fieldError("age")}
+        disabled={!!values.dateOfBirth}
+      />
       <GenderField
         name="gender"
         value={values.gender ?? ""}
         onChange={(next) => setValue("gender", next)}
         error={fieldError("gender")}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="ABHA number"
-          name="abhaNumber"
-          value={values.abhaNumber ?? ""}
-          onChange={(e) => setValue("abhaNumber", e.target.value)}
-          error={fieldError("abhaNumber")}
-          placeholder="14-digit ABHA number"
-        />
-        <Input
-          label="ABHA address"
-          name="abhaAddress"
-          value={values.abhaAddress ?? ""}
-          onChange={(e) => setValue("abhaAddress", e.target.value)}
-          error={fieldError("abhaAddress")}
-          placeholder="name@abdm"
-        />
-      </div>
       <Textarea
         label="Address"
         name="address"

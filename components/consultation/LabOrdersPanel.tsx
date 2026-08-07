@@ -34,7 +34,7 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
     setOrders(await getLabOrdersForConsultation(consultationId));
   }
   return (
-    <CollapsibleSection flush density="compact" contentClassName="px-3 py-3 md:px-4" title="Lab orders" defaultOpen>
+    <CollapsibleSection flush density="compact" contentClassName="px-3 py-3 md:px-4" title="Lab orders">
       <div className="flex flex-col gap-4">
         <div className="grid gap-2 sm:grid-cols-2">
           {tests.map((test) => (

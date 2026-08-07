@@ -1,5 +1,10 @@
 import { SettingsOverview } from "@/components/settings/SettingsOverview";
+import { requireSessionUser } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 
-export default function SettingsPage() {
-  return <SettingsOverview />;
+export default async function SettingsPage() {
+  const session = await requireSessionUser();
+  return (
+    <SettingsOverview showClinicAdmin={can(session, "settings.access")} />
+  );
 }

@@ -29,6 +29,7 @@ import {
   workspaceShortcutTab,
   type WorkspaceTabId,
 } from "@/lib/consultation-workspace";
+import { hasPatientSafetyAlerts } from "@/lib/consultation-utils";
 import type { ConsultationClinicalData, Medicine } from "@/lib/types";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import { LabOrdersPanel } from "@/components/consultation/LabOrdersPanel";
@@ -257,27 +258,25 @@ export function ConsultationWorkspace({
       <div className="border-b border-border bg-card">
         <PageHeader
           className="pb-3 md:pb-3"
-          title={
-            <span className="flex w-full min-w-0 items-baseline justify-between gap-x-3">
-              <span className="min-w-0 truncate">{patientName}</span>
-              {autosaveLabel ? (
-                <span
-                  role="status"
-                  className={
-                    autosaveStatus === "saved"
-                      ? "shrink-0 rounded-md bg-success/15 px-2 py-0.5 font-sans text-xs font-semibold tracking-wide text-success"
-                      : autosaveStatus === "saving"
-                        ? "shrink-0 font-sans text-xs font-medium text-muted-foreground"
-                        : "shrink-0 rounded-md bg-accent/15 px-2 py-0.5 font-sans text-xs font-semibold tracking-wide text-accent-foreground"
-                  }
-                >
-                  {autosaveLabel}
-                </span>
-              ) : null}
-            </span>
-          }
+          title={patientName}
           backHref="/queue"
           backLabel="Queue"
+          backAccessory={
+            autosaveLabel ? (
+              <span
+                role="status"
+                className={
+                  autosaveStatus === "saved"
+                    ? "shrink-0 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-success"
+                    : autosaveStatus === "saving"
+                      ? "shrink-0 text-xs font-medium text-muted-foreground"
+                      : "shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-accent-foreground"
+                }
+              >
+                {autosaveLabel}
+              </span>
+            ) : null
+          }
         />
         <PatientContextRail
           className="px-6 pb-4 md:px-8"
@@ -318,20 +317,20 @@ export function ConsultationWorkspace({
                 <TabsTrigger
                   key={item.id}
                   value={item.id}
-                  className="min-h-10 flex-none shrink-0 gap-1.5 px-2.5"
-                  title={`${item.label} (Alt+${item.shortcut})`}
+                  className="min-h-10 flex-none shrink-0 px-2.5"
+                  title={item.label}
                 >
-                  <span>{item.label}</span>
-                  <kbd className="hidden rounded border border-border px-1 font-mono text-[10px] text-muted-foreground md:inline">
-                    {item.shortcut}
-                  </kbd>
+                  {item.label}
                 </TabsTrigger>
               ))}
             </TabsList>
           </div>
 
           <TabsContent value="consultation" className="mt-0">
-            {(patientAllergies?.trim() || patientChronicConditions?.trim()) ? (
+            {hasPatientSafetyAlerts({
+              allergies: patientAllergies,
+              chronicConditions: patientChronicConditions,
+            }) ? (
               <div className="border-b border-border px-3 py-3 md:px-4">
                 <PatientSafetyBanner
                   allergies={patientAllergies}
@@ -356,6 +355,7 @@ export function ConsultationWorkspace({
               onFollowUpChange={setFollowUp}
               patientAllergies={patientAllergies}
               hideSaveActions
+              saveTemplateInFooter={tab === "prescription"}
             />
           </TabsContent>
 
@@ -386,34 +386,31 @@ export function ConsultationWorkspace({
         </Tabs>
       </div>
 
-      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-2 border-t border-border bg-card/95 px-3 py-2.5 backdrop-blur md:px-4">
-        <p className="text-xs text-muted-foreground md:text-sm">
-          <span className="md:hidden">Autosaves</span>
-          <span className="hidden md:inline">
-            Autosave · ⌘/Ctrl+S draft · ⌘/Ctrl+Enter complete
-          </span>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="min-h-10"
-            onClick={handleSaveDraft}
-            loading={isPending("save")}
-          >
-            Save draft
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="min-h-10"
-            onClick={handleCompleteVisit}
-            loading={isPending("complete")}
-          >
-            Complete visit
-          </Button>
+      <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-2.5 md:px-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="min-h-10"
+              onClick={handleSaveDraft}
+              loading={isPending("save")}
+            >
+              Save draft
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="min-h-10"
+              onClick={handleCompleteVisit}
+              loading={isPending("complete")}
+            >
+              Complete visit
+            </Button>
+          </div>
         </div>
+        <div id="prescription-save-template-host" />
       </div>
     </PageShell>
   );

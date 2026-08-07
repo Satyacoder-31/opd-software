@@ -91,7 +91,6 @@ export function ConsultationClinicalSections({
           title="Vitals"
           summary={sectionSummary(completion.vitals)}
           filled={completion.vitals.filled}
-          defaultOpen
         >
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
             {VITAL_FIELDS.map((field) => (
@@ -459,7 +458,6 @@ export function InvestigationSections({
         title="Investigation results"
         summary={sectionSummary(completion.investigationResults)}
         filled={completion.investigationResults.filled}
-        defaultOpen
       >
         <div className="flex flex-col gap-2.5">
           <Textarea
@@ -530,7 +528,6 @@ export function MedicalCertificateSections({
         title="Medical certificate"
         summary={sectionSummary(completion.medicalCertificate)}
         filled={completion.medicalCertificate.filled}
-        defaultOpen
       >
         <div className="flex flex-col gap-2.5">
           <Textarea

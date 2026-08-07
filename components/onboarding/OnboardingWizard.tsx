@@ -1,53 +1,66 @@
 "use client";
 
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { inviteStaff } from "@/actions/auth";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { logout } from "@/actions/auth";
 import {
   completeOnboarding,
   saveOnboardingIdentity,
   saveOnboardingPublicProfile,
-  saveOnboardingSchedule,
   skipOnboarding,
-  uploadClinicLogo,
   type OnboardingState,
 } from "@/actions/onboarding";
 import {
   requestClinicPhoneOtp,
   saveOnboardingBillingAddress,
   saveOnboardingDirectoryExtras,
-  saveOnboardingOpsDefaults,
   verifyClinicPhoneOtp,
 } from "@/actions/onboarding-medium";
 import {
   ClinicAddressFields,
   type ClinicAddressValue,
 } from "@/components/settings/ClinicAddressFields";
+import { ClinicLogoUpload } from "@/components/settings/ClinicLogoUpload";
 import { Banner } from "@/components/ui/Banner";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Button } from "@/components/ui/Button";
+import {
+  CheckboxMark,
+  CheckboxOption,
+  checkboxOptionClass,
+} from "@/components/ui/CheckboxOption";
+import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
+import { OtpCodeInput } from "@/components/ui/OtpCodeInput";
 import { Select } from "@/components/ui/Select";
+import { Badge } from "@/components/ui/shadcn/badge";
 import {
   BUSINESS_ENTITY_OPTIONS,
   CLINIC_FACILITY_OPTIONS,
   CLINIC_LANGUAGE_OPTIONS,
-  CLINIC_TIMEZONE_OPTIONS,
   CLINIC_TYPE_OPTIONS,
   type ClinicHourRow,
 } from "@/lib/clinic-onboarding";
-import { PRESCRIPTION_LAYOUTS } from "@/lib/prescription-layouts";
-import { DOCTOR_SPECIALTY_OPTIONS } from "@/lib/staff-profile";
-
-const WEEKDAYS = [
-  { value: "1", label: "Mon" },
-  { value: "2", label: "Tue" },
-  { value: "3", label: "Wed" },
-  { value: "4", label: "Thu" },
-  { value: "5", label: "Fri" },
-  { value: "6", label: "Sat" },
-  { value: "0", label: "Sun" },
-];
+import {
+  ONBOARDING_LAST_STEP,
+  ONBOARDING_STEPS,
+  clearStoredOnboardingStep,
+  readStoredOnboardingStep,
+  resolveResumeStep,
+  writeStoredOnboardingStep,
+} from "@/lib/onboarding-progress";
+import { PLAN_LABELS } from "@/lib/plan-features";
+import { cn } from "@/lib/utils";
 
 const DAY_FULL = [
   "Sunday",
@@ -59,25 +72,61 @@ const DAY_FULL = [
   "Saturday",
 ];
 
-const STEPS = [
-  "Clinic identity",
-  "Billing & address",
-  "Public profile",
-  "Directory extras",
-  "Schedule",
-  "Ops defaults",
-  "Invite staff",
-  "Done",
-] as const;
+function StepActions({
+  left,
+  right,
+  className,
+}: {
+  left?: React.ReactNode;
+  right?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4",
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-3">{left}</div>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+        {right}
+      </div>
+    </div>
+  );
+}
 
-const PRESCRIPTION_LAYOUT_OPTIONS = PRESCRIPTION_LAYOUTS.map((layout) => ({
-  value: layout.id,
-  label: layout.name,
-}));
+function StepBody({ children }: { children: React.ReactNode }) {
+  return <div className="pb-2">{children}</div>;
+}
 
 export function OnboardingWizard({ state }: { state: OnboardingState }) {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const progressInput = useMemo(
+    () => ({
+      clinic: {
+        logoUrl: state.clinic.logoUrl,
+        addressLine1: state.clinic.addressLine1,
+        city: state.clinic.city,
+        pincode: state.clinic.pincode,
+        gstin: state.clinic.gstin,
+        pan: state.clinic.pan,
+        businessEntity: state.clinic.businessEntity,
+        feeItemCount: state.clinic.feeItemCount,
+        phoneVerifiedAt: state.clinic.phoneVerifiedAt,
+        description: state.clinic.description,
+        isPublicListed: state.clinic.isPublicListed,
+        website: state.clinic.website,
+        languages: state.clinic.languages,
+        facilities: state.clinic.facilities,
+      },
+    }),
+    [state],
+  );
+
+  const initialResume = resolveResumeStep(0, progressInput);
+  const [step, setStep] = useState(initialResume);
+  const [maxReached, setMaxReached] = useState(initialResume);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -85,7 +134,6 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
   } | null>(null);
 
   const [clinicType, setClinicType] = useState(state.clinic.clinicType);
-  const [timezone, setTimezone] = useState(state.clinic.timezone);
   const [logoUrl, setLogoUrl] = useState(state.clinic.logoUrl ?? "");
 
   const [address, setAddress] = useState<ClinicAddressValue>({
@@ -139,61 +187,56 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
     () => new Set(state.clinic.facilities),
   );
 
-  const [hasAvailability, setHasAvailability] = useState(state.hasAvailability);
-  const [selectedDays, setSelectedDays] = useState<Set<string>>(
-    () => new Set(["1", "2", "3", "4", "5"]),
-  );
-  const [doctorId, setDoctorId] = useState(
-    state.consultingDoctors[0]?.id ?? "",
-  );
+  const clinicId = state.clinic.id;
+  const currentMeta = ONBOARDING_STEPS[step];
+  const isRevisiting = step < maxReached;
+  const progressPct = Math.round((maxReached / ONBOARDING_LAST_STEP) * 100);
+  const didHydrateProgress = useRef(false);
 
-  const [prescriptionLayout, setPrescriptionLayout] = useState(
-    state.clinic.prescriptionLayout || "classic",
-  );
-  const [smsEnabled, setSmsEnabled] = useState(
-    Boolean(state.clinic.messagingConfig.smsEnabled),
-  );
-  const [whatsappEnabled, setWhatsappEnabled] = useState(
-    Boolean(state.clinic.messagingConfig.whatsappEnabled),
-  );
-  const [appointmentReminders, setAppointmentReminders] = useState(
-    Boolean(state.clinic.messagingConfig.appointmentReminders),
-  );
-  const [dryRun, setDryRun] = useState(
-    state.clinic.messagingConfig.dryRun !== false,
-  );
-  const [senderId, setSenderId] = useState(
-    state.clinic.messagingConfig.senderId ?? "",
-  );
-  const [razorpayKeyId, setRazorpayKeyId] = useState(
-    state.clinic.razorpayKeyId ?? "",
-  );
-
-  const [staffCount, setStaffCount] = useState(state.staffCount);
-  const [inviteSkipped, setInviteSkipped] = useState(false);
-  const [inviteRole, setInviteRole] = useState("receptionist");
-
-  const needsStaffEmphasis =
-    clinicType === "multi_doctor" || clinicType === "polyclinic";
   const previewPath = slug ? `/clinics/${slug}` : null;
 
-  const scheduleHint = useMemo(() => {
-    if (clinicType === "solo") {
-      return "Set the hours patients can book with you.";
+  useEffect(() => {
+    const stored = readStoredOnboardingStep(clinicId);
+    const resume = resolveResumeStep(stored, progressInput);
+    setMaxReached((prev) => Math.max(prev, resume, stored));
+    if (!didHydrateProgress.current) {
+      setStep(resume);
+      didHydrateProgress.current = true;
     }
-    if (clinicType === "hospital_opd") {
-      return "OPD slots often fill early — keep slot length short if needed.";
-    }
-    return "Configure the first doctor's bookable hours. You can add more later.";
-  }, [clinicType]);
+  }, [clinicId, progressInput]);
 
-  function toggleDay(day: string) {
-    setSelectedDays((prev) => {
-      const next = new Set(prev);
-      if (next.has(day)) next.delete(day);
-      else next.add(day);
-      return next;
-    });
+  useEffect(() => {
+    const html = document.documentElement;
+    const { body } = document;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
+
+  const goForward = useCallback(
+    (next: number) => {
+      const clamped = Math.min(Math.max(0, next), ONBOARDING_LAST_STEP);
+      setMaxReached((prev) => {
+        const updated = Math.max(prev, clamped);
+        writeStoredOnboardingStep(clinicId, updated);
+        return updated;
+      });
+      setStep(clamped);
+      setMessage(null);
+    },
+    [clinicId],
+  );
+
+  function goToStep(index: number) {
+    if (index <= maxReached) {
+      setStep(index);
+      setMessage(null);
+    }
   }
 
   function toggleLanguage(lang: string) {
@@ -222,32 +265,14 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
     );
   }
 
-  function onLogoFile(file: File | null) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result ?? "");
-      const base64 = result.includes(",") ? result.split(",")[1] : result;
-      startTransition(async () => {
-        const upload = await uploadClinicLogo({
-          fileName: file.name,
-          mimeType: file.type || "image/png",
-          base64,
-        });
-        if (!upload.success) {
-          setMessage({ type: "error", text: upload.error });
-          return;
-        }
-        setLogoUrl(upload.data.logoUrl);
-        setMessage({ type: "success", text: "Logo uploaded." });
-      });
-    };
-    reader.readAsDataURL(file);
-  }
-
   function saveIdentity(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const detected =
+      typeof Intl !== "undefined"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : "";
+    fd.set("timezone", detected || "Asia/Kolkata");
     startTransition(async () => {
       const result = await saveOnboardingIdentity(fd);
       if (!result.success) {
@@ -255,7 +280,7 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
         return;
       }
       setMessage({ type: "success", text: "Clinic identity saved." });
-      setStep(1);
+      goForward(step + 1);
       router.refresh();
     });
   }
@@ -273,7 +298,7 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
         setFeeItemCount(1);
       }
       setMessage({ type: "success", text: "Billing & address saved." });
-      setStep(2);
+      goForward(step + 1);
       router.refresh();
     });
   }
@@ -325,7 +350,7 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
         return;
       }
       setMessage({ type: "success", text: "Public profile saved." });
-      setStep(3);
+      goForward(step + 1);
       router.refresh();
     });
   }
@@ -340,57 +365,7 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
         return;
       }
       setMessage({ type: "success", text: "Directory extras saved." });
-      setStep(4);
-      router.refresh();
-    });
-  }
-
-  function saveSchedule(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    startTransition(async () => {
-      const result = await saveOnboardingSchedule(fd);
-      if (!result.success) {
-        setMessage({ type: "error", text: result.error });
-        return;
-      }
-      setHasAvailability(true);
-      setMessage({ type: "success", text: "Weekly schedule saved." });
-      setStep(5);
-      router.refresh();
-    });
-  }
-
-  function saveOps(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    startTransition(async () => {
-      const result = await saveOnboardingOpsDefaults(fd);
-      if (!result.success) {
-        setMessage({ type: "error", text: result.error });
-        return;
-      }
-      setMessage({ type: "success", text: "Ops defaults saved." });
-      setStep(6);
-      router.refresh();
-    });
-  }
-
-  function sendInvite(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    startTransition(async () => {
-      const result = await inviteStaff(fd);
-      if (!result.success) {
-        setMessage({ type: "error", text: result.error });
-        return;
-      }
-      setStaffCount((n) => n + 1);
-      setMessage({
-        type: "success",
-        text: `Invite sent to ${result.data.email}.`,
-      });
-      e.currentTarget.reset();
+      goForward(step + 1);
       router.refresh();
     });
   }
@@ -402,6 +377,7 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
         setMessage({ type: "error", text: result.error });
         return;
       }
+      clearStoredOnboardingStep(clinicId);
       router.push("/queue");
       router.refresh();
     });
@@ -414,854 +390,823 @@ export function OnboardingWizard({ state }: { state: OnboardingState }) {
         setMessage({ type: "error", text: result.error });
         return;
       }
+      clearStoredOnboardingStep(clinicId);
       router.push("/queue");
       router.refresh();
     });
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 md:px-0">
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-primary">Clinic setup</p>
-        <h1 className="font-display text-2xl font-semibold text-ink md:text-3xl">
-          Go live with {state.clinic.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">{state.planBlurb}</p>
-        <Link
-          href="/settings/subscription"
-          className="text-sm text-primary underline-offset-2 hover:underline"
-        >
-          View plans & subscription
-        </Link>
-      </div>
-
-      <ol className="flex flex-wrap gap-2">
-        {STEPS.map((label, index) => (
-          <li
-            key={label}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-              index === step
-                ? "bg-primary text-primary-foreground"
-                : index < step
-                  ? "bg-primary/15 text-primary"
-                  : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {index + 1}. {label}
-          </li>
-        ))}
-      </ol>
-
-      {message ? (
-        <Banner variant={message.type === "error" ? "error" : "success"}>
-          {message.text}
-        </Banner>
-      ) : null}
-
-      {step === 0 ? (
-        <form
-          onSubmit={saveIdentity}
-          className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
-        >
-          <Select
-            label="Clinic type"
-            name="clinicType"
-            options={[...CLINIC_TYPE_OPTIONS]}
-            value={clinicType}
-            onChange={(e) =>
-              setClinicType(e.target.value as typeof clinicType)
-            }
-            required
-            allowClear={false}
-          />
-          <Select
-            label="Timezone"
-            name="timezone"
-            options={[...CLINIC_TIMEZONE_OPTIONS]}
-            value={timezone}
-            onChange={(e) => setTimezone(e.target.value)}
-            required
-            allowClear={false}
-          />
-          <div className="flex flex-col gap-2">
-            <Input
-              label="Logo URL (optional)"
-              name="logoUrl"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://…"
-            />
-            <label className="text-sm text-muted-foreground">
-              Or upload an image
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                className="mt-1 block w-full text-sm"
-                onChange={(e) => onLogoFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logoUrl}
-                alt="Clinic logo preview"
-                className="mt-2 h-16 w-16 rounded-lg border border-border object-contain bg-white"
-              />
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" loading={pending}>
-              Save and continue
-            </Button>
-            <Button type="button" variant="ghost" onClick={skip} disabled={pending}>
-              Skip for now
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 1 ? (
-        <form
-          onSubmit={saveBilling}
-          className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
-        >
-          <ClinicAddressFields
-            value={address}
-            onChange={setAddress}
-            required={false}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="GSTIN (optional)"
-              name="gstin"
-              value={gstin}
-              onChange={(e) => setGstin(e.target.value.toUpperCase())}
-              placeholder="15-character GSTIN"
-            />
-            <Input
-              label="PAN (optional)"
-              name="pan"
-              value={pan}
-              onChange={(e) => setPan(e.target.value.toUpperCase())}
-              placeholder="ABCDE1234F"
-            />
-          </div>
-          <Select
-            label="Business entity"
-            name="businessEntity"
-            options={[...BUSINESS_ENTITY_OPTIONS]}
-            value={businessEntity}
-            onChange={(e) => setBusinessEntity(e.target.value)}
-            allowClear
-            clearLabel="Select entity type"
-          />
-          <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-            <input
-              type="checkbox"
-              name="seedFees"
-              value="true"
-              checked={seedFees}
-              onChange={(e) => setSeedFees(e.target.checked)}
-              className="mt-1 size-4"
-            />
-            <span>
-              <span className="font-medium text-ink">
-                Seed default fee items
-              </span>
-              <span className="mt-1 block text-muted-foreground">
-                {feeItemCount > 0
-                  ? "You already have fee items; leave unchecked unless you want defaults again."
-                  : "Adds common consultation and procedure fees to get billing started."}
-              </span>
-            </span>
-          </label>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" loading={pending}>
-              Save and continue
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setStep(0)}>
-              Back
-            </Button>
-            <Button type="button" variant="ghost" onClick={skip} disabled={pending}>
-              Skip for now
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 2 ? (
-        <form
-          onSubmit={savePublicProfile}
-          className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
-        >
-          <Input
-            label="Public URL slug"
-            name="slug"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            required={isPublicListed}
-          />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-ink">
-              Short description
-            </label>
-            <textarea
-              name="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-              placeholder="What patients should know about your clinic"
-            />
-          </div>
-          <Input
-            label="Website (optional)"
-            name="website"
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-            placeholder="https://"
-          />
-          <input type="hidden" name="landmark" value={address.landmark} />
-          <input type="hidden" name="mapsUrl" value={address.mapsUrl} />
-
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-sm font-medium text-ink">
-              Front-desk clinic hours
-            </legend>
-            <p className="text-xs text-muted-foreground">
-              Shown on your public page (separate from doctor booking slots).
-            </p>
-            {hours
-              .slice()
-              .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
-              .map((row) => (
-                <div
-                  key={row.dayOfWeek}
-                  className="grid grid-cols-[7rem_1fr_1fr_auto] items-center gap-2"
-                >
-                  <span className="text-sm text-ink">
-                    {DAY_FULL[row.dayOfWeek]}
-                  </span>
-                  <input type="hidden" name={`hoursOpen_${row.dayOfWeek}`} value={row.open} />
-                  <input type="hidden" name={`hoursClose_${row.dayOfWeek}`} value={row.close} />
-                  <Input
-                    label=""
-                    aria-label={`${DAY_FULL[row.dayOfWeek]} open`}
-                    type="time"
-                    value={row.open}
-                    disabled={row.closed}
-                    onChange={(e) =>
-                      updateHour(row.dayOfWeek, { open: e.target.value })
-                    }
-                  />
-                  <Input
-                    label=""
-                    aria-label={`${DAY_FULL[row.dayOfWeek]} close`}
-                    type="time"
-                    value={row.close}
-                    disabled={row.closed}
-                    onChange={(e) =>
-                      updateHour(row.dayOfWeek, { close: e.target.value })
-                    }
-                  />
-                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      name={`hoursClosed_${row.dayOfWeek}`}
-                      value="true"
-                      checked={row.closed}
-                      onChange={(e) =>
-                        updateHour(row.dayOfWeek, { closed: e.target.checked })
-                      }
-                    />
-                    Closed
-                  </label>
-                </div>
-              ))}
-          </fieldset>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
-            <p className="text-sm font-medium text-ink">Verify clinic phone</p>
-            <p className="text-sm text-muted-foreground">
-              Phone on file:{" "}
-              <span className="font-medium text-ink">
-                {state.clinic.phone || "Not set"}
-              </span>
-            </p>
-            {phoneVerified ? (
-              <Banner variant="success">Phone verified.</Banner>
-            ) : (
-              <>
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    loading={pending}
-                    onClick={sendPhoneOtp}
-                    disabled={!state.clinic.phone}
-                  >
-                    Send OTP
-                  </Button>
-                </div>
-                {otpHint ? (
-                  <p className="text-xs text-muted-foreground">{otpHint}</p>
-                ) : null}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <Input
-                    label="6-digit OTP"
-                    name="code"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="000000"
-                  />
-                  <Button
-                    type="button"
-                    loading={pending}
-                    disabled={otpCode.length !== 6}
-                    onClick={verifyPhone}
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <label
-            className={`flex items-start gap-3 rounded-xl border border-border p-3 text-sm ${
-              !phoneVerified ? "opacity-60" : ""
-            }`}
-          >
-            <input
-              type="checkbox"
-              name="isPublicListed"
-              value="true"
-              checked={isPublicListed}
-              disabled={!phoneVerified}
-              onChange={(e) => setIsPublicListed(e.target.checked)}
-              className="mt-1 size-4"
-            />
-            <span>
-              <span className="font-medium text-ink">List clinic publicly</span>
-              <span className="mt-1 block text-muted-foreground">
-                Appear on /clinics for patient discovery.
-                {!phoneVerified
-                  ? " Verify your phone first."
-                  : null}
-              </span>
-            </span>
-          </label>
-          <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-            <input
-              type="checkbox"
-              name="bookingEnabled"
-              value="true"
-              checked={bookingEnabled}
-              onChange={(e) => setBookingEnabled(e.target.checked)}
-              className="mt-1 size-4"
-            />
-            <span>
-              <span className="font-medium text-ink">Enable online booking</span>
-              <span className="mt-1 block text-muted-foreground">
-                Patients can self-book available slots.
-              </span>
-            </span>
-          </label>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" loading={pending}>
-              Save and continue
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setStep(1)}>
-              Back
-            </Button>
-            <Button type="button" variant="ghost" onClick={skip} disabled={pending}>
-              Skip for now
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 3 ? (
-        <form
-          onSubmit={saveDirectory}
-          className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
-        >
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-ink">
-              Languages spoken
-            </legend>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Shown on your public clinic directory listing.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {CLINIC_LANGUAGE_OPTIONS.map((lang) => {
-                const checked = languages.has(lang);
-                return (
-                  <label
-                    key={lang}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${
-                      checked
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      name="languages"
-                      value={lang}
-                      checked={checked}
-                      onChange={() => toggleLanguage(lang)}
-                      className="sr-only"
-                    />
-                    {lang}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend className="mb-2 text-sm font-medium text-ink">
-              Facilities
-            </legend>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Help patients know what to expect on arrival.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {CLINIC_FACILITY_OPTIONS.map((facility) => {
-                const checked = facilities.has(facility);
-                return (
-                  <label
-                    key={facility}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${
-                      checked
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      name="facilities"
-                      value={facility}
-                      checked={checked}
-                      onChange={() => toggleFacility(facility)}
-                      className="sr-only"
-                    />
-                    {facility}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" loading={pending}>
-              Save and continue
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setStep(4)}
-              disabled={pending}
-            >
-              Skip for now
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setStep(2)}>
-              Back
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 4 ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">{scheduleHint}</p>
-          {!state.consultingDoctors.length ? (
-            <>
-              <Banner variant="info">
-                No consulting doctor profile yet. Invite a doctor later, or
-                continue without a schedule.
-              </Banner>
-              <div className="flex flex-wrap gap-3">
-                <Button type="button" onClick={() => setStep(5)}>
-                  Continue to ops defaults
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setStep(3)}>
-                  Back
-                </Button>
-              </div>
-            </>
-          ) : (
-            <form onSubmit={saveSchedule} className="flex flex-col gap-4">
-              <Select
-                label="Doctor"
-                name="doctorId"
-                options={state.consultingDoctors.map((d) => ({
-                  value: d.id,
-                  label: d.specialty
-                    ? `${d.name} · ${d.specialty}`
-                    : d.name,
-                }))}
-                value={doctorId}
-                onChange={(e) => setDoctorId(e.target.value)}
-                required
-              />
-              <fieldset>
-                <legend className="mb-2 text-sm font-medium text-ink">
-                  Days open
-                </legend>
-                <div className="flex flex-wrap gap-2">
-                  {WEEKDAYS.map((day) => {
-                    const checked = selectedDays.has(day.value);
-                    return (
-                      <label
-                        key={day.value}
-                        className={`cursor-pointer rounded-lg border px-3 py-2 text-sm ${
-                          checked
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          name="days"
-                          value={day.value}
-                          checked={checked}
-                          onChange={() => toggleDay(day.value)}
-                          className="sr-only"
-                        />
-                        {day.label}
-                      </label>
-                    );
-                  })}
-                </div>
-              </fieldset>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Input
-                  label="Start"
-                  name="startTime"
-                  type="time"
-                  defaultValue="09:00"
-                  required
-                />
-                <Input
-                  label="End"
-                  name="endTime"
-                  type="time"
-                  defaultValue="17:00"
-                  required
-                />
-                <Input
-                  label="Slot (min)"
-                  name="slotDuration"
-                  type="number"
-                  min={5}
-                  max={120}
-                  defaultValue={15}
-                  required
-                />
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button type="submit" loading={pending}>
-                  Save schedule
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setStep(5)}
-                  disabled={pending}
-                >
-                  Skip schedule
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setStep(3)}>
-                  Back
-                </Button>
-              </div>
-            </form>
-          )}
-        </div>
-      ) : null}
-
-      {step === 5 ? (
-        <form
-          onSubmit={saveOps}
-          className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5"
-        >
-          <Select
-            label="Prescription layout"
-            name="prescriptionLayout"
-            options={PRESCRIPTION_LAYOUT_OPTIONS}
-            value={prescriptionLayout}
-            onChange={(e) => setPrescriptionLayout(e.target.value)}
-            allowClear={false}
-            required
-          />
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-sm font-medium text-ink">Messaging</legend>
-            <p className="text-xs text-muted-foreground">
-              Fine-tune templates later in{" "}
-              <Link
-                href="/settings/notifications"
-                className="text-primary underline-offset-2 hover:underline"
-              >
-                notification settings
-              </Link>
-              .
-            </p>
-            <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-              <input
-                type="checkbox"
-                name="smsEnabled"
-                value="true"
-                checked={smsEnabled}
-                onChange={(e) => setSmsEnabled(e.target.checked)}
-                className="mt-1 size-4"
-              />
-              <span className="font-medium text-ink">SMS notifications</span>
-            </label>
-            <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-              <input
-                type="checkbox"
-                name="whatsappEnabled"
-                value="true"
-                checked={whatsappEnabled}
-                onChange={(e) => setWhatsappEnabled(e.target.checked)}
-                className="mt-1 size-4"
-              />
-              <span className="font-medium text-ink">WhatsApp notifications</span>
-            </label>
-            <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-              <input
-                type="checkbox"
-                name="appointmentReminders"
-                value="true"
-                checked={appointmentReminders}
-                onChange={(e) => setAppointmentReminders(e.target.checked)}
-                className="mt-1 size-4"
-              />
-              <span className="font-medium text-ink">Appointment reminders</span>
-            </label>
-            <label className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-              <input
-                type="checkbox"
-                name="dryRun"
-                value="true"
-                checked={dryRun}
-                onChange={(e) => setDryRun(e.target.checked)}
-                className="mt-1 size-4"
-              />
-              <span>
-                <span className="font-medium text-ink">Dry run mode</span>
-                <span className="mt-1 block text-muted-foreground">
-                  Log messages without sending while you test.
-                </span>
-              </span>
-            </label>
-            <Input
-              label="Sender ID (optional)"
-              name="senderId"
-              value={senderId}
-              onChange={(e) => setSenderId(e.target.value)}
-              placeholder="e.g. CLINIC"
-            />
-          </fieldset>
-          <div className="flex flex-col gap-1.5">
-            <Input
-              label="Razorpay key ID (optional)"
-              name="razorpayKeyId"
-              value={razorpayKeyId}
-              onChange={(e) => setRazorpayKeyId(e.target.value)}
-              placeholder="rzp_live_… or rzp_test_…"
-            />
-            <p className="text-xs text-muted-foreground">
-              Only the public key ID is stored here. Keep your Razorpay secret
-              in environment variables (never paste it into the app).
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" loading={pending}>
-              Save and continue
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setStep(6)}
-              disabled={pending}
-            >
-              Skip for now
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setStep(4)}>
-              Back
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === 6 ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-          {needsStaffEmphasis ? (
-            <Banner variant="info">
-              Multi-doctor clinics work best with at least one invited staff
-              member (doctor or front desk).
-            </Banner>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Optionally invite a front desk user or another doctor now.
-            </p>
-          )}
-          <p className="text-sm text-ink">
-            Invited staff so far:{" "}
-            <span className="font-medium">{staffCount}</span>
-          </p>
-          <form onSubmit={sendInvite} className="flex flex-col gap-4">
-            <Input label="Name" name="name" required />
-            <Input label="Email" name="email" type="email" required />
-            <Select
-              label="Role"
-              name="role"
-              options={[
-                { value: "doctor", label: "Doctor" },
-                { value: "receptionist", label: "Front desk / receptionist" },
-                { value: "admin", label: "Admin" },
-              ]}
-              value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value)}
-              allowClear={false}
-              required
-            />
-            <Select
-              label="Specialty (doctors)"
-              name="specialty"
-              options={DOCTOR_SPECIALTY_OPTIONS}
-              allowClear
-              clearLabel="Not a doctor / skip"
-            />
-            <Input
-              label="Consultation fee (doctors, optional)"
-              name="consultationFee"
-              type="number"
-              min={0}
-            />
-            <Button type="submit" loading={pending}>
-              Send invite
+    <div className="flex h-full min-h-0 w-full flex-row overflow-hidden overscroll-none bg-card">
+      {/* Left: fixed logo header; form body scrolls */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border bg-card px-6 py-5 md:px-10">
+          <BrandLogo size="sm" priority />
+          <form action={logout}>
+            <Button type="submit" variant="ghost" size="sm">
+              Sign out
             </Button>
           </form>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              type="button"
-              onClick={() => {
-                if (needsStaffEmphasis && staffCount === 0 && !inviteSkipped) {
-                  setInviteSkipped(true);
-                }
-                setStep(7);
-              }}
-            >
-              {staffCount > 0 || inviteSkipped || !needsStaffEmphasis
-                ? "Continue"
-                : "Skip invite for now"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setStep(5)}>
-              Back
-            </Button>
-          </div>
-        </div>
-      ) : null}
+        </header>
 
-      {step === 7 ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-          <h2 className="font-display text-lg font-semibold text-ink">
-            You&apos;re ready
-          </h2>
-          <ul className="flex flex-col gap-2 text-sm text-muted-foreground">
-            <li>
-              Type:{" "}
-              <span className="font-medium text-ink">
-                {CLINIC_TYPE_OPTIONS.find((o) => o.value === clinicType)?.label}
-              </span>
-            </li>
-            <li>
-              Billing address:{" "}
-              <span className="font-medium text-ink">
-                {address.addressLine1 || address.city || address.pincode
-                  ? "Saved"
-                  : "Not set yet"}
-              </span>
-            </li>
-            <li>
-              Fees seeded:{" "}
-              <span className="font-medium text-ink">
-                {feeItemCount > 0 ? "Yes" : "Not yet"}
-              </span>
-            </li>
-            <li>
-              Phone verified:{" "}
-              <span className="font-medium text-ink">
-                {phoneVerified ? "Yes" : "Not yet"}
-              </span>
-            </li>
-            <li>
-              Public listing:{" "}
-              <span className="font-medium text-ink">
-                {isPublicListed ? "On" : "Off"}
-              </span>
-            </li>
-            <li>
-              Online booking:{" "}
-              <span className="font-medium text-ink">
-                {bookingEnabled ? "On" : "Off"}
-              </span>
-            </li>
-            <li>
-              Directory extras:{" "}
-              <span className="font-medium text-ink">
-                {languages.size || facilities.size
-                  ? `${languages.size} language(s), ${facilities.size} facility(ies)`
-                  : "Not set yet"}
-              </span>
-            </li>
-            <li>
-              Schedule:{" "}
-              <span className="font-medium text-ink">
-                {hasAvailability ? "Saved" : "Not set yet"}
-              </span>
-            </li>
-            <li>
-              Rx layout:{" "}
-              <span className="font-medium text-ink">
-                {PRESCRIPTION_LAYOUTS.find((l) => l.id === prescriptionLayout)
-                  ?.name ?? prescriptionLayout}
-              </span>
-            </li>
-            <li>
-              Staff invited:{" "}
-              <span className="font-medium text-ink">{staffCount}</span>
-              {needsStaffEmphasis && staffCount === 0 ? (
-                <span className="text-amber-700"> (recommended)</span>
-              ) : null}
-            </li>
-          </ul>
-          {previewPath && isPublicListed ? (
-            <Banner variant="info">
-              Preview your clinic page at{" "}
-              <Link
-                href={previewPath}
-                className="font-medium underline underline-offset-2"
-                target="_blank"
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+          <div className="mx-auto flex w-full max-w-xl flex-col px-6 py-6 md:px-10 md:py-8">
+          <div className="mb-6 flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-base font-medium text-primary">Clinic setup</p>
+              <Badge
+                variant="secondary"
+                className="h-6 border border-primary/25 bg-primary/15 px-2.5 text-primary shadow-[0_1px_2px_rgba(27,73,101,0.08)]"
               >
-                {previewPath}
-              </Link>
+                {PLAN_LABELS[state.clinic.plan] ?? "Free"}
+                {state.clinic.subscriptionStatus === "trialing"
+                  ? " · Trial"
+                  : ""}
+              </Badge>
+            </div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink md:text-3xl">
+              {state.clinic.name}
+            </h1>
+          </div>
+
+          <div
+            className="mb-5 h-1 overflow-hidden rounded-full bg-surface-muted"
+            role="progressbar"
+            aria-valuenow={progressPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Onboarding progress"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+
+          <nav aria-label="Onboarding steps" className="mb-5">
+            <ol className="flex flex-wrap gap-2">
+              {ONBOARDING_STEPS.map((s, index) => {
+                const isCurrent = index === step;
+                const isCompleted =
+                  index !== step && (index < step || index < maxReached);
+                const isClickable = index <= maxReached;
+
+                return (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => goToStep(index)}
+                      disabled={!isClickable}
+                      aria-current={isCurrent ? "step" : undefined}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-[color,background-color,border-color,box-shadow] duration-150",
+                        isCurrent
+                          ? "border-primary bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(95,168,211,0.45)]"
+                          : isCompleted
+                            ? "border-primary/35 bg-primary/20 text-primary shadow-[0_1px_3px_rgba(27,73,101,0.12)] hover:bg-primary/25"
+                            : isClickable
+                              ? "border-border bg-surface-muted text-ink shadow-[0_1px_2px_rgba(27,73,101,0.08)] hover:border-primary/35 hover:bg-surface-tint"
+                              : "cursor-not-allowed border-transparent bg-surface/70 text-muted-foreground shadow-none",
+                      )}
+                    >
+                      {isCompleted ? (
+                        <span
+                          className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                          aria-hidden
+                        >
+                          <Icon
+                            icon={faCheck}
+                            className="size-3 text-primary-foreground"
+                          />
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold",
+                            isCurrent
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-border/60 text-muted-foreground",
+                          )}
+                          aria-hidden
+                        >
+                          {index + 1}
+                        </span>
+                      )}
+                      <span>{s.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+
+          {message ? (
+            <Banner
+              variant={message.type === "error" ? "error" : "success"}
+              className="mb-4"
+            >
+              {message.text}
             </Banner>
           ) : null}
-          <div className="flex flex-wrap gap-3">
-            <Button type="button" loading={pending} onClick={finish}>
-              Finish setup
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setStep(6)}>
-              Back
-            </Button>
+
+          <div className="flex flex-col">
+            {step !== ONBOARDING_LAST_STEP ? (
+              <div className="mb-4 flex flex-col gap-1">
+                <h2 className="font-display text-xl font-semibold text-ink">
+                  {currentMeta.title}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {currentMeta.description}
+                </p>
+              </div>
+            ) : null}
+
+            {step === 0 ? (
+              <form
+                onSubmit={saveIdentity}
+                className="flex flex-col"
+              >
+                <StepBody>
+                  <div className="flex flex-col gap-5">
+                    <Select
+                      label="Clinic type"
+                      name="clinicType"
+                      options={[...CLINIC_TYPE_OPTIONS]}
+                      value={clinicType}
+                      onChange={(e) =>
+                        setClinicType(e.target.value as typeof clinicType)
+                      }
+                      required
+                      allowClear={false}
+                    />
+                    <ClinicLogoUpload
+                      value={logoUrl}
+                      onChange={setLogoUrl}
+                      onMessage={setMessage}
+                      disabled={pending}
+                    />
+                  </div>
+                </StepBody>
+                <StepActions
+                  left={
+                    !isRevisiting ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={skip}
+                        disabled={pending}
+                      >
+                        Skip for now
+                      </Button>
+                    ) : null
+                  }
+                  right={
+                    isRevisiting ? (
+                      <>
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          loading={pending}
+                        >
+                          Save changes
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => goForward(step + 1)}
+                          disabled={pending}
+                        >
+                          Continue
+                        </Button>
+                      </>
+                    ) : (
+                      <Button type="submit" loading={pending}>
+                        Save and continue
+                      </Button>
+                    )
+                  }
+                />
+              </form>
+            ) : null}
+
+            {step === 1 ? (
+              <form
+                onSubmit={saveBilling}
+                className="flex flex-col"
+              >
+                <StepBody>
+                  <div className="flex flex-col gap-5">
+                    <ClinicAddressFields
+                      value={address}
+                      onChange={setAddress}
+                      required={false}
+                    />
+                    <Select
+                      label="Business entity"
+                      name="businessEntity"
+                      options={[...BUSINESS_ENTITY_OPTIONS]}
+                      value={businessEntity}
+                      onChange={(e) => setBusinessEntity(e.target.value)}
+                      allowClear
+                      clearLabel="Select entity type"
+                    />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Input
+                        label="GSTIN (optional)"
+                        name="gstin"
+                        value={gstin}
+                        onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                        placeholder="15-character GSTIN"
+                      />
+                      <Input
+                        label="PAN (optional)"
+                        name="pan"
+                        value={pan}
+                        onChange={(e) => setPan(e.target.value.toUpperCase())}
+                        placeholder="ABCDE1234F"
+                      />
+                    </div>
+                    <label
+                      className={cn(
+                        checkboxOptionClass(seedFees),
+                        "items-start",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        name="seedFees"
+                        value="true"
+                        checked={seedFees}
+                        onChange={(e) => setSeedFees(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <CheckboxMark checked={seedFees} className="mt-0.5" />
+                      <span>
+                        <span className="font-medium text-ink">
+                          Seed default fee items
+                        </span>
+                        <span className="mt-1 block text-muted-foreground">
+                          {feeItemCount > 0
+                            ? "You already have fee items; leave unchecked unless you want defaults again."
+                            : "Adds common consultation and procedure fees to get billing started."}
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                </StepBody>
+                <StepActions
+                  left={
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => goToStep(step - 1)}
+                        disabled={pending}
+                      >
+                        Back
+                      </Button>
+                      {!isRevisiting ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={skip}
+                          disabled={pending}
+                        >
+                          Skip for now
+                        </Button>
+                      ) : null}
+                    </>
+                  }
+                  right={
+                    isRevisiting ? (
+                      <>
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          loading={pending}
+                        >
+                          Save changes
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => goForward(step + 1)}
+                          disabled={pending}
+                        >
+                          Continue
+                        </Button>
+                      </>
+                    ) : (
+                      <Button type="submit" loading={pending}>
+                        Save and continue
+                      </Button>
+                    )
+                  }
+                />
+              </form>
+            ) : null}
+
+            {step === 2 ? (
+              <form
+                onSubmit={savePublicProfile}
+                className="flex flex-col"
+              >
+                <StepBody>
+                <div className="flex flex-col gap-5">
+                  <Input
+                    label="Public URL slug"
+                    name="slug"
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value)}
+                    required={isPublicListed}
+                  />
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-ink">
+                      Short description
+                    </label>
+                    <textarea
+                      name="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      placeholder="What patients should know about your clinic"
+                    />
+                  </div>
+                  <Input
+                    label="Website (optional)"
+                    name="website"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://"
+                  />
+                  <input type="hidden" name="landmark" value={address.landmark} />
+                  <input type="hidden" name="mapsUrl" value={address.mapsUrl} />
+
+                  <fieldset className="flex flex-col gap-3 border-t border-border/60 pt-5">
+                    <legend className="text-sm font-medium text-ink">
+                      Front-desk clinic hours
+                    </legend>
+                    <p className="text-xs text-muted-foreground">
+                      Shown on your public page (separate from doctor booking
+                      slots).
+                    </p>
+                    {hours
+                      .slice()
+                      .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+                      .map((row) => (
+                        <div
+                          key={row.dayOfWeek}
+                          className="grid grid-cols-[7rem_1fr_1fr_auto] items-center gap-2"
+                        >
+                          <span className="text-sm text-ink">
+                            {DAY_FULL[row.dayOfWeek]}
+                          </span>
+                          <input
+                            type="hidden"
+                            name={`hoursOpen_${row.dayOfWeek}`}
+                            value={row.open}
+                          />
+                          <input
+                            type="hidden"
+                            name={`hoursClose_${row.dayOfWeek}`}
+                            value={row.close}
+                          />
+                          <Input
+                            label=""
+                            aria-label={`${DAY_FULL[row.dayOfWeek]} open`}
+                            type="time"
+                            value={row.open}
+                            disabled={row.closed}
+                            onChange={(e) =>
+                              updateHour(row.dayOfWeek, {
+                                open: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            label=""
+                            aria-label={`${DAY_FULL[row.dayOfWeek]} close`}
+                            type="time"
+                            value={row.close}
+                            disabled={row.closed}
+                            onChange={(e) =>
+                              updateHour(row.dayOfWeek, {
+                                close: e.target.value,
+                              })
+                            }
+                          />
+                          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              name={`hoursClosed_${row.dayOfWeek}`}
+                              value="true"
+                              checked={row.closed}
+                              onChange={(e) =>
+                                updateHour(row.dayOfWeek, {
+                                  closed: e.target.checked,
+                                })
+                              }
+                            />
+                            Closed
+                          </label>
+                        </div>
+                      ))}
+                  </fieldset>
+
+                  <div className="flex flex-col gap-4 rounded-xl border border-border/80 bg-surface-muted px-4 py-4 shadow-[0_1px_3px_rgba(27,73,101,0.08)]">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-sm font-medium text-ink">
+                        Verify clinic phone
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Phone on file:{" "}
+                        <span className="font-medium tabular-nums text-ink">
+                          {state.clinic.phone || "Not set"}
+                        </span>
+                      </p>
+                    </div>
+                    {phoneVerified ? (
+                      <Banner variant="success">Phone verified.</Banner>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            loading={pending}
+                            onClick={sendPhoneOtp}
+                            disabled={!state.clinic.phone}
+                          >
+                            Send OTP
+                          </Button>
+                          {otpHint ? (
+                            <p className="text-xs text-muted-foreground">
+                              {otpHint}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">
+                              We&apos;ll text a 6-digit code to this number.
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <label
+                            htmlFor="clinic-phone-otp"
+                            className="text-sm font-medium text-ink"
+                          >
+                            Enter OTP
+                          </label>
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <OtpCodeInput
+                              id="clinic-phone-otp"
+                              value={otpCode}
+                              onChange={setOtpCode}
+                              disabled={pending || !state.clinic.phone}
+                              onComplete={(code) => {
+                                setOtpCode(code);
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              loading={pending}
+                              disabled={otpCode.length !== 6}
+                              onClick={verifyPhone}
+                              className="sm:self-center"
+                            >
+                              Verify
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <label
+                    className={cn(
+                      checkboxOptionClass(isPublicListed),
+                      "items-start",
+                      !phoneVerified && "opacity-60",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      name="isPublicListed"
+                      value="true"
+                      checked={isPublicListed}
+                      disabled={!phoneVerified}
+                      onChange={(e) => setIsPublicListed(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <CheckboxMark checked={isPublicListed} className="mt-0.5" />
+                    <span>
+                      <span className="font-medium text-ink">
+                        List clinic publicly
+                      </span>
+                      <span className="mt-1 block text-muted-foreground">
+                        Appear on /clinics for patient discovery.
+                        {!phoneVerified ? " Verify your phone first." : null}
+                      </span>
+                    </span>
+                  </label>
+                  <label
+                    className={cn(
+                      checkboxOptionClass(bookingEnabled),
+                      "items-start",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      name="bookingEnabled"
+                      value="true"
+                      checked={bookingEnabled}
+                      onChange={(e) => setBookingEnabled(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <CheckboxMark checked={bookingEnabled} className="mt-0.5" />
+                    <span>
+                      <span className="font-medium text-ink">
+                        Enable online booking
+                      </span>
+                      <span className="mt-1 block text-muted-foreground">
+                        Patients can self-book available slots.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+                </StepBody>
+                <StepActions
+                  left={
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => goToStep(step - 1)}
+                        disabled={pending}
+                      >
+                        Back
+                      </Button>
+                      {!isRevisiting ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={skip}
+                          disabled={pending}
+                        >
+                          Skip for now
+                        </Button>
+                      ) : null}
+                    </>
+                  }
+                  right={
+                    isRevisiting ? (
+                      <>
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          loading={pending}
+                        >
+                          Save changes
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => goForward(step + 1)}
+                          disabled={pending}
+                        >
+                          Continue
+                        </Button>
+                      </>
+                    ) : (
+                      <Button type="submit" loading={pending}>
+                        Save and continue
+                      </Button>
+                    )
+                  }
+                />
+              </form>
+            ) : null}
+
+            {step === 3 ? (
+              <form
+                onSubmit={saveDirectory}
+                className="flex flex-col"
+              >
+                <StepBody>
+                <div className="flex flex-col gap-6">
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-medium text-ink">
+                      Languages spoken
+                    </legend>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Shown on your public clinic directory listing.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {CLINIC_LANGUAGE_OPTIONS.map((lang) => (
+                        <CheckboxOption
+                          key={lang}
+                          name="languages"
+                          value={lang}
+                          checked={languages.has(lang)}
+                          onChange={() => toggleLanguage(lang)}
+                        >
+                          {lang}
+                        </CheckboxOption>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <fieldset className="border-t border-border/60 pt-6">
+                    <legend className="mb-2 text-sm font-medium text-ink">
+                      Facilities
+                    </legend>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Help patients know what to expect on arrival.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {CLINIC_FACILITY_OPTIONS.map((facility) => (
+                        <CheckboxOption
+                          key={facility}
+                          name="facilities"
+                          value={facility}
+                          checked={facilities.has(facility)}
+                          onChange={() => toggleFacility(facility)}
+                        >
+                          {facility}
+                        </CheckboxOption>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+                </StepBody>
+                <StepActions
+                  left={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => goToStep(step - 1)}
+                      disabled={pending}
+                    >
+                      Back
+                    </Button>
+                  }
+                  right={
+                    isRevisiting ? (
+                      <>
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          loading={pending}
+                        >
+                          Save changes
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => goForward(step + 1)}
+                          disabled={pending}
+                        >
+                          Continue
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => goForward(step + 1)}
+                          disabled={pending}
+                        >
+                          Skip for now
+                        </Button>
+                        <Button type="submit" loading={pending}>
+                          Save and continue
+                        </Button>
+                      </>
+                    )
+                  }
+                />
+              </form>
+            ) : null}
+
+            {step === ONBOARDING_LAST_STEP ? (
+              <div className="flex flex-col">
+                <div className="mb-4 flex shrink-0 flex-col gap-1">
+                  <h2 className="font-display text-xl font-semibold text-ink">
+                    You&apos;re ready
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Review what you&apos;ve set up, then go live.
+                  </p>
+                </div>
+                <StepBody>
+                <ul className="flex flex-col gap-2.5 border-t border-border/60 pt-5 text-sm text-muted-foreground">
+                  <li>
+                    Type:{" "}
+                    <span className="font-medium text-ink">
+                      {
+                        CLINIC_TYPE_OPTIONS.find((o) => o.value === clinicType)
+                          ?.label
+                      }
+                    </span>
+                  </li>
+                  <li>
+                    Billing address:{" "}
+                    <span className="font-medium text-ink">
+                      {address.addressLine1 || address.city || address.pincode
+                        ? "Saved"
+                        : "Not set yet"}
+                    </span>
+                  </li>
+                  <li>
+                    Fees seeded:{" "}
+                    <span className="font-medium text-ink">
+                      {feeItemCount > 0 ? "Yes" : "Not yet"}
+                    </span>
+                  </li>
+                  <li>
+                    Phone verified:{" "}
+                    <span className="font-medium text-ink">
+                      {phoneVerified ? "Yes" : "Not yet"}
+                    </span>
+                  </li>
+                  <li>
+                    Public listing:{" "}
+                    <span className="font-medium text-ink">
+                      {isPublicListed ? "On" : "Off"}
+                    </span>
+                  </li>
+                  <li>
+                    Online booking:{" "}
+                    <span className="font-medium text-ink">
+                      {bookingEnabled ? "On" : "Off"}
+                    </span>
+                  </li>
+                  <li>
+                    Directory extras:{" "}
+                    <span className="font-medium text-ink">
+                      {languages.size || facilities.size
+                        ? `${languages.size} language(s), ${facilities.size} facility(ies)`
+                        : "Not set yet"}
+                    </span>
+                  </li>
+                </ul>
+                {previewPath && isPublicListed ? (
+                  <Banner variant="info" className="mt-5">
+                    Preview your clinic page at{" "}
+                    <Link
+                      href={previewPath}
+                      className="font-medium underline underline-offset-2"
+                      target="_blank"
+                    >
+                      {previewPath}
+                    </Link>
+                  </Banner>
+                ) : null}
+                </StepBody>
+                <StepActions
+                  left={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => goToStep(step - 1)}
+                    >
+                      Back
+                    </Button>
+                  }
+                  right={
+                    <Button type="button" loading={pending} onClick={finish}>
+                      Finish setup
+                    </Button>
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
           </div>
         </div>
-      ) : null}
+      </div>
+
+      {/* Right panel */}
+      <aside
+        className="relative hidden h-full min-h-0 shrink-0 overflow-hidden border-l border-border lg:block lg:w-[min(55vw,40rem)] xl:w-[min(55vw,44rem)]"
+        aria-hidden
+      >
+        <Image
+          src="/landing/signup-panel-architecture.png"
+          alt="Clinic architecture and care spaces"
+          fill
+          priority
+          sizes="(min-width: 1024px) 55vw, 0px"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-surface-deep/85 via-surface-deep/35 to-surface-deep/10" />
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-10 xl:p-12">
+          <p className="font-display text-3xl font-semibold leading-tight tracking-tight text-white xl:text-4xl">
+            Set up once. Run every day.
+          </p>
+          <p className="max-w-md text-sm leading-relaxed text-white/80 xl:text-base">
+            Listing and hours — so patients can find you and your team can
+            work without friction.
+          </p>
+        </div>
+      </aside>
     </div>
   );
 }

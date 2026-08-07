@@ -9,6 +9,7 @@ import { PatientSafetyBanner } from "@/components/patients/PatientSafetyBanner";
 import { Banner } from "@/components/ui/Banner";
 import { Card } from "@/components/ui/Card";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
+import { hasPatientSafetyAlerts } from "@/lib/consultation-utils";
 import type { ConsultationClinicalData, Medicine } from "@/lib/types";
 
 type AmendConsultationPageClientProps = {
@@ -77,7 +78,10 @@ export function AmendConsultationPageClient({
         />
       </div>
 
-      {(patientAllergies?.trim() || patientChronicConditions?.trim()) ? (
+      {hasPatientSafetyAlerts({
+        allergies: patientAllergies,
+        chronicConditions: patientChronicConditions,
+      }) ? (
         <div className="border-b border-border px-6 py-3 md:px-8">
           <PatientSafetyBanner
             allergies={patientAllergies}

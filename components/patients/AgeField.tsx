@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 const MIN_AGE = 0;
 const MAX_AGE = 150;
+/** Visual starting position when age is unset. */
+const DEFAULT_AGE = 35;
 
 type AgeFieldProps = {
   name?: string;
@@ -24,8 +26,8 @@ export function AgeField({
 }: AgeFieldProps) {
   const hasValue = value.trim() !== "";
   const numericValue = hasValue
-    ? Math.min(MAX_AGE, Math.max(MIN_AGE, Number(value) || MIN_AGE))
-    : null;
+    ? Math.min(MAX_AGE, Math.max(MIN_AGE, Number(value) || DEFAULT_AGE))
+    : DEFAULT_AGE;
 
   return (
     <Field
@@ -33,19 +35,19 @@ export function AgeField({
       data-disabled={disabled || undefined}
       className={cn(disabled && "opacity-60")}
     >
-      <FieldLabel className="mb-2">Age (if DOB unknown)</FieldLabel>
+      <FieldLabel>Age (if DOB unknown)</FieldLabel>
       <NumberWheel
         min={MIN_AGE}
         max={MAX_AGE}
         value={numericValue}
         onChange={(next) => onChange(String(next))}
         disabled={disabled}
-        suffix="yrs"
-        className="mx-auto w-full max-w-28"
+        suffix="y"
+        aria-label="Age in years"
       />
-      {!hasValue ? (
-        <p className="text-center text-xs text-muted-foreground">
-          Scroll to pick age
+      {!hasValue && !disabled ? (
+        <p className="text-xs text-muted-foreground">
+          Scroll sideways to pick age
         </p>
       ) : null}
       <input type="hidden" name={name} value={value} disabled={disabled} />

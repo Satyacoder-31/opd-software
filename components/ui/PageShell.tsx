@@ -22,6 +22,8 @@ type PageHeaderProps = {
   backHref?: string;
   /** Accessible label for the back control. Defaults to "Back". */
   backLabel?: string;
+  /** Optional content on the back-link row (e.g. status badge). */
+  backAccessory?: React.ReactNode;
   actions?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
@@ -32,6 +34,7 @@ export function PageHeader({
   description,
   backHref,
   backLabel = "Back",
+  backAccessory,
   actions,
   children,
   className,
@@ -62,18 +65,22 @@ export function PageHeader({
               <h1 className="min-w-0 font-display text-2xl font-semibold text-balance text-ink">
                 {title}
               </h1>
+              {backAccessory}
             </div>
           ) : (
             <>
               {backHref ? (
-                <Link
-                  href={backHref}
-                  aria-label={ariaBackLabel}
-                  className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                >
-                  <Icon icon={faChevronLeft} className="size-4" aria-hidden />
-                  {trimmedBackLabel ? <span>{backLabel}</span> : null}
-                </Link>
+                <div className="flex min-h-11 w-full items-center justify-between gap-2">
+                  <Link
+                    href={backHref}
+                    aria-label={ariaBackLabel}
+                    className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <Icon icon={faChevronLeft} className="size-4" aria-hidden />
+                    {trimmedBackLabel ? <span>{backLabel}</span> : null}
+                  </Link>
+                  {backAccessory}
+                </div>
               ) : null}
               <h1 className="font-display text-2xl font-semibold text-balance text-ink">
                 {title}

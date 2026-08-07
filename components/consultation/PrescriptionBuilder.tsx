@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   savePrescription,
   generatePrescriptionPdf,
@@ -14,9 +15,13 @@ import {
 import { MedicineCombobox } from "@/components/consultation/MedicineCombobox";
 import { PrescriptionOptionCombobox } from "@/components/consultation/PrescriptionOptionCombobox";
 import { DurationField } from "@/components/consultation/DurationField";
-import { PrescriptionTemplatesBar } from "@/components/consultation/PrescriptionTemplatesBar";
+import {
+  PrescriptionQuickTemplates,
+  PrescriptionSaveTemplateForm,
+} from "@/components/consultation/PrescriptionTemplatesBar";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -28,13 +33,14 @@ import {
   rememberRecentMedicine,
   rememberRecentMedicines,
 } from "@/lib/prescription-favorites";
-import { expandFrequencyInput, estimateQuantity, parseDosesPerIntake } from "@/lib/prescription-dosing";
+import { expandFrequencyInput } from "@/lib/prescription-dosing";
 import { collectPrescriptionSafetyCues } from "@/lib/prescription-safety";
 import {
   FREQUENCY_OPTIONS,
   INSTRUCTION_OPTIONS,
   MEDICINE_ROUTES,
   medicineFilled,
+  medicineSummary,
   medicineTitle,
 } from "@/lib/prescription-utils";
 import {
@@ -50,16 +56,7 @@ function medicineFromSuggestion(
   current: Medicine,
   suggestion: DrugSuggestion
 ): Medicine {
-  const next = applyDrugDefaults(current, suggestion.name, suggestion.defaults);
-  const qty = estimateQuantity(
-    next.frequency,
-    next.duration,
-    parseDosesPerIntake(next.dosage)
-  );
-  if (qty && !next.quantity?.trim()) {
-    next.quantity = qty;
-  }
-  return next;
+  return applyDrugDefaults(current, suggestion.name, suggestion.defaults);
 }
 
 type TemplateRow = Awaited<
@@ -89,6 +86,11 @@ type PrescriptionBuilderProps = {
   onFollowUpChange?: (followUp: string) => void;
   /** When true, hide local save controls — parent owns persistence. */
   hideSaveActions?: boolean;
+  /**
+   * When true (workspace prescription tab), render the save-as-template
+   * form into the sticky footer host instead of inline.
+   */
+  saveTemplateInFooter?: boolean;
   mode?: "active" | "amend";
   amendmentReason?: string;
   patientAllergies?: string | null;
@@ -118,6 +120,7 @@ export function PrescriptionBuilder({
   onAdviceChange,
   onFollowUpChange,
   hideSaveActions = false,
+  saveTemplateInFooter = false,
   mode = "active",
   amendmentReason = "",
   patientAllergies,
@@ -138,6 +141,7 @@ export function PrescriptionBuilder({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [templateName, setTemplateName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [footerHost, setFooterHost] = useState<HTMLElement | null>(null);
   const { isPending, run } = usePendingAction<
     "save" | "download" | "template" | "delete-template"
   >();
@@ -196,6 +200,14 @@ export function PrescriptionBuilder({
     setFavorites(loadFavoriteMedicines());
   }, []);
 
+  useEffect(() => {
+    if (!saveTemplateInFooter) {
+      setFooterHost(null);
+      return;
+    }
+    setFooterHost(document.getElementById("prescription-save-template-host"));
+  }, [saveTemplateInFooter]);
+
   const safetyCues = useMemo(
     () => collectPrescriptionSafetyCues(medicines, patientAllergies),
     [medicines, patientAllergies]
@@ -204,42 +216,8 @@ export function PrescriptionBuilder({
   const completeCount = filledMedicineCount(medicines);
 
   function updateMedicine(index: number, field: keyof Medicine, value: string) {
-    const dosingFields: Array<keyof Medicine> = [
-      "dosage",
-      "frequency",
-      "duration",
-    ];
-    if (!dosingFields.includes(field)) {
-      setMedicines(
-        medicines.map((m, i) => (i === index ? { ...m, [field]: value } : m))
-      );
-      return;
-    }
-
-    const current = medicines[index] ?? emptyMedicine();
-    const patch: Partial<Medicine> = { [field]: value };
-    const next = { ...current, ...patch };
-    const qty = estimateQuantity(
-      next.frequency,
-      next.duration,
-      parseDosesPerIntake(next.dosage)
-    );
-    if (qty) {
-      const previousEstimate = estimateQuantity(
-        current.frequency,
-        current.duration,
-        parseDosesPerIntake(current.dosage)
-      );
-      const qtyBlank = !current.quantity?.trim();
-      const qtyWasAuto =
-        previousEstimate != null && current.quantity === previousEstimate;
-      if (qtyBlank || qtyWasAuto) {
-        patch.quantity = qty;
-      }
-    }
-
     setMedicines(
-      medicines.map((m, i) => (i === index ? { ...m, ...patch } : m))
+      medicines.map((m, i) => (i === index ? { ...m, [field]: value } : m))
     );
   }
 
@@ -407,21 +385,26 @@ export function PrescriptionBuilder({
     }, "delete-template");
   }
 
+  const saveTemplateForm = !isAmendMode ? (
+    <PrescriptionSaveTemplateForm
+      templateName={templateName}
+      onTemplateNameChange={setTemplateName}
+      onSave={handleSaveTemplate}
+      saving={isPending("template")}
+    />
+  ) : null;
+
   return (
     <div>
       {!isAmendMode ? (
-        <PrescriptionTemplatesBar
+        <PrescriptionQuickTemplates
           templates={templates.map((template) => ({
             id: template.id,
             name: template.name,
             medicineCount: templateMedicineCount(template.medicines),
           }))}
-          templateName={templateName}
-          onTemplateNameChange={setTemplateName}
           onApply={applyTemplate}
-          onSave={handleSaveTemplate}
           onDelete={handleDeleteTemplate}
-          saving={isPending("template")}
           deleting={isPending("delete-template")}
         />
       ) : null}
@@ -454,18 +437,17 @@ export function PrescriptionBuilder({
             cue.medicineIndexes?.includes(index)
           );
           return (
-            <div
+            <CollapsibleSection
               key={index}
-              className={cn(
-                "border-b border-border px-3 py-3 md:px-4",
-                flagged && "bg-danger/3"
-              )}
-            >
-              <div className="mb-2.5 flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {medicineTitle(med, index)}
-                </p>
-                {medicines.length > 1 ? (
+              flush
+              density="compact"
+              contentClassName="px-3 py-3 md:px-4"
+              title={medicineTitle(med, index)}
+              summary={medicineSummary(med)}
+              filled={medicineFilled(med)}
+              className={cn(flagged && "bg-danger/3")}
+              actions={
+                medicines.length > 1 ? (
                   <Button
                     type="button"
                     variant="ghost"
@@ -476,8 +458,9 @@ export function PrescriptionBuilder({
                   >
                     Remove
                   </Button>
-                ) : null}
-              </div>
+                ) : null
+              }
+            >
               <div className="flex flex-col gap-2.5">
                 <MedicineCombobox
                   name={`med-name-${index}`}
@@ -540,59 +523,25 @@ export function PrescriptionBuilder({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="flex flex-col gap-1">
-                      <Input
-                        label="Quantity"
-                        name={`med-qty-${index}`}
-                        value={med.quantity ?? ""}
-                        onChange={(e) =>
-                          updateMedicine(index, "quantity", e.target.value)
-                        }
-                        placeholder="Auto from freq × days"
-                        inputMode="numeric"
-                        className="h-10"
-                      />
-                      {(() => {
-                        const suggested = estimateQuantity(
-                          med.frequency,
-                          med.duration,
-                          parseDosesPerIntake(med.dosage)
-                        );
-                        if (!suggested || med.quantity === suggested) return null;
-                        return (
-                          <button
-                            type="button"
-                            className="self-start text-xs font-medium text-primary hover:underline"
-                            onClick={() =>
-                              updateMedicine(index, "quantity", suggested)
-                            }
-                          >
-                            Use suggested qty {suggested}
-                          </button>
-                        );
-                      })()}
-                    </div>
-                    <PrescriptionOptionCombobox
-                      label="Route"
-                      name={`med-route-${index}`}
-                      value={med.route ?? ""}
-                      onChange={(value) =>
-                        updateMedicine(index, "route", value)
-                      }
-                      options={MEDICINE_ROUTES}
-                      placeholder="e.g. Oral"
-                    />
-                  </div>
+                  <PrescriptionOptionCombobox
+                    label="Route"
+                    name={`med-route-${index}`}
+                    value={med.route ?? ""}
+                    onChange={(value) =>
+                      updateMedicine(index, "route", value)
+                    }
+                    options={MEDICINE_ROUTES}
+                    placeholder="e.g. Oral"
+                  />
                 </div>
               </div>
-            </div>
+            </CollapsibleSection>
           );
         })}
 
         <div className="border-b border-border px-3 py-2.5 md:px-4">
           <Button type="button" variant="secondary" size="sm" onClick={() => addRow()}>
-            Add medicine
+            Add another medicine
           </Button>
         </div>
       </div>
@@ -666,6 +615,23 @@ export function PrescriptionBuilder({
           </Button>
         </div>
       )}
+
+      {!isAmendMode && !saveTemplateInFooter && saveTemplateForm ? (
+        <div className="border-b border-border px-3 py-3 md:px-4">
+          {saveTemplateForm}
+        </div>
+      ) : null}
+
+      {saveTemplateInFooter &&
+      footerHost &&
+      saveTemplateForm
+        ? createPortal(
+            <div className="border-t border-border/80 px-3 py-2.5 md:px-4">
+              {saveTemplateForm}
+            </div>,
+            footerHost
+          )
+        : null}
     </div>
   );
 }
