@@ -3,6 +3,17 @@ import type { NextConfig } from "next";
 const appOrigin =
   process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "http://localhost:3000";
 
+// All allowed server action origins: primary domain + all Vercel deployment aliases
+const allowedServerActionOrigins = [
+  appOrigin.replace(/^https?:\/\//, ""),
+  // Vercel deployment aliases (preview, staging, git-branch URLs)
+  "dr-orthos-alpha.vercel.app",
+  "dr-orthos-satya-9d16.vercel.app",
+  "dr-orthos-git-main-satya-9d16.vercel.app",
+  // localhost for development
+  "localhost:3000",
+];
+
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -36,7 +47,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@react-pdf/renderer"],
   experimental: {
     serverActions: {
-      allowedOrigins: [appOrigin.replace(/^https?:\/\//, "")],
+      allowedOrigins: [...new Set(allowedServerActionOrigins)],
     },
   },
   images: {
