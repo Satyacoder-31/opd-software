@@ -3,53 +3,68 @@ export type IcdCode = {
   display: string;
 };
 
-/** Common OPD ICD-10 codes for India clinic search. */
+/** Common Orthopedic & General OPD ICD-10 codes for Dr Orthos clinic search. */
 export const ICD10_COMMON: IcdCode[] = [
-  { code: "J06.9", display: "Acute upper respiratory infection, unspecified" },
-  { code: "J02.9", display: "Acute pharyngitis, unspecified" },
-  { code: "J00", display: "Acute nasopharyngitis (common cold)" },
-  { code: "J18.9", display: "Pneumonia, unspecified" },
-  { code: "J45.9", display: "Asthma, unspecified" },
+  // Orthopedics: Knee & Hip
+  { code: "M17.11", display: "Primary osteoarthritis of right knee" },
+  { code: "M17.12", display: "Primary osteoarthritis of left knee" },
+  { code: "M17.0", display: "Bilateral primary osteoarthritis of knee" },
+  { code: "M17.9", display: "Osteoarthritis of knee, unspecified" },
+  { code: "M16.1", display: "Primary osteoarthritis of hip" },
+  { code: "M16.9", display: "Osteoarthritis of hip, unspecified" },
+  { code: "S83.51", display: "Sprain / tear of anterior cruciate ligament (ACL) of knee" },
+  { code: "S83.52", display: "Sprain / tear of posterior cruciate ligament (PCL) of knee" },
+  { code: "S83.2", display: "Tear of meniscus, acute injury of knee" },
+  { code: "M23.2", display: "Derangement of meniscus due to old tear, knee" },
+  { code: "M22.2", display: "Patellofemoral disorders / Chondromalacia patellae" },
+  { code: "M25.56", display: "Pain in knee joint" },
+
+  // Orthopedics: Spine & Back
+  { code: "M54.5", display: "Low back pain (Lumbago)" },
+  { code: "M54.4", display: "Lumbago with sciatica" },
+  { code: "M51.26", display: "Other intervertebral disc displacement, lumbar region" },
+  { code: "M48.06", display: "Spinal stenosis, lumbar region" },
+  { code: "M54.2", display: "Cervicalgia (Neck pain)" },
+  { code: "M50.20", display: "Cervical disc displacement with radiculopathy" },
+  { code: "M47.816", display: "Spondylosis without myelopathy or radiculopathy, lumbar" },
+
+  // Orthopedics: Shoulder & Upper Extremity
+  { code: "M75.1", display: "Rotator cuff tear or capsule rupture" },
+  { code: "M75.0", display: "Adhesive capsulitis of shoulder (Frozen shoulder)" },
+  { code: "M75.4", display: "Impingement syndrome of shoulder" },
+  { code: "M75.5", display: "Bursitis of shoulder" },
+  { code: "M77.1", display: "Lateral epicondylitis (Tennis elbow)" },
+  { code: "M77.0", display: "Medial epicondylitis (Golfer's elbow)" },
+  { code: "G56.0", display: "Carpal tunnel syndrome" },
+  { code: "M65.4", display: "Radial styloid tenosynovitis (De Quervain's disease)" },
+  { code: "M70.6", display: "Trochanteric bursitis" },
+
+  // Orthopedics: Foot, Ankle & Bone Health
+  { code: "S93.4", display: "Sprain of ankle ligament" },
+  { code: "M72.2", display: "Plantar fascial fibromatosis (Plantar fasciitis)" },
+  { code: "M76.6", display: "Achilles tendinitis" },
+  { code: "M81.0", display: "Age-related osteoporosis without current fracture" },
+  { code: "M10.9", display: "Gouty arthritis, unspecified" },
+  { code: "M25.50", display: "Pain in unspecified joint" },
+
+  // Orthopedics: Fractures & Trauma
+  { code: "S52.50", display: "Fracture of lower end of radius (Colles / Distal radius)" },
+  { code: "S82.8", display: "Fracture of other parts of lower leg (Bimalleolar / Ankle)" },
+  { code: "S42.0", display: "Fracture of clavicle" },
+  { code: "S72.0", display: "Fracture of neck of femur (Hip fracture)" },
+  { code: "T14.9", display: "Musculoskeletal injury, unspecified" },
+
+  // General & Medical OPD
   { code: "I10", display: "Essential (primary) hypertension" },
   { code: "E11.9", display: "Type 2 diabetes mellitus without complications" },
   { code: "E78.5", display: "Hyperlipidemia, unspecified" },
   { code: "E03.9", display: "Hypothyroidism, unspecified" },
-  { code: "K21.0", display: "Gastro-esophageal reflux disease with esophagitis" },
+  { code: "E55.9", display: "Vitamin D deficiency, unspecified" },
+  { code: "E53.8", display: "Deficiency of other specified B group vitamins (Vitamin B12)" },
+  { code: "K21.0", display: "Gastro-esophageal reflux disease" },
   { code: "K29.7", display: "Gastritis, unspecified" },
-  { code: "K59.0", display: "Constipation" },
-  { code: "A09", display: "Infectious gastroenteritis and colitis, unspecified" },
-  { code: "N39.0", display: "Urinary tract infection, site not specified" },
-  { code: "N30.0", display: "Acute cystitis" },
-  { code: "M54.5", display: "Low back pain" },
-  { code: "M25.5", display: "Pain in joint" },
-  { code: "M79.3", display: "Panniculitis, unspecified" },
-  { code: "G43.9", display: "Migraine, unspecified" },
-  { code: "G44.1", display: "Vascular headache, not elsewhere classified" },
-  { code: "R51", display: "Headache" },
   { code: "R50.9", display: "Fever, unspecified" },
-  { code: "R05", display: "Cough" },
-  { code: "R10.4", display: "Other and unspecified abdominal pain" },
-  { code: "L30.9", display: "Dermatitis, unspecified" },
-  { code: "L20.9", display: "Atopic dermatitis, unspecified" },
-  { code: "B35.1", display: "Tinea unguium" },
-  { code: "H66.9", display: "Otitis media, unspecified" },
-  { code: "H10.9", display: "Conjunctivitis, unspecified" },
   { code: "Z00.0", display: "General adult medical examination" },
-  { code: "Z71.1", display: "Person with feared health complaint in whom no diagnosis is made" },
-  { code: "F41.9", display: "Anxiety disorder, unspecified" },
-  { code: "F32.9", display: "Major depressive disorder, single episode, unspecified" },
-  { code: "J30.9", display: "Allergic rhinitis, unspecified" },
-  { code: "B34.9", display: "Viral infection, unspecified" },
-  { code: "S93.4", display: "Sprain of ankle" },
-  { code: "T14.9", display: "Injury, unspecified" },
-  { code: "O80", display: "Encounter for full-term uncomplicated delivery" },
-  { code: "Z23", display: "Encounter for immunization" },
-  { code: "E66.9", display: "Obesity, unspecified" },
-  { code: "D50.9", display: "Iron deficiency anemia, unspecified" },
-  { code: "N76.0", display: "Acute vaginitis" },
-  { code: "B37.3", display: "Candidiasis of vulva and vagina" },
-  { code: "J20.9", display: "Acute bronchitis, unspecified" },
-  { code: "K35.8", display: "Other acute appendicitis" },
 ];
 
 export type DiagnosisCodeEntry = {
@@ -78,6 +93,8 @@ export function searchIcdCodes(query: string, limit = 12): IcdCode[] {
 
   return scored.slice(0, limit).map((row) => row.item);
 }
+
+export const searchIcd10 = searchIcdCodes;
 
 export function formatDiagnosisCodesSummary(
   codes: DiagnosisCodeEntry[] | undefined | null

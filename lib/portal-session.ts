@@ -16,7 +16,7 @@ export function portalSigningSecret() {
   return (
     process.env.PORTAL_SESSION_SECRET ||
     process.env.RAZORPAY_KEY_SECRET ||
-    "medyx-local-portal-secret"
+    "drorthos-local-portal-secret"
   );
 }
 

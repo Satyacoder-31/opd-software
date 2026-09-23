@@ -81,6 +81,46 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "3 Days",
     instructions: "After meals",
   }),
+  oral("Aceclofenac 100 mg + Paracetamol 325 mg", {
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Strictly after meals with water",
+  }),
+  oral("Thiocolchicoside 4 mg + Aceclofenac 100 mg", {
+    dosage: "1 capsule",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "After food (Muscle relaxant)",
+  }),
+  oral("Etoricoxib 90 mg tablet", {
+    frequency: "Once daily",
+    duration: "5 Days",
+    instructions: "After dinner for acute joint inflammation",
+  }),
+  oral("Calcium Citrate Malate 1250 mg + Vitamin D3 1000 IU", {
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "30 Days",
+    instructions: "Post-dinner with milk/water",
+  }),
+  oral("Pregabalin 75 mg + Methylcobalamin 1500 mcg", {
+    dosage: "1 capsule",
+    frequency: "Once daily at bedtime",
+    duration: "15 Days",
+    instructions: "For sciatica / radicular nerve pain",
+  }),
+  oral("Diacerein 50 mg + Glucosamine 750 mg", {
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "30 Days",
+    instructions: "Cartilage protective agent after food",
+  }),
+  topical("Diclofenac Diethylamine 1.16% Gel", {
+    dosage: "Apply gently",
+    frequency: "Three times daily",
+    duration: "10 Days",
+    instructions: "Apply over affected joint without vigorous massage",
+  }),
   oral("Paracetamol 650 mg tablet", {
     frequency: "Three times daily",
     duration: "3 Days",

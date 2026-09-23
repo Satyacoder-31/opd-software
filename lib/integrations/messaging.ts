@@ -34,21 +34,21 @@ function renderTemplate(
 ): string {
   switch (key) {
     case "appointment_booked":
-      return `Medyx: Appointment booked for ${vars.patientName} on ${vars.when} at ${vars.clinicName}.`;
+      return `Dr Orthos: Appointment booked for ${vars.patientName} on ${vars.when} at ${vars.clinicName}.`;
     case "appointment_reminder":
-      return `Medyx: Reminder — ${vars.patientName} has an appointment on ${vars.when} at ${vars.clinicName}.`;
+      return `Dr Orthos: Reminder — ${vars.patientName} has an appointment on ${vars.when} at ${vars.clinicName}.`;
     case "token_called":
-      return `Medyx: Token #${vars.token} for ${vars.patientName} — please proceed to the doctor.`;
+      return `Dr Orthos: Token #${vars.token} for ${vars.patientName} — please proceed to the doctor.`;
     case "rx_ready":
-      return `Medyx: Prescription is ready for ${vars.patientName} at ${vars.clinicName}.`;
+      return `Dr Orthos: Prescription is ready for ${vars.patientName} at ${vars.clinicName}.`;
     case "bill_paid":
-      return `Medyx: Payment of ₹${vars.amount} received for ${vars.patientName}. Thank you.`;
+      return `Dr Orthos: Payment of ₹${vars.amount} received for ${vars.patientName}. Thank you.`;
     case "lab_report_ready":
-      return `Medyx: Lab report is ready for ${vars.patientName} at ${vars.clinicName}.`;
+      return `Dr Orthos: Lab report is ready for ${vars.patientName} at ${vars.clinicName}.`;
     case "portal_otp":
-      return `Medyx: Your OTP for ${vars.clinicName} patient portal is ${vars.code}. It expires in 10 minutes.`;
+      return `Dr Orthos: Your OTP for ${vars.clinicName} patient portal is ${vars.code}. It expires in 10 minutes.`;
     default:
-      return `Medyx notification from ${vars.clinicName ?? "your clinic"}.`;
+      return `Dr Orthos notification from ${vars.clinicName ?? "your clinic"}.`;
   }
 }
 

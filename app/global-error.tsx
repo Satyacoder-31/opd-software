@@ -15,7 +15,7 @@ export default function GlobalError({
               Application error
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
-              Medyx encountered a problem
+              Dr Orthos encountered a problem
             </h1>
             <p className="max-w-md text-sm text-neutral-600">
               Please refresh the page. If the problem continues, contact support.

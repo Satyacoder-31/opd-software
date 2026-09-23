@@ -5,7 +5,7 @@ import { ClinicDirectoryList } from "@/components/portal/ClinicDirectoryList";
 import { ClinicLocationBar } from "@/components/portal/ClinicLocationBar";
 
 export const metadata = {
-  title: "Find a clinic · Medyx",
+  title: "Find a Clinic · Dr Orthos",
   description: "Search clinics and book appointments online.",
 };
 

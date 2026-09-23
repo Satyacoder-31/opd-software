@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { faAnglesLeft, faEllipsis } from "@fortawesome/free-solid-svg-icons";
 import type { SessionUser } from "@/lib/types";
 import { can } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
-import { BrandLogo } from "@/components/ui/BrandLogo";
+import { BrandLogo, OrthoIcon } from "@/components/ui/BrandLogo";
 import { Icon } from "@/components/ui/Icon";
 import {
   Popover,
@@ -26,7 +25,7 @@ import {
 } from "@/components/nav/primary-nav";
 import type { ClinicAlert } from "@/lib/clinic-alerts";
 
-const SIDEBAR_COLLAPSED_KEY = "medyx.sidebar.collapsed";
+const SIDEBAR_COLLAPSED_KEY = "drorthos.sidebar.collapsed";
 
 type AppShellProps = {
   session: SessionUser;
@@ -223,13 +222,7 @@ export function AppShell({
           )}
         >
           {collapsed ? (
-            <Image
-              src="/logo.png"
-              alt="Medyx"
-              width={80}
-              height={59}
-              className="h-7 w-auto object-contain"
-            />
+            <OrthoIcon size={28} />
           ) : (
             <BrandLogo size="sm" />
           )}

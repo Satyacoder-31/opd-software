@@ -255,7 +255,7 @@ export async function exportDailyReportCsv(
   }
 
   const lines = [
-    "Medyx Daily Report",
+    "Dr Orthos Daily Report",
     `Date,${report.date}`,
     "",
     "Metric,Value",

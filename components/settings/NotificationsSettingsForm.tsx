@@ -85,7 +85,7 @@ export function NotificationsSettingsForm({
         label="Sender ID"
         value={config.senderId}
         onChange={(e) => setConfig({ ...config, senderId: e.target.value })}
-        placeholder="MEDYX"
+        placeholder="ORTHOS"
       />
       <label className="flex min-h-12 items-center gap-3 rounded-lg border border-border px-4 text-sm">
         <input

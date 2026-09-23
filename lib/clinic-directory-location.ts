@@ -1,7 +1,7 @@
 import { getCitiesForState, INDIAN_CITIES } from "@/lib/indian-cities";
 import { INDIAN_STATES, type IndianState } from "@/lib/indian-states";
 
-export const CLINIC_LOCATION_STORAGE_KEY = "medyx.clinic-location";
+export const CLINIC_LOCATION_STORAGE_KEY = "drorthos.clinic-location";
 
 export type SavedClinicLocation = {
   city: string;

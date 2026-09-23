@@ -48,7 +48,7 @@ export function AuthShell({
           )}
         >
           <div className="flex flex-col gap-3 border-b border-border px-6 py-6 md:px-8 md:py-8">
-            <Link href="/" aria-label="Medyx home" className="w-fit">
+            <Link href="/" aria-label="Dr Orthos home" className="w-fit">
               <BrandLogo size="sm" priority />
             </Link>
             <div className="flex flex-col gap-1">

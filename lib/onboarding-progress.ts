@@ -55,7 +55,7 @@ export type OnboardingProgressInput = {
 };
 
 function storageKey(clinicId: string) {
-  return `medyx:onboarding-step:${clinicId}`;
+  return `drorthos:onboarding-step:${clinicId}`;
 }
 
 export function readStoredOnboardingStep(clinicId: string): number {

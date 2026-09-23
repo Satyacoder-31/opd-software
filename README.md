@@ -1,8 +1,8 @@
-# Medyx
+# Dr Orthos
 
-OPD EMR for clinics and local hospitals — walk-in queue, consultations, prescriptions, billing, and daily reports.
+Advanced Orthopedic Healthcare Platform & OPD EMR — specialist appointments, real-time queue management, clinical consultations, digital prescriptions, billing, and patient portal.
 
-**Stack:** Next.js 15 · React 19 · Prisma 6 · PostgreSQL (Supabase) · Supabase Auth · Tailwind CSS 4
+**Stack:** Next.js 15 (App Router) · React 19 · Prisma 6 · PostgreSQL (Supabase) · Supabase Auth · Tailwind CSS v4
 
 ---
 
@@ -162,10 +162,10 @@ On paid Supabase plans, enable **Database → Backups / PITR** in the dashboard.
 
 ```bash
 # Dump (use DIRECT_URL host/credentials)
-pg_dump "$DIRECT_URL" --format=custom --file="medyx-$(date +%Y%m%d).dump"
+pg_dump "$DIRECT_URL" --format=custom --file="drorthos-$(date +%Y%m%d).dump"
 
 # Restore into an empty database
-pg_restore --clean --if-exists --no-owner --dbname="$DIRECT_URL" medyx-YYYYMMDD.dump
+pg_restore --clean --if-exists --no-owner --dbname="$DIRECT_URL" drorthos-YYYYMMDD.dump
 ```
 
 After restore, run `npx prisma migrate deploy` if the dump is older than current migrations.

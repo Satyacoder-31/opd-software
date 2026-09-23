@@ -5,7 +5,7 @@ export default function ResetPasswordPage() {
   return (
     <AuthShell
       title="Set a new password"
-      description="Choose a password for your Medyx account"
+      description="Choose a password for your Dr Orthos account"
       backHref="/login"
       backLabel="Back to sign in"
     >

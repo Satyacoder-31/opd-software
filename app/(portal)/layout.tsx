@@ -25,7 +25,7 @@ export default async function PortalLayout({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
           <Link href="/clinics" className="min-w-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <BrandLogo size="sm" />
-            <span className="sr-only">Medyx clinics</span>
+            <span className="sr-only">Dr Orthos clinics</span>
           </Link>
           <nav
             aria-label="Patient"

@@ -25,26 +25,37 @@
   }
 }
 
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 @theme {
-  /* Palette: pale_sky / frozen_water / pacific_blue / fresh_sky / yale_blue */
-  --color-surface: #f5fbff; /* pale_sky 900 */
-  --color-surface-muted: #e5f6f6; /* frozen_water 800 */
-  --color-surface-tint: #ebf7ff; /* pale_sky 800 */
-  --color-surface-rich: #2b74a1; /* yale_blue 600 */
-  --color-surface-deep: #1b4965; /* yale_blue */
-  --color-surface-ochre: #a04d06;
-  --color-primary: #5fa8d3; /* fresh_sky */
-  --color-accent: #e09410;
-  --color-accent-foreground: #8b5a08;
-  --color-ink: #0b1d28; /* yale_blue 200 */
-  --color-danger: #c53d32;
-  --color-success: #178a5c;
+  /* Dr Orthos Orthopedic Palette: Midnight Navy / Precision Cyan / Medical Slate / Ice Wash */
+  --color-surface: #f8fafc;
+  --color-surface-muted: #f1f5f9;
+  --color-surface-tint: #f0f7fd;
+  --color-surface-rich: #0f2e4a;
+  --color-surface-deep: #0a192f;
+  --color-surface-ochre: #b45309;
+  --color-primary: #0284c7;
+  --color-primary-hover: #0369a1;
+  --color-accent: #0ea5e9;
+  --color-accent-foreground: #0369a1;
+  --color-ink: #0a192f;
+  --color-danger: #dc2626;
+  --color-success: #059669;
   --color-destructive: var(--destructive);
-  --color-border: #c0e2ea; /* pacific_blue 800 */
+  --color-border: #e2e8f0;
   --font-display: var(--font-roboto-serif), "Roboto Serif", Georgia, serif;
   --font-sans: var(--font-roboto), Roboto, system-ui, sans-serif;
   --font-nav: var(--font-roboto), Roboto, system-ui, sans-serif;
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  --animate-pulse-subtle: pulse-subtle 3s ease-in-out infinite;
 }
 
 @utility scrollbar-hide {
@@ -60,13 +71,14 @@
   html {
     font-family: var(--font-sans);
     @apply font-sans;
+    scroll-behavior: smooth;
   }
 
   body {
     @apply antialiased bg-background text-foreground;
   }
 
-  /* Native form controls often ignore inherited fonts — force Roboto. */
+  /* Form controls font inherit */
   input,
   textarea,
   select,
@@ -83,29 +95,28 @@
   }
 
   .landing-grain {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   }
 
-  /* Rich section bands — yale depth into pacific midtones + warm ochre */
+  /* Dr Orthos clinical hero bands — midnight blue with subtle surgical ambient glow */
   .tint-hero {
-    background-color: var(--color-surface-deep);
-    background-image: linear-gradient(
-      165deg,
-      #0b1d28 0%,
-      #1b4965 55%,
-      #2b74a1 100%
-    );
+    background-color: #0a192f;
+    background-image: 
+      radial-gradient(circle at 80% 20%, rgba(14, 165, 233, 0.15) 0%, transparent 40%),
+      radial-gradient(circle at 20% 80%, rgba(2, 132, 199, 0.12) 0%, transparent 45%),
+      linear-gradient(170deg, #071322 0%, #0a192f 50%, #0f2e4a 100%);
   }
 
   .tint-band {
-    background-color: var(--color-surface-rich);
+    background-color: #0f2e4a;
+    background-image: linear-gradient(180deg, #0f2e4a 0%, #0b1f33 100%);
   }
 
   .tint-band-warm {
-    background-color: var(--color-surface-ochre);
+    background-color: #1e3a5f;
   }
 
-  /* Light functional wash for app working surfaces */
+  /* Crisp surgical wash for working surfaces */
   .tint-soft {
     background-color: var(--color-surface-tint);
   }
@@ -117,7 +128,7 @@
   @keyframes fade-up {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
@@ -183,72 +194,70 @@
 }
 
 :root {
-  --background: #f5fbff; /* pale_sky 900 */
-  --foreground: #0b1d28; /* yale_blue 200 */
+  --background: #f8fafc;
+  --foreground: #0a192f;
   --card: #ffffff;
-  --card-foreground: #0b1d28;
+  --card-foreground: #0a192f;
   --popover: #ffffff;
-  --popover-foreground: #0b1d28;
-  --primary: #5fa8d3; /* fresh_sky */
+  --popover-foreground: #0a192f;
+  --primary: #0284c7;
   --primary-foreground: #ffffff;
-  --secondary: #e5f6f6; /* frozen_water 800 */
-  --secondary-foreground: #0b1d28;
-  /* Surface wash for bg-muted — not for body text */
-  --muted: #e5f6f6; /* frozen_water 800 */
-  /* Secondary copy: readable on pale teal / sky washes */
-  --muted-foreground: #1e4e5a; /* pacific_blue 200 */
-  --accent: #e09410;
-  --accent-foreground: #8b5a08;
-  --destructive: #c53d32;
-  --border: #c0e2ea; /* pacific_blue 800 */
-  --input: #c0e2ea;
-  --ring: #62b6cb; /* pacific_blue */
-  --chart-1: #5fa8d3; /* fresh_sky */
-  --chart-2: #178a5c;
-  --chart-3: #e09410;
-  --chart-4: #1b4965; /* yale_blue */
-  --chart-5: #c53d32;
+  --secondary: #f0f7fd;
+  --secondary-foreground: #0f2e4a;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --accent: #0ea5e9;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #38bdf8;
+  --chart-1: #0284c7;
+  --chart-2: #059669;
+  --chart-3: #d97706;
+  --chart-4: #0f2e4a;
+  --chart-5: #dc2626;
   --radius: 0.625rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #0b1d28;
-  --sidebar-primary: #1b4965; /* yale_blue */
+  --sidebar-foreground: #0a192f;
+  --sidebar-primary: #0f2e4a;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e5f6f6;
-  --sidebar-accent-foreground: #0b1d28;
-  --sidebar-border: #c0e2ea;
-  --sidebar-ring: #62b6cb;
+  --sidebar-accent: #f0f7fd;
+  --sidebar-accent-foreground: #0284c7;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #38bdf8;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #071322;
+  --foreground: #f8fafc;
+  --card: #0b1f33;
+  --card-foreground: #f8fafc;
+  --popover: #0b1f33;
+  --popover-foreground: #f8fafc;
+  --primary: #38bdf8;
+  --primary-foreground: #071322;
+  --secondary: #132a40;
+  --secondary-foreground: #f8fafc;
+  --muted: #132a40;
+  --muted-foreground: #94a3b8;
+  --accent: #0ea5e9;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: #1e3a5f;
+  --input: #1e3a5f;
+  --ring: #38bdf8;
+  --chart-1: #38bdf8;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #60a5fa;
+  --chart-5: #ef4444;
+  --sidebar: #0b1f33;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #38bdf8;
+  --sidebar-primary-foreground: #071322;
+  --sidebar-accent: #132a40;
+  --sidebar-accent-foreground: #38bdf8;
+  --sidebar-border: #1e3a5f;
+  --sidebar-ring: #38bdf8;
 }

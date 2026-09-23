@@ -8,9 +8,9 @@ type Params = Promise<{ slug: string }>;
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;
   const clinic = await getPublicClinicBySlug(slug);
-  if (!clinic) return { title: "Clinic · Medyx" };
+  if (!clinic) return { title: "Clinic · Dr Orthos" };
   return {
-    title: `${clinic.name} · Medyx`,
+    title: `${clinic.name} · Dr Orthos`,
     description: clinic.description || `Book an appointment at ${clinic.name}`,
   };
 }
