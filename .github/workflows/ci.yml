@@ -8,6 +8,13 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emr_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/emr_test
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
 
     steps:
       - name: Checkout
@@ -33,10 +40,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/emr_test
-          DIRECT_URL: postgresql://postgres:postgres@localhost:5432/emr_test
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
-          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
