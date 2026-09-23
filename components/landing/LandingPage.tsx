@@ -530,7 +530,7 @@ export function LandingPage() {
       {/* =====================================================================
           7. INTERACTIVE BOOKING ENGINE (FLAGSHIP SECTION)
           ===================================================================== */}
-      <section className="py-20 sm:py-28 bg-[#071322]">
+      <section id="book" className="scroll-mt-24 py-20 sm:py-28 bg-[#071322]">
         <div className="mx-auto max-w-5xl px-4 sm:px-6">
           <DrOrthoBookingWidget />
         </div>
