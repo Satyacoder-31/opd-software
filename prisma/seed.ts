@@ -180,6 +180,7 @@ async function main() {
       languages: ["English", "Hindi", "Marathi"],
       description:
         "Premier center for advanced orthopedic surgery, arthroscopy, robotic joint replacement, and comprehensive musculoskeletal rehabilitation.",
+      onboardingCompletedAt: new Date(),
       users: {
         create: [
           {
@@ -193,6 +194,34 @@ async function main() {
             designation: "Chief Orthopedic Consultant",
             consultationFee: 800.0,
             phone: "9876543210",
+          },
+          {
+            name: "Dr. Meera Rao",
+            email: "doctor@demo.local",
+            role: Role.doctor,
+            supabaseAuthId: "00000000-0000-4000-a000-000000000002",
+            qualifications: "MBBS, MS (Orthopedics)",
+            registrationNo: "MCI-59102-MH",
+            specialty: "Arthroscopy & Sports Injuries",
+            designation: "Associate Orthopedic Consultant",
+            consultationFee: 600.0,
+            phone: "9876543211",
+          },
+          {
+            name: "Aarav Gupta",
+            email: "admin.staff@demo.local",
+            role: Role.admin,
+            supabaseAuthId: "00000000-0000-4000-a000-000000000003",
+            designation: "Practice Operations Manager",
+            phone: "9876543212",
+          },
+          {
+            name: "Kavita Sharma",
+            email: "receptionist@demo.local",
+            role: Role.receptionist,
+            supabaseAuthId: "00000000-0000-4000-a000-000000000004",
+            designation: "Senior Front Desk Executive",
+            phone: "9876543213",
           },
         ],
       },
@@ -374,6 +403,27 @@ async function main() {
       })
     )
   );
+
+  // Link patients to portal accounts for seamless patient portal demo login
+  for (const p of patients) {
+    if (p.phone) {
+      const cleanPhone = p.phone.replace(/\D/g, "").slice(-10);
+      const acc = await prisma.portalAccount.upsert({
+        where: { phone: cleanPhone },
+        create: { phone: cleanPhone, name: p.name },
+        update: { name: p.name },
+      });
+      await prisma.clinicPatient.upsert({
+        where: { patientId: p.id },
+        create: {
+          portalAccountId: acc.id,
+          clinicId: clinic.id,
+          patientId: p.id,
+        },
+        update: { portalAccountId: acc.id },
+      });
+    }
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

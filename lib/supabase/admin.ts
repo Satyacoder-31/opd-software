@@ -1,4 +1,6 @@
-import "server-only";
+if (typeof window !== "undefined") {
+  throw new Error("createAdminClient must only be used on the server.");
+}
 import { createClient } from "@supabase/supabase-js";
 
 export function createAdminClient() {

@@ -4,6 +4,7 @@ import type { ActionResult } from "@/lib/types";
 import {
   requestPortalOtp as requestOtp,
   verifyPortalOtp as verifyOtp,
+  oneTapPatientLogin as oneTapLogin,
   logoutPortal as logout,
   getPortalSessionAccount as getAccount,
   getPortalPatientData as getPatientData,
@@ -27,6 +28,12 @@ export async function verifyPortalOtp(
   code: string,
 ): Promise<ActionResult<{ portalAccountId: string }>> {
   return verifyOtp(phone, code);
+}
+
+export async function oneTapPatientLogin(
+  phone: string,
+): Promise<ActionResult<{ portalAccountId: string; redirectTo: string }>> {
+  return oneTapLogin(phone);
 }
 
 export async function logoutPortal() {

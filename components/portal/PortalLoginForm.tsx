@@ -7,6 +7,8 @@ import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
+import { OneTapPatientLogin } from "@/components/portal/OneTapPatientLogin";
+
 export function PortalLoginForm({ redirectTo }: { redirectTo?: string }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
@@ -14,6 +16,13 @@ export function PortalLoginForm({ redirectTo }: { redirectTo?: string }) {
   const [sent, setSent] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  const handlePrefillPhone = (newPhone: string) => {
+    setPhone(newPhone);
+    setSent(false);
+    setCode("");
+    setMessage(null);
+  };
 
   async function requestCode() {
     setPending(true);
@@ -38,7 +47,21 @@ export function PortalLoginForm({ redirectTo }: { redirectTo?: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      {/* 1-Tap Demo Patient Sign In */}
+      <OneTapPatientLogin onPrefillPhone={handlePrefillPhone} />
+
+      {/* Divider */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative bg-card px-3 text-xs uppercase tracking-wider text-muted-foreground font-medium">
+          Or verify with phone OTP
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
       <Input
         label="Phone number"
         type="tel"
@@ -87,6 +110,7 @@ export function PortalLoginForm({ redirectTo }: { redirectTo?: string }) {
           Use another number
         </Button>
       ) : null}
+      </div>
     </div>
   );
 }

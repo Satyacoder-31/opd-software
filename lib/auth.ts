@@ -171,17 +171,15 @@ export async function ensureUserFromAuth(): Promise<SessionUser | null> {
 
   if (!dbUser) {
     dbUser = await prisma.$transaction(async (tx) => {
-      const pending = await tx.user.findFirst({
-        where: {
-          email: user.email!,
-          supabaseAuthId: { startsWith: PENDING_AUTH_PREFIX },
-        },
+      // Find matching user by email (either pending invite or seeded user)
+      const existing = await tx.user.findUnique({
+        where: { email: user.email! },
       });
 
-      if (!pending) return null;
+      if (!existing) return null;
 
       return tx.user.update({
-        where: { id: pending.id },
+        where: { id: existing.id },
         data: { supabaseAuthId: user.id },
       });
     });

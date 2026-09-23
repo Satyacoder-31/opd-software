@@ -21,14 +21,14 @@ export default async function PatientPortalPage({
   if (!data) {
     return (
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mx-auto grid max-w-lg gap-6 pt-4">
+        <div className="mx-auto grid max-w-2xl gap-6 pt-2">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-ink">Sign in</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Use your phone number. We&apos;ll send a one-time code — no password.
+            <h1 className="font-display text-3xl font-semibold text-ink">Patient Portal</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Sign in with 1-tap demo access or enter your registered phone number.
             </p>
           </div>
-          <Card title="OTP login" className="border border-border bg-card">
+          <Card title="Patient Portal Access" className="border border-border bg-card">
             <PortalLoginForm redirectTo={params.next} />
           </Card>
           <p className="text-center text-sm text-muted-foreground">

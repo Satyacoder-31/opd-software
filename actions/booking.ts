@@ -19,6 +19,7 @@ import {
   writePortalSession,
 } from "@/lib/portal-session";
 import { generateDaySlots } from "@/lib/slots";
+import { ensureDemoPatient } from "@/lib/demo-accounts";
 import { bookableClinicianWhere } from "@/lib/bookable-clinicians";
 import {
   ageFromDob,
@@ -268,6 +269,26 @@ export async function verifyPortalOtp(
 
   await writePortalSession({ portalAccountId });
   return { success: true, data: { portalAccountId } };
+}
+
+export async function oneTapPatientLogin(
+  phone: string
+): Promise<ActionResult<{ portalAccountId: string; redirectTo: string }>> {
+  try {
+    const { portalAccountId } = await ensureDemoPatient(phone);
+    await writePortalSession({ portalAccountId });
+    revalidatePath("/portal", "layout");
+    return { success: true, data: { portalAccountId, redirectTo: "/portal" } };
+  } catch (err) {
+    logger.error("one_tap_patient_login_failed", {
+      phone,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to sign in as patient.",
+    };
+  }
 }
 
 export async function logoutPortal() {

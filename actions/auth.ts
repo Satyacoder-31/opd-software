@@ -18,6 +18,7 @@ import { logAudit } from "@/lib/audit";
 import { zodFieldErrors } from "@/lib/form-utils";
 import { loginSchema, clinicProfileSchema, forgotPasswordSchema, resetPasswordSchema } from "@/lib/validation";
 import { CLINIC_SPECIALTIES } from "@/lib/clinic-specialties";
+import { ensureDemoStaffUser } from "@/lib/demo-accounts";
 import {
   cancelCutoffForClinicType,
   formatClinicAddress,
@@ -335,6 +336,48 @@ export async function login(
   }
 
   return { success: true, data: { redirectTo } };
+}
+
+export async function oneTapStaffLogin(
+  email: string
+): Promise<ActionResult<{ redirectTo: string }>> {
+  try {
+    const { email: demoEmail, password } = await ensureDemoStaffUser(email);
+
+    const supabase = await createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: demoEmail,
+      password,
+    });
+
+    if (error) {
+      logger.warn("one_tap_login_failed", { email: demoEmail, error: error.message });
+      return {
+        success: false,
+        error: "Failed to sign in to demo account: " + error.message,
+      };
+    }
+
+    const session = await ensureUserFromAuth();
+    if (!session) {
+      return {
+        success: false,
+        error: "Failed to establish staff session. Please try again.",
+      };
+    }
+
+    revalidatePath("/", "layout");
+    return { success: true, data: { redirectTo: "/queue" } };
+  } catch (err) {
+    logger.error("one_tap_login_error", {
+      email,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "One-tap login failed.",
+    };
+  }
 }
 
 export async function requestPasswordReset(
