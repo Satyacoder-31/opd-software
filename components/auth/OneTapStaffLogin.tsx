@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   faBolt,
   faCircleNotch,
@@ -77,7 +76,6 @@ const ROLE_THEMES: Record<
 };
 
 export function OneTapStaffLogin({ onPrefill }: OneTapStaffLoginProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeEmail, setActiveEmail] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -95,8 +93,9 @@ export function OneTapStaffLogin({ onPrefill }: OneTapStaffLoginProps) {
           return;
         }
 
-        router.push(result.data.redirectTo);
-        router.refresh();
+        // Hard redirect so auth cookie is fully sent with the next request.
+        // router.push() races against cookie propagation and causes error boundary.
+        window.location.href = result.data.redirectTo;
       } catch (err) {
         setErrorMsg(err instanceof Error ? err.message : "Unexpected error during login.");
         setActiveEmail(null);

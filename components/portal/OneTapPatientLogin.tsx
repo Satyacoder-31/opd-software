@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   faBolt,
   faCircleNotch,
@@ -38,7 +37,6 @@ const STATUS_ICONS: Record<string, typeof faUser> = {
 };
 
 export function OneTapPatientLogin({ onPrefillPhone }: OneTapPatientLoginProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activePhone, setActivePhone] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -56,8 +54,9 @@ export function OneTapPatientLogin({ onPrefillPhone }: OneTapPatientLoginProps) 
           return;
         }
 
-        router.push(res.data.redirectTo || "/portal");
-        router.refresh();
+        // Hard redirect so portal session cookie is fully sent with the next request.
+        // router.push() races against cookie propagation and causes error boundary.
+        window.location.href = res.data.redirectTo || "/portal";
       } catch (err) {
         setErrorMsg(err instanceof Error ? err.message : "Patient login error.");
         setActivePhone(null);
