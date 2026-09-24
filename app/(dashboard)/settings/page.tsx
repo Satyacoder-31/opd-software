@@ -5,6 +5,9 @@ import { can } from "@/lib/rbac";
 export default async function SettingsPage() {
   const session = await requireSessionUser();
   return (
-    <SettingsOverview showClinicAdmin={can(session, "settings.access")} />
+    <SettingsOverview
+      session={session}
+      showClinicAdmin={can(session, "settings.access")}
+    />
   );
 }

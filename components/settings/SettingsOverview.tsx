@@ -16,9 +16,12 @@ import { SettingsOverviewLink } from "@/components/settings/SettingsOverviewLink
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
+import type { SessionUser } from "@/lib/types";
+import { ROLE_LABELS } from "@/lib/rbac";
 
 type SettingsOverviewProps = {
   showClinicAdmin: boolean;
+  session: SessionUser;
 };
 
 function SettingsSection({
@@ -45,7 +48,7 @@ function SettingsSection({
   );
 }
 
-export function SettingsOverview({ showClinicAdmin }: SettingsOverviewProps) {
+export function SettingsOverview({ showClinicAdmin, session }: SettingsOverviewProps) {
   return (
     <PageShell>
       <PageHeader
@@ -125,6 +128,20 @@ export function SettingsOverview({ showClinicAdmin }: SettingsOverviewProps) {
         ) : null}
 
         <SettingsSection id="settings-account-heading" title="Account">
+          <div className="rounded-lg border border-border/80 bg-card p-4 my-2">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary text-sm">
+                {session.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ink truncate">{session.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{session.email}</p>
+              </div>
+              <span className="inline-flex items-center rounded-md bg-surface-muted px-2.5 py-1 text-xs font-medium text-ink border border-border">
+                {ROLE_LABELS[session.role] ?? session.role}
+              </span>
+            </div>
+          </div>
           <form action={logout} className="px-1 py-2">
             <Button
               type="submit"

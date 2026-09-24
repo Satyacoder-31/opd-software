@@ -17,10 +17,20 @@ const publicRoutes = [
 /**
  * Lightweight route → role allowlists for Edge.
  * Keep in sync with lib/rbac.ts (JWT role is a hint; actions re-check DB).
- * Do not import @/lib/rbac or @prisma/client here — they blow the Edge size limit.
+ * More specific paths MUST be evaluated before parent paths.
  */
 const routeAllowedRoles: Record<string, readonly string[]> = {
-  "/settings": ["owner", "admin"],
+  "/settings/clinic": ["owner", "admin"],
+  "/settings/availability": ["owner", "admin"],
+  "/settings/prescriptions": ["owner", "admin"],
+  "/settings/medicines": ["owner", "admin"],
+  "/settings/labs": ["owner", "admin"],
+  "/settings/notifications": ["owner", "admin"],
+  "/settings/staff": ["owner", "admin"],
+  "/settings/fees": ["owner", "admin"],
+  "/settings/subscription": ["owner"],
+  "/settings/audit": ["owner", "admin"],
+  "/settings": ["owner", "admin", "doctor", "receptionist"],
   "/reports": ["owner", "admin", "receptionist"],
   "/consultations": ["owner", "admin", "doctor"],
   "/billing": ["owner", "admin", "receptionist"],
@@ -67,11 +77,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const { response, user } = await updateSession(request);
-
   const isPublic = isPublicRoute(pathname);
 
+  // Fast-path cookie detection: Supabase SSR stores auth in sb-*-auth-token cookies
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
+
+  // 1. Fast path for public routes without session cookie: instant response (<5ms)
+  if (isPublic && !hasAuthCookie) {
+    return nextWithCleanHeaders(request, NextResponse.next({ request }));
+  }
+
+  // 2. Fast path for protected routes without session cookie: instant redirect to /login (<5ms)
+  if (!isPublic && !hasAuthCookie) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // 3. Auth cookie is present: validate and refresh session
+  const { response, user } = await updateSession(request);
+
   if (isPublic) {
+    // If authenticated user visits login or signup, redirect them into the dashboard
+    if (user && (pathname === "/login" || pathname === "/signup")) {
+      return NextResponse.redirect(new URL("/queue", request.url));
+    }
     return nextWithCleanHeaders(request, response);
   }
 
@@ -87,10 +117,11 @@ export async function middleware(request: NextRequest) {
   }
 
   for (const [routePrefix, allowedRoles] of Object.entries(routeAllowedRoles)) {
-    if (pathname.startsWith(routePrefix)) {
+    if (pathname === routePrefix || pathname.startsWith(`${routePrefix}/`)) {
       if (!role || !allowedRoles.includes(role)) {
         return NextResponse.redirect(new URL("/queue", request.url));
       }
+      break;
     }
   }
 

@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import type { Role } from "@prisma/client";
@@ -110,6 +111,13 @@ async function resolveSessionFromUser(user: User): Promise<SessionUser | null> {
 }
 
 async function loadSessionFromSupabase(): Promise<SessionUser | null> {
+  const cookieStore = await cookies();
+  const hasAuthCookie = cookieStore
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
+
+  if (!hasAuthCookie) return null;
+
   const supabase = await createClient();
   const {
     data: { user },
