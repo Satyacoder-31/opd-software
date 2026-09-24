@@ -21,7 +21,7 @@ const publicRoutes = [
  */
 const routeAllowedRoles: Record<string, readonly string[]> = {
   "/settings/clinic": ["owner", "admin"],
-  "/settings/availability": ["owner", "admin"],
+  "/settings/availability": ["owner", "admin", "doctor"],
   "/settings/prescriptions": ["owner", "admin"],
   "/settings/medicines": ["owner", "admin"],
   "/settings/labs": ["owner", "admin"],
@@ -36,6 +36,8 @@ const routeAllowedRoles: Record<string, readonly string[]> = {
   "/billing": ["owner", "admin", "receptionist"],
   "/labs": ["owner", "admin", "doctor", "receptionist"],
   "/appointments": ["owner", "admin", "doctor", "receptionist"],
+  "/patients": ["owner", "admin", "doctor", "receptionist"],
+  "/queue": ["owner", "admin", "doctor", "receptionist"],
 };
 
 function isPublicRoute(pathname: string): boolean {
@@ -109,19 +111,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const role = user.app_metadata?.role as string | undefined;
+  const role = (
+    user.app_metadata?.role ||
+    user.user_metadata?.role
+  ) as string | undefined;
   const isActive = user.app_metadata?.isActive;
   // Treat missing isActive as active for older tokens, but explicit false blocks.
   if (isActive === false) {
     return NextResponse.redirect(new URL("/login?deactivated=1", request.url));
   }
 
-  for (const [routePrefix, allowedRoles] of Object.entries(routeAllowedRoles)) {
-    if (pathname === routePrefix || pathname.startsWith(`${routePrefix}/`)) {
-      if (!role || !allowedRoles.includes(role)) {
-        return NextResponse.redirect(new URL("/queue", request.url));
+  // If role is present in JWT, perform fast edge authorization check.
+  // If role is not yet in JWT metadata, allow the request to proceed to server components
+  // where requireSessionUser() checks the authoritative database role.
+  if (role) {
+    const normalizedRole = role.toLowerCase();
+    for (const [routePrefix, allowedRoles] of Object.entries(routeAllowedRoles)) {
+      if (pathname === routePrefix || pathname.startsWith(`${routePrefix}/`)) {
+        if (!allowedRoles.includes(normalizedRole)) {
+          return NextResponse.redirect(new URL("/queue", request.url));
+        }
+        break;
       }
-      break;
     }
   }
 

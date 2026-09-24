@@ -313,29 +313,7 @@ export async function login(
   }
 
   await ensureUserFromAuth();
-
-  let redirectTo = "/queue";
-  if (
-    dbUser &&
-    (dbUser.role === Role.owner || dbUser.role === Role.admin)
-  ) {
-    const clinic = await prisma.clinic.findUnique({
-      where: { id: dbUser.clinicId },
-      select: {
-        onboardingCompletedAt: true,
-        onboardingSkippedAt: true,
-      },
-    });
-    if (
-      clinic &&
-      !clinic.onboardingCompletedAt &&
-      !clinic.onboardingSkippedAt
-    ) {
-      redirectTo = "/onboarding";
-    }
-  }
-
-  return { success: true, data: { redirectTo } };
+  return { success: true, data: { redirectTo: "/queue" } };
 }
 
 export async function oneTapStaffLogin(

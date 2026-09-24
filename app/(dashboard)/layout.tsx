@@ -39,16 +39,6 @@ export default async function DashboardLayout({
 
   const clinic = await getClinicDashboardMeta(session.clinicId);
 
-  if (
-    pathname &&
-    can(session, "clinic.manage") &&
-    !clinic.onboardingCompletedAt &&
-    !clinic.onboardingSkippedAt &&
-    !onOnboarding
-  ) {
-    redirect("/onboarding");
-  }
-
   // Focused full-page setup — no sidebar, search, or clinic chrome until ready.
   // fixed inset-0 pulls setup out of document flow so the page itself cannot scroll.
   if (onOnboarding) {

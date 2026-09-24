@@ -75,9 +75,21 @@ async function syncAuthMetadata(
  * JWT metadata is treated as a hint only; isActive/role/clinic always come from DB when available.
  */
 async function resolveSessionFromUser(user: User): Promise<SessionUser | null> {
-  const dbUser = await prisma.user.findUnique({
+  let dbUser = await prisma.user.findUnique({
     where: { supabaseAuthId: user.id },
   });
+
+  if (!dbUser && user.email) {
+    const matchedByEmail = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
+    if (matchedByEmail) {
+      dbUser = await prisma.user.update({
+        where: { id: matchedByEmail.id },
+        data: { supabaseAuthId: user.id },
+      });
+    }
+  }
 
   if (dbUser) {
     if (!dbUser.isActive) return null;

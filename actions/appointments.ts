@@ -100,7 +100,7 @@ export async function createAppointment(
       where: {
         id: input.doctorId,
         clinicId: session.clinicId,
-        role: Role.doctor,
+        role: { in: [Role.doctor, Role.owner, Role.admin] },
         isActive: true,
       },
       select: { id: true },
@@ -350,7 +350,7 @@ export async function listClinicDoctors() {
   return prisma.user.findMany({
     where: {
       clinicId: session.clinicId,
-      role: Role.doctor,
+      role: { in: [Role.doctor, Role.owner, Role.admin] },
       isActive: true,
     },
     orderBy: { name: "asc" },
@@ -411,14 +411,14 @@ export async function updateAppointmentStatus(
 
   let resolvedDoctorId: string | undefined;
   if (status === AppointmentStatus.in_progress && !appointment.consultation) {
-    if (session.role === Role.doctor) {
-      resolvedDoctorId = session.userId;
+    if (session.role === Role.doctor || session.role === Role.owner || session.role === Role.admin) {
+      resolvedDoctorId = doctorId || session.userId;
     } else if (doctorId) {
       const doctor = await prisma.user.findFirst({
         where: {
           id: doctorId,
           clinicId: session.clinicId,
-          role: Role.doctor,
+          role: { in: [Role.doctor, Role.owner, Role.admin] },
           isActive: true,
         },
       });
@@ -430,7 +430,7 @@ export async function updateAppointmentStatus(
       const doctor = await prisma.user.findFirst({
         where: {
           clinicId: session.clinicId,
-          role: Role.doctor,
+          role: { in: [Role.doctor, Role.owner, Role.admin] },
           isActive: true,
         },
         orderBy: { name: "asc" },
@@ -675,7 +675,7 @@ export async function rescheduleAppointment(
       where: {
         id: resolvedDoctorId,
         clinicId: session.clinicId,
-        role: Role.doctor,
+        role: { in: [Role.doctor, Role.owner, Role.admin] },
         isActive: true,
       },
       select: { id: true },

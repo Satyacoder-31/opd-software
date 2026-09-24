@@ -69,6 +69,7 @@ const DOCTOR_PERMISSIONS: Permission[] = [
   "queue.read",
   "queue.manage",
   "appointments.schedule",
+  "appointments.cancel",
   "consultations.start",
   "consultations.read",
   "consultations.write",
@@ -80,7 +81,9 @@ const DOCTOR_PERMISSIONS: Permission[] = [
   "drugs.search",
   "labs.read",
   "labs.manage",
+  "labs.results",
   "messaging.send",
+  "settings.access",
 ];
 
 /**
@@ -100,10 +103,12 @@ const RECEPTIONIST_PERMISSIONS: Permission[] = [
   "billing.write",
   "fees.read",
   "labs.read",
+  "labs.manage",
   "labs.results",
   "messaging.send",
   "reports.read",
   "reports.export.visits",
+  "settings.access",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
