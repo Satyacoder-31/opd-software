@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { faBars, faXmark, faCalendarCheck, faUserDoctor, faHospital } from "@fortawesome/free-solid-svg-icons";
+import { faBars, faXmark, faCalendarCheck, faUserDoctor } from "@fortawesome/free-solid-svg-icons";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Icon } from "@/components/ui/Icon";
 
@@ -11,7 +11,6 @@ const navLinks = [
   { href: "#conditions", label: "Conditions" },
   { href: "#doctors", label: "Specialists" },
   { href: "#journey", label: "Care Pathway" },
-  { href: "/portal", label: "Patient Portal" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -33,13 +32,6 @@ export function LandingNav() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <Link
-              href="/portal"
-              className="text-slate-300 hover:text-sky-300 font-medium transition-colors"
-            >
-              Check Live Queue Token
-            </Link>
-            <span className="text-slate-600">|</span>
             <Link
               href="/login"
               className="text-slate-300 hover:text-sky-300 font-medium transition-colors"
@@ -73,11 +65,11 @@ export function LandingNav() {
         {/* Right Action Area */}
         <div className="flex items-center gap-3">
           <Link
-            href="/portal"
+            href="/login"
             className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all shadow-sm"
           >
-            <Icon icon={faHospital} className="size-3.5 text-sky-400" />
-            Patient Portal
+            <Icon icon={faUserDoctor} className="size-3.5 text-sky-400" />
+            Staff Sign In
           </Link>
 
           <a
@@ -126,16 +118,6 @@ export function LandingNav() {
               </li>
             ))}
             <li className="mt-2 pt-2 border-t border-slate-800">
-              <Link
-                href="/portal"
-                className="flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
-                onClick={() => setOpen(false)}
-              >
-                <Icon icon={faHospital} className="size-4 text-sky-400" />
-                Patient Portal &amp; Queue Tracker
-              </Link>
-            </li>
-            <li>
               <Link
                 href="/login"
                 className="flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"

@@ -203,10 +203,10 @@ export function ClinicProfileView({
             ) : null}
             {!signedIn ? (
               <Link
-                href={`/portal?next=/clinics/${clinic.slug}`}
+                href="/login"
                 className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-white px-4 text-sm font-semibold text-surface-deep transition-colors hover:bg-surface-muted"
               >
-                Sign in to book
+                Staff Sign In
               </Link>
             ) : null}
           </div>

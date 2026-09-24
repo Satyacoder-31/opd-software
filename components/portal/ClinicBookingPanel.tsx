@@ -85,10 +85,10 @@ export function ClinicBookingPanel({
   if (!signedIn) {
     return (
       <Link
-        href={`/portal?next=/clinics/${clinicSlug}`}
+        href="/login"
         className="inline-flex min-h-11 items-center justify-center rounded-lg bg-surface-deep px-4 text-sm font-semibold text-white hover:bg-primary"
       >
-        Sign in to book
+        Staff Sign In to Schedule
       </Link>
     );
   }

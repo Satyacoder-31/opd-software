@@ -8,7 +8,6 @@ const publicRoutes = [
   "/signup",
   "/auth/callback",
   "/api/health",
-  "/portal",
   "/clinics",
   "/api/webhooks/razorpay",
   "/terms",
@@ -63,6 +62,10 @@ function nextWithCleanHeaders(
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname === "/portal" || pathname.startsWith("/portal/")) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   const { response, user } = await updateSession(request);
 

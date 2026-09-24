@@ -95,7 +95,7 @@ const clinicalPillars = [
   },
   {
     title: "Complete Digital Continuity",
-    description: "Access your digital prescriptions, X-ray reports, and follow-up schedules anytime via the secure Dr Orthos patient portal.",
+    description: "Receive electronic prescriptions, digital X-ray records, and structured post-consultation recovery instructions directly at every visit.",
     icon: faFilePdf,
   },
 ];
@@ -135,7 +135,7 @@ const faqs = [
   },
   {
     question: "How does the live token queue tracking work?",
-    answer: "When your appointment is scheduled or you check in at the reception desk, you receive a token number. In the Patient Portal (/portal), you can see exactly which token is currently inside the consultation room and your estimated wait time.",
+    answer: "When your appointment is scheduled or you check in at the reception desk, you receive a prioritized token number displayed on clinic OPD boards, keeping your consultation on schedule with minimal wait time.",
   },
   {
     question: "What documents should I bring for my first consultation?",
@@ -146,8 +146,8 @@ const faqs = [
     answer: "No. In fact, over 80% of knee conditions are successfully managed conservatively through quadriceps strengthening physiotherapy, weight management, anti-inflammatory protocols, and joint injections. Surgery is only considered for severe end-stage osteoarthritis or complete ligament tears.",
   },
   {
-    question: "Can I download my prescriptions and receipts online?",
-    answer: "Yes. All consultations generate a clean, digitally signed prescription PDF accessible anytime in your Patient Portal with detailed medicine dosage times and clinical exercise advice.",
+    question: "Can I get digital prescriptions and receipts?",
+    answer: "Yes. All consultations generate a clean, digitally signed prescription and printed summary with detailed medicine dosage times and clinical exercise advice provided at checkout.",
   },
   {
     question: "Are emergency fracture and trauma services supported?",
@@ -272,11 +272,11 @@ export function LandingPage() {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-sky-300 font-semibold flex items-center gap-1.5">
                       <span className="size-2 rounded-full bg-sky-400 animate-ping" />
-                      Live Queue Board
+                      Live OPD Queue Board
                     </span>
-                    <Link href="/portal" className="text-sky-400 underline font-medium hover:text-white">
-                      View Portal
-                    </Link>
+                    <span className="text-emerald-400 text-[11px] font-semibold tracking-wide uppercase">
+                      Live Queue
+                    </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs text-slate-300">
                     <span>Now Serving Token: <strong className="text-white text-sm">#12</strong></span>
@@ -595,11 +595,11 @@ export function LandingPage() {
               <span>Book Consultation Now</span>
             </a>
             <Link
-              href="/portal"
+              href="/login"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-7 py-3.5 text-base font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all"
             >
-              <Icon icon={faHospital} className="size-4 text-sky-400" />
-              <span>Patient Portal &amp; Queue</span>
+              <Icon icon={faUserDoctor} className="size-4 text-sky-400" />
+              <span>Staff Workspace Login</span>
             </Link>
           </div>
         </div>
@@ -646,8 +646,6 @@ export function LandingPage() {
               </h4>
               <ul className="space-y-2 text-xs text-slate-400">
                 <li><a href="#book" className="hover:text-white">Book Appointment</a></li>
-                <li><Link href="/portal" className="hover:text-white">Live Queue Token Tracker</Link></li>
-                <li><Link href="/portal" className="hover:text-white">Digital Prescriptions (PDF)</Link></li>
                 <li><a href="#faq" className="hover:text-white">Frequently Asked Questions</a></li>
                 <li><Link href="/clinics" className="hover:text-white">Clinic Directory</Link></li>
               </ul>

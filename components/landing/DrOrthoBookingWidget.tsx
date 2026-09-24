@@ -395,13 +395,10 @@ export function DrOrthoBookingWidget() {
             </div>
 
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/portal"
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-sky-500/20 hover:bg-sky-400 transition-all"
-              >
-                <Icon icon={faStethoscope} className="size-4" />
-                Track Live Queue in Patient Portal
-              </Link>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-5 py-2.5 text-xs sm:text-sm font-medium text-emerald-300">
+                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                Present token at clinic reception on arrival
+              </div>
               <button
                 type="button"
                 onClick={() => {

@@ -32,10 +32,10 @@ export default async function PortalLayout({
             className="flex flex-wrap items-center justify-end gap-1 text-sm font-medium sm:gap-2"
           >
             <Link
-              href="/portal"
+              href="/login"
               className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-ink"
             >
-              My visits
+              Staff Sign In
             </Link>
             {account ? (
               <div className="flex items-center gap-2 pl-1">
