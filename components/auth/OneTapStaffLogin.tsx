@@ -16,7 +16,7 @@ import {
   DEMO_STAFF_ACCOUNTS,
   DEMO_STAFF_PASSWORD,
   type DemoStaffAccount,
-} from "@/lib/demo-accounts";
+} from "@/lib/demo-accounts-data";
 import { Banner } from "@/components/ui/Banner";
 
 interface OneTapStaffLoginProps {

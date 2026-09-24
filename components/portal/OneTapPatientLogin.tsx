@@ -15,7 +15,7 @@ import { oneTapPatientLogin } from "@/actions/portal";
 import {
   DEMO_PATIENT_ACCOUNTS,
   type DemoPatientAccount,
-} from "@/lib/demo-accounts";
+} from "@/lib/demo-accounts-data";
 import { Banner } from "@/components/ui/Banner";
 
 interface OneTapPatientLoginProps {

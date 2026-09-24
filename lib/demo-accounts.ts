@@ -1,148 +1,21 @@
 import { Role, Gender } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  DEMO_STAFF_ACCOUNTS,
+  DEMO_PATIENT_ACCOUNTS,
+  DEMO_STAFF_PASSWORD,
+  type DemoStaffAccount,
+  type DemoPatientAccount,
+} from "./demo-accounts-data";
 
-export const DEMO_STAFF_PASSWORD = "DemoPassword2026!";
-
-export type DemoStaffAccount = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: Role;
-  roleLabel: string;
-  designation?: string;
-  specialty?: string;
-  qualifications?: string;
-  consultationFee?: number;
-  phone?: string;
-  description: string;
-  avatarColor: string;
-  tagline: string;
+export {
+  DEMO_STAFF_ACCOUNTS,
+  DEMO_PATIENT_ACCOUNTS,
+  DEMO_STAFF_PASSWORD,
+  type DemoStaffAccount,
+  type DemoPatientAccount,
 };
-
-export const DEMO_STAFF_ACCOUNTS: DemoStaffAccount[] = [
-  {
-    id: "demo-owner",
-    name: "Dr. Orthos Lead Consultant",
-    email: "admin@demo.local",
-    password: DEMO_STAFF_PASSWORD,
-    role: Role.owner,
-    roleLabel: "Owner & Chief Surgeon",
-    specialty: "Orthopedic Surgeon & Joint Specialist",
-    qualifications: "MBBS, MS (Orthopedics), DNB, Fellowship in Arthroscopy",
-    consultationFee: 800,
-    phone: "9876543210",
-    description: "Complete clinic ownership, surgeries, clinical consultations, invoicing & system settings.",
-    avatarColor: "bg-amber-600 text-white shadow-amber-600/30",
-    tagline: "Full Clinic Control",
-  },
-  {
-    id: "demo-doctor",
-    name: "Dr. Meera Rao",
-    email: "doctor@demo.local",
-    password: DEMO_STAFF_PASSWORD,
-    role: Role.doctor,
-    roleLabel: "Consulting Orthopedic Doctor",
-    specialty: "Arthroscopy & Sports Injuries",
-    qualifications: "MBBS, MS (Orthopedics)",
-    consultationFee: 600,
-    phone: "9876543211",
-    description: "OPD token queue, clinical examinations, e-prescriptions, vitals & lab investigation orders.",
-    avatarColor: "bg-sky-600 text-white shadow-sky-600/30",
-    tagline: "Clinical OPD & Prescriptions",
-  },
-  {
-    id: "demo-admin",
-    name: "Aarav Gupta",
-    email: "admin.staff@demo.local",
-    password: DEMO_STAFF_PASSWORD,
-    role: Role.admin,
-    roleLabel: "Clinic Operations Admin",
-    designation: "Practice Operations Manager",
-    phone: "9876543212",
-    description: "Clinic operations, staff scheduling, fee configuration, patient registry & audit logs.",
-    avatarColor: "bg-purple-600 text-white shadow-purple-600/30",
-    tagline: "Operations & Practice Admin",
-  },
-  {
-    id: "demo-receptionist",
-    name: "Kavita Sharma",
-    email: "receptionist@demo.local",
-    password: DEMO_STAFF_PASSWORD,
-    role: Role.receptionist,
-    roleLabel: "Front Desk & Billing",
-    designation: "Senior Front Desk Executive",
-    phone: "9876543213",
-    description: "Patient check-in, queue token management, vitals measurement & instant invoice billing.",
-    avatarColor: "bg-emerald-600 text-white shadow-emerald-600/30",
-    tagline: "Front Desk, Tokens & Billing",
-  },
-];
-
-export type DemoPatientAccount = {
-  id: string;
-  name: string;
-  phone: string;
-  age: number;
-  gender: Gender;
-  statusBadge: string;
-  statusType: "success" | "warning" | "info" | "neutral";
-  condition: string;
-  summary: string;
-  avatarColor: string;
-};
-
-export const DEMO_PATIENT_ACCOUNTS: DemoPatientAccount[] = [
-  {
-    id: "patient-rahul",
-    name: "Rahul Mehta",
-    phone: "9988776655",
-    age: 52,
-    gender: Gender.male,
-    statusBadge: "Consultation Done · Active Rx",
-    statusType: "success",
-    condition: "Primary Knee Osteoarthritis (Grade III)",
-    summary: "Has completed visit, full e-prescription (4 drugs), medical certificate & invoice ready.",
-    avatarColor: "bg-teal-600 text-white",
-  },
-  {
-    id: "patient-rajesh",
-    name: "Rajesh Kumar",
-    phone: "9811111111",
-    age: 45,
-    gender: Gender.male,
-    statusBadge: "Live Queue · Token #1",
-    statusType: "warning",
-    condition: "Lumbar Disc Herniation (L4-L5)",
-    summary: "Currently waiting in OPD live queue. First in line to see the consulting orthopedic surgeon.",
-    avatarColor: "bg-amber-600 text-white",
-  },
-  {
-    id: "patient-priya",
-    name: "Priya Sharma",
-    phone: "9822222222",
-    age: 28,
-    gender: Gender.female,
-    statusBadge: "Live Queue · Token #2",
-    statusType: "info",
-    condition: "Right Knee ACL Tear (Sports Injury)",
-    summary: "Token #2 in live queue. Post-MRI evaluation for knee twisting and ligament arthroscopy review.",
-    avatarColor: "bg-indigo-600 text-white",
-  },
-  {
-    id: "patient-sunita",
-    name: "Sunita Devi",
-    phone: "9844444444",
-    age: 64,
-    gender: Gender.female,
-    statusBadge: "Registered Patient",
-    statusType: "neutral",
-    condition: "Bilateral Knee Osteoarthritis",
-    summary: "Registered patient record with penicillin allergy alert, ready for appointment booking.",
-    avatarColor: "bg-slate-600 text-white",
-  },
-];
 
 /**
  * Self-healing provisioner: Ensures that a demo staff user exists in Supabase Auth
@@ -153,6 +26,8 @@ export async function ensureDemoStaffUser(email: string) {
   if (!staff) {
     throw new Error(`Unknown demo staff account: ${email}`);
   }
+
+  const role = staff.role as Role;
 
   // 1. Get primary clinic (Dr Orthos)
   let clinic = await prisma.clinic.findFirst({
@@ -190,7 +65,7 @@ export async function ensureDemoStaffUser(email: string) {
       user_metadata: { name: staff.name },
       app_metadata: {
         clinicId: clinic.id,
-        role: staff.role,
+        role: role,
         isActive: true,
       },
     });
@@ -202,7 +77,7 @@ export async function ensureDemoStaffUser(email: string) {
       user_metadata: { name: staff.name },
       app_metadata: {
         clinicId: clinic.id,
-        role: staff.role,
+        role: role,
         isActive: true,
       },
     });
@@ -223,7 +98,7 @@ export async function ensureDemoStaffUser(email: string) {
       data: {
         supabaseAuthId,
         name: staff.name,
-        role: staff.role,
+        role: role,
         clinicId: clinic.id,
         isActive: true,
         specialty: staff.specialty ?? existingUser.specialty,
@@ -239,7 +114,7 @@ export async function ensureDemoStaffUser(email: string) {
         clinicId: clinic.id,
         name: staff.name,
         email: staff.email,
-        role: staff.role,
+        role: role,
         supabaseAuthId,
         specialty: staff.specialty,
         qualifications: staff.qualifications,
@@ -291,7 +166,7 @@ export async function ensureDemoPatient(phone: string) {
         name: patientConfig?.name ?? "Demo Patient",
         phone: normalized,
         age: patientConfig?.age ?? 40,
-        gender: patientConfig?.gender ?? Gender.male,
+        gender: (patientConfig?.gender as Gender) ?? Gender.male,
         mrn: `ORTHO-DEMO-${normalized.slice(-4)}`,
         chronicConditions: patientConfig?.condition ?? null,
       },
