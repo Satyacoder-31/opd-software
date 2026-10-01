@@ -15,6 +15,7 @@ import { validatePrescriptionDraft } from "@/lib/prescription-validation";
 import { validateReason } from "@/lib/validation";
 import { isPrescriptionLayoutId } from "@/lib/prescription-layouts";
 import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
+import { normalizeDrugName, parsePrescriptionQuantity } from "@/lib/drug-catalog";
 import { can } from "@/lib/rbac";
 import type { ActionResult, Medicine, VoidActionResult } from "@/lib/types";
 
@@ -53,7 +54,10 @@ export async function savePrescription(
 
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
-    include: { appointment: { select: { status: true } } },
+    include: {
+      appointment: { select: { status: true } },
+      patient: { select: { name: true, mrn: true } },
+    },
   });
 
   if (!consultation) {
@@ -113,7 +117,67 @@ export async function savePrescription(
       });
     }
 
+    // 1. Learn prescribing defaults for autocomplete
     await recordPrescribedDrugs(tx, session.clinicId, validated.medicines);
+
+    // 2. Stock Management: reverse previous consultation deductions if re-saving
+    const previousMovements = await tx.stockMovement.findMany({
+      where: {
+        clinicId: session.clinicId,
+        reference: consultationId,
+        type: "consultation",
+      },
+    });
+
+    for (const prev of previousMovements) {
+      const restoreQty = Math.abs(prev.quantity);
+      await tx.drugCatalogItem.update({
+        where: { id: prev.drugCatalogItemId },
+        data: { stockQuantity: { increment: restoreQty } },
+      });
+    }
+
+    if (previousMovements.length > 0) {
+      await tx.stockMovement.deleteMany({
+        where: {
+          clinicId: session.clinicId,
+          reference: consultationId,
+          type: "consultation",
+        },
+      });
+    }
+
+    // 3. Deduct stock for each prescribed medicine and log the transaction
+    for (const m of validated.medicines) {
+      if (!m.name?.trim()) continue;
+      const normalized = normalizeDrugName(m.name);
+      const item = await tx.drugCatalogItem.findFirst({
+        where: { clinicId: session.clinicId, normalizedName: normalized },
+      });
+
+      if (item) {
+        const qty = parsePrescriptionQuantity(m);
+        const newStock = Math.max(0, item.stockQuantity - qty);
+
+        await tx.drugCatalogItem.update({
+          where: { id: item.id },
+          data: { stockQuantity: newStock },
+        });
+
+        await tx.stockMovement.create({
+          data: {
+            clinicId: session.clinicId,
+            drugCatalogItemId: item.id,
+            type: "consultation",
+            quantity: -qty,
+            balanceAfter: newStock,
+            reference: consultationId,
+            notes: `Dispensed to ${consultation.patient.name} (${consultation.patient.mrn}) — ${m.name} (${qty} units)`,
+            createdById: session.userId,
+          },
+        });
+      }
+    }
 
     return upserted;
   });
@@ -132,6 +196,7 @@ export async function savePrescription(
   revalidatePath(`/consultations/${consultationId}`);
   revalidatePath(`/consultations/${consultationId}/edit`);
   revalidatePath(`/consultations/${consultationId}/amend`);
+  revalidatePath("/medicines");
   return { success: true, data: { id: prescription.id } };
 }
 

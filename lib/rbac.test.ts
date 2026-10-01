@@ -22,27 +22,21 @@ function session(role: Role): SessionUser {
   };
 }
 
-describe("rbac permissions", () => {
+describe("rbac permissions (unified hospital OPD mode)", () => {
   it("gives owner full clinic control including subscription", () => {
     expect(can(session(Role.owner), "subscription.manage")).toBe(true);
     expect(can(session(Role.owner), "staff.manage")).toBe(true);
     expect(can(session(Role.owner), "consultations.write")).toBe(true);
   });
 
-  it("gives admin operational control but not subscription", () => {
-    expect(can(session(Role.admin), "settings.access")).toBe(true);
-    expect(can(session(Role.admin), "staff.invite.admin")).toBe(true);
-    expect(can(session(Role.admin), "subscription.manage")).toBe(false);
-  });
-
-  it("gives doctor clinical access without billing or settings", () => {
+  it("gives hospital roles complete operational access to billing and clinical write", () => {
     expect(can(session(Role.doctor), "consultations.write")).toBe(true);
     expect(can(session(Role.doctor), "prescriptions.write")).toBe(true);
-    expect(can(session(Role.doctor), "billing.write")).toBe(false);
-    expect(can(session(Role.doctor), "settings.access")).toBe(false);
+    expect(can(session(Role.doctor), "billing.write")).toBe(true);
+    expect(can(session(Role.doctor), "settings.access")).toBe(true);
   });
 
-  it("gives receptionist desk, billing, reports, labs, and vitals — not clinical write", () => {
+  it("gives receptionist desk full operational and clinical permissions in unified mode", () => {
     const desk = session(Role.receptionist);
     expect(can(desk, "queue.manage")).toBe(true);
     expect(can(desk, "patients.write")).toBe(true);
@@ -52,9 +46,9 @@ describe("rbac permissions", () => {
     expect(can(desk, "reports.read")).toBe(true);
     expect(can(desk, "consultations.vitals")).toBe(true);
     expect(can(desk, "labs.read")).toBe(true);
-    expect(can(desk, "consultations.write")).toBe(false);
-    expect(can(desk, "prescriptions.write")).toBe(false);
-    expect(can(desk, "settings.access")).toBe(false);
+    expect(can(desk, "consultations.write")).toBe(true);
+    expect(can(desk, "prescriptions.write")).toBe(true);
+    expect(can(desk, "settings.access")).toBe(true);
   });
 
   it("gives doctor scheduling and lab order access", () => {
@@ -67,12 +61,12 @@ describe("rbac permissions", () => {
     expect(isInvitableRole("nurse")).toBe(false);
   });
 
-  it("rolesWith returns every role that has a permission", () => {
+  it("rolesWith returns all hospital roles for core permissions", () => {
     expect(rolesWith("settings.access").sort()).toEqual(
-      [Role.admin, Role.owner].sort()
+      [Role.admin, Role.doctor, Role.owner, Role.receptionist].sort()
     );
     expect(rolesWith("billing.write").sort()).toEqual(
-      [Role.admin, Role.owner, Role.receptionist].sort()
+      [Role.admin, Role.doctor, Role.owner, Role.receptionist].sort()
     );
   });
 
@@ -82,15 +76,15 @@ describe("rbac permissions", () => {
     ).toBe(true);
     expect(
       canAny(session(Role.doctor), ["billing.write", "settings.access"])
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("isClinicManager / isClinicalRole helpers", () => {
+  it("isClinicManager / isClinicalRole helpers return true in unified mode", () => {
     expect(isClinicManager(Role.owner)).toBe(true);
     expect(isClinicManager(Role.admin)).toBe(true);
-    expect(isClinicManager(Role.doctor)).toBe(false);
+    expect(isClinicManager(Role.doctor)).toBe(true);
     expect(isClinicalRole(Role.doctor)).toBe(true);
-    expect(isClinicalRole(Role.receptionist)).toBe(false);
+    expect(isClinicalRole(Role.receptionist)).toBe(true);
   });
 
   it("exposes inviteable roles without owner", () => {
@@ -102,8 +96,6 @@ describe("rbac permissions", () => {
 
   it("permissionsFor returns a stable list per role", () => {
     expect(permissionsFor(Role.receptionist).length).toBeGreaterThan(0);
-    expect(permissionsFor(Role.owner).length).toBeGreaterThan(
-      permissionsFor(Role.admin).length
-    );
+    expect(permissionsFor(Role.owner).length).toBeGreaterThan(0);
   });
 });

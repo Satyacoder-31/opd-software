@@ -6,6 +6,7 @@ import {
   faGear,
   faIndianRupeeSign,
   faListOl,
+  faPills,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import type { Permission } from "@/lib/rbac";
@@ -56,6 +57,12 @@ export const PRIMARY_NAV_GROUPS: readonly PrimaryNavGroup[] = [
         permission: "patients.read",
         icon: faUsers,
         mobilePrimary: true,
+      },
+      {
+        href: "/medicines",
+        label: "Medicines & Stock",
+        permission: "drugs.search",
+        icon: faPills,
       },
       {
         href: "/labs",

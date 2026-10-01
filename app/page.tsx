@@ -1,9 +1,11 @@
-import { redirect } from "next/navigation";
 import { LandingPage } from "@/components/landing/LandingPage";
-import { getSessionUser } from "@/lib/auth";
 
-export default async function HomePage() {
-  const session = await getSessionUser();
-  if (session) redirect("/queue");
+export const metadata = {
+  title: "Dr. Ortho | Advanced Orthopedic & Joint Health Center",
+  description:
+    "Premier orthopedic and musculoskeletal hospital OPD. Advanced joint replacement, arthroscopy, fracture care, and online appointment booking.",
+};
+
+export default function HomePage() {
   return <LandingPage />;
 }

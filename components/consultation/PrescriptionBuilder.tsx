@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import {
   applyDrugDefaults,
   type DrugSuggestion,
+  findDrugSuggestion,
 } from "@/lib/drug-catalog";
 import {
   loadFavoriteMedicines,
@@ -474,6 +475,45 @@ export function PrescriptionBuilder({
                   favorites={favorites}
                   onFavoritesChange={setFavorites}
                 />
+
+                {(() => {
+                  const matchedDrug = med.name?.trim()
+                    ? findDrugSuggestion(drugSuggestions, med.name)
+                    : null;
+                  if (!matchedDrug || matchedDrug.stockQuantity === undefined) {
+                    return null;
+                  }
+                  const stock = matchedDrug.stockQuantity;
+                  const reorder = matchedDrug.reorderLevel ?? 10;
+                  return (
+                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-xs">
+                      <span className="font-medium text-muted-foreground">Pharmacy stock:</span>
+                      {stock > reorder ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+                          ✓ {stock} units available
+                        </span>
+                      ) : stock > 0 ? (
+                        <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+                          ⚠ Low stock: {stock} left (reorder level: {reorder})
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-rose-500/15 px-2 py-0.5 font-medium text-rose-700 dark:text-rose-400">
+                          ✕ Out of stock (0 units in pharmacy)
+                        </span>
+                      )}
+                      {matchedDrug.batchNumber ? (
+                        <span className="text-[11px] text-muted-foreground">
+                          · Batch: {matchedDrug.batchNumber}
+                        </span>
+                      ) : null}
+                      {matchedDrug.unitPrice ? (
+                        <span className="text-[11px] text-muted-foreground">
+                          · MRP: ₹{matchedDrug.unitPrice}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex flex-col gap-2.5">
                   <div className="grid grid-cols-2 gap-2.5">

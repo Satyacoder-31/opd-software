@@ -134,7 +134,7 @@ export function BrandLogo({
               inverted ? "text-sky-300/80" : "text-sky-700"
             )}
           >
-            Orthopedic Care
+            Hospital OPD System
           </span>
         )}
       </span>

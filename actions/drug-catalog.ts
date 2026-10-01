@@ -61,6 +61,14 @@ export async function listDrugSuggestions(): Promise<DrugSuggestion[]> {
       name: true,
       normalizedName: true,
       usageCount: true,
+      stockQuantity: true,
+      reorderLevel: true,
+      genericName: true,
+      category: true,
+      strength: true,
+      batchNumber: true,
+      expiryDate: true,
+      unitPrice: true,
       dosage: true,
       route: true,
       frequency: true,
@@ -69,10 +77,15 @@ export async function listDrugSuggestions(): Promise<DrugSuggestion[]> {
       instructions: true,
     },
     orderBy: [{ usageCount: "desc" }, { name: "asc" }],
-    take: 300,
+    take: 1000,
   });
 
-  return buildDrugSuggestions(clinicEntries);
+  const serialized = clinicEntries.map((e) => ({
+    ...e,
+    unitPrice: e.unitPrice ? Number(e.unitPrice) : null,
+  }));
+
+  return buildDrugSuggestions(serialized);
 }
 
 export async function listClinicDrugItems() {

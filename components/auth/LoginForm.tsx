@@ -35,13 +35,13 @@ export function LoginForm() {
           <div className="w-full border-t border-border" />
         </div>
         <div className="relative bg-card px-3 text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          Or sign in manually
+          Or sign in with hospital credentials
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
-          label="Email"
+          label="Hospital Staff Email"
           name="email"
           type="email"
           autoComplete="email"
@@ -66,7 +66,7 @@ export function LoginForm() {
           </p>
         )}
         <Button type="submit" loading={pending}>
-          Sign in with Password
+          Sign in to Hospital Workspace
         </Button>
         <p className="text-sm text-muted-foreground">
           <Link
@@ -77,12 +77,12 @@ export function LoginForm() {
           </Link>
         </p>
         <p className="text-sm text-muted-foreground">
-          New clinic?{" "}
+          New hospital or clinic?{" "}
           <Link
             href="/signup"
             className="text-primary underline-offset-4 transition-[color,opacity] duration-150 hover:underline active:opacity-70"
           >
-            Register your clinic
+            Register hospital facility
           </Link>
         </p>
       </form>

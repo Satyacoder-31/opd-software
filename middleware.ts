@@ -14,30 +14,32 @@ const publicRoutes = [
   "/privacy",
 ];
 
+const ALL_STAFF_ROLES = ["owner", "admin", "doctor", "receptionist"] as const;
+
 /**
  * Lightweight route → role allowlists for Edge.
- * Keep in sync with lib/rbac.ts (JWT role is a hint; actions re-check DB).
+ * Unified hospital OPD mode allows hospital users to manage everything.
  * More specific paths MUST be evaluated before parent paths.
  */
 const routeAllowedRoles: Record<string, readonly string[]> = {
-  "/settings/clinic": ["owner", "admin"],
-  "/settings/availability": ["owner", "admin", "doctor"],
-  "/settings/prescriptions": ["owner", "admin"],
-  "/settings/medicines": ["owner", "admin"],
-  "/settings/labs": ["owner", "admin"],
-  "/settings/notifications": ["owner", "admin"],
-  "/settings/staff": ["owner", "admin"],
-  "/settings/fees": ["owner", "admin"],
-  "/settings/subscription": ["owner"],
-  "/settings/audit": ["owner", "admin"],
-  "/settings": ["owner", "admin", "doctor", "receptionist"],
-  "/reports": ["owner", "admin", "receptionist"],
-  "/consultations": ["owner", "admin", "doctor"],
-  "/billing": ["owner", "admin", "receptionist"],
-  "/labs": ["owner", "admin", "doctor", "receptionist"],
-  "/appointments": ["owner", "admin", "doctor", "receptionist"],
-  "/patients": ["owner", "admin", "doctor", "receptionist"],
-  "/queue": ["owner", "admin", "doctor", "receptionist"],
+  "/settings/clinic": ALL_STAFF_ROLES,
+  "/settings/availability": ALL_STAFF_ROLES,
+  "/settings/prescriptions": ALL_STAFF_ROLES,
+  "/settings/medicines": ALL_STAFF_ROLES,
+  "/settings/labs": ALL_STAFF_ROLES,
+  "/settings/notifications": ALL_STAFF_ROLES,
+  "/settings/staff": ALL_STAFF_ROLES,
+  "/settings/fees": ALL_STAFF_ROLES,
+  "/settings/subscription": ALL_STAFF_ROLES,
+  "/settings/audit": ALL_STAFF_ROLES,
+  "/settings": ALL_STAFF_ROLES,
+  "/reports": ALL_STAFF_ROLES,
+  "/consultations": ALL_STAFF_ROLES,
+  "/billing": ALL_STAFF_ROLES,
+  "/labs": ALL_STAFF_ROLES,
+  "/appointments": ALL_STAFF_ROLES,
+  "/patients": ALL_STAFF_ROLES,
+  "/queue": ALL_STAFF_ROLES,
 };
 
 function isPublicRoute(pathname: string): boolean {
@@ -75,7 +77,13 @@ function nextWithCleanHeaders(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/portal" || pathname.startsWith("/portal/")) {
+  // The software is for the hospital, not patients — redirect public patient portal routes to login
+  if (
+    pathname === "/portal" ||
+    pathname.startsWith("/portal/") ||
+    pathname === "/clinics" ||
+    pathname.startsWith("/clinics/")
+  ) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

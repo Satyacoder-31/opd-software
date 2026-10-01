@@ -52,70 +52,11 @@ export type Permission = (typeof PERMISSIONS)[number];
 
 const ALL_PERMISSIONS = [...PERMISSIONS] as Permission[];
 
-/** Owner: full clinic control including subscription and inviting admins. */
-const OWNER_PERMISSIONS: Permission[] = ALL_PERMISSIONS;
-
-/**
- * Admin: full operational control. Same clinical/desk powers as owner,
- * but subscription / ownership-sensitive actions stay owner-only.
- */
-const ADMIN_PERMISSIONS: Permission[] = ALL_PERMISSIONS.filter(
-  (p) => p !== "subscription.manage"
-);
-
-const DOCTOR_PERMISSIONS: Permission[] = [
-  "patients.read",
-  "patients.write",
-  "queue.read",
-  "queue.manage",
-  "appointments.schedule",
-  "appointments.cancel",
-  "consultations.start",
-  "consultations.read",
-  "consultations.write",
-  "consultations.vitals",
-  "prescriptions.write",
-  "templates.manage",
-  "attachments.manage",
-  "fees.read",
-  "drugs.search",
-  "labs.read",
-  "labs.manage",
-  "labs.results",
-  "messaging.send",
-  "settings.access",
-];
-
-/**
- * Receptionist: front desk + billing + reports + lab desk.
- * Also covers former nurse/assistant duties (queue, patient prep, vitals).
- * No prescriptions, diagnosis edits, or clinic settings.
- */
-const RECEPTIONIST_PERMISSIONS: Permission[] = [
-  "patients.read",
-  "patients.write",
-  "queue.read",
-  "queue.manage",
-  "appointments.cancel",
-  "appointments.schedule",
-  "consultations.vitals",
-  "billing.read",
-  "billing.write",
-  "fees.read",
-  "labs.read",
-  "labs.manage",
-  "labs.results",
-  "messaging.send",
-  "reports.read",
-  "reports.export.visits",
-  "settings.access",
-];
-
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  owner: OWNER_PERMISSIONS,
-  admin: ADMIN_PERMISSIONS,
-  doctor: DOCTOR_PERMISSIONS,
-  receptionist: RECEPTIONIST_PERMISSIONS,
+  owner: ALL_PERMISSIONS,
+  admin: ALL_PERMISSIONS,
+  doctor: ALL_PERMISSIONS,
+  receptionist: ALL_PERMISSIONS,
 };
 
 /** Roles that can be assigned when inviting staff (never owner). */
@@ -124,14 +65,14 @@ export const INVITABLE_ROLES = ["admin", "doctor", "receptionist"] as const sati
 export type InvitableRole = (typeof INVITABLE_ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
-  owner: "Owner",
-  admin: "Admin",
-  doctor: "Doctor",
-  receptionist: "Receptionist",
+  owner: "Hospital Lead / Owner",
+  admin: "Hospital Admin",
+  doctor: "Consulting Doctor",
+  receptionist: "Front Desk & Billing",
 };
 
 export function permissionsFor(role: Role): readonly Permission[] {
-  return ROLE_PERMISSIONS[role] ?? [];
+  return ROLE_PERMISSIONS[role] ?? ALL_PERMISSIONS;
 }
 
 export function can(
@@ -154,13 +95,14 @@ export function rolesWith(permission: Permission): Role[] {
   );
 }
 
-/** Owner and admin manage clinic settings / staff. */
-export function isClinicManager(role: Role): boolean {
-  return role === "owner" || role === "admin";
+/** All hospital staff have clinic operational management access in unified mode. */
+export function isClinicManager(_role: Role): boolean {
+  return true;
 }
 
-export function isClinicalRole(role: Role): boolean {
-  return role === "owner" || role === "admin" || role === "doctor";
+/** All hospital staff have clinical capabilities in unified mode. */
+export function isClinicalRole(_role: Role): boolean {
+  return true;
 }
 
 export function isInvitableRole(role: string): role is InvitableRole {

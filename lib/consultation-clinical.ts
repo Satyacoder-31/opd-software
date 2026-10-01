@@ -16,6 +16,9 @@ export const vitalsSchema = z.object({
   temp: z.string().optional(),
   weight: z.string().optional(),
   spo2: z.string().optional(),
+  height: z.string().optional(),
+  bmi: z.string().optional(),
+  respiratoryRate: z.string().optional(),
 });
 
 export const VITAL_FIELDS = [

@@ -64,25 +64,10 @@ describe("canTransitionAppointment", () => {
 });
 
 describe("canSetAppointmentStatus", () => {
-  it("blocks receptionists from starting consultations", () => {
+  it("allows hospital staff to start consultations in unified mode", () => {
     expect(
       canSetAppointmentStatus(Role.receptionist, AppointmentStatus.in_progress)
-    ).toBe(false);
-  });
-
-  it("blocks all roles from finalizing via the queue action", () => {
-    expect(
-      canSetAppointmentStatus(Role.receptionist, AppointmentStatus.done)
-    ).toBe(false);
-    expect(canSetAppointmentStatus(Role.doctor, AppointmentStatus.done)).toBe(
-      false
-    );
-    expect(canSetAppointmentStatus(Role.admin, AppointmentStatus.done)).toBe(
-      false
-    );
-  });
-
-  it("allows owners, doctors and admins to start consultations", () => {
+    ).toBe(true);
     expect(
       canSetAppointmentStatus(Role.doctor, AppointmentStatus.in_progress)
     ).toBe(true);
@@ -94,7 +79,19 @@ describe("canSetAppointmentStatus", () => {
     ).toBe(true);
   });
 
-  it("allows owner, admin and receptionist to cancel or mark no-show", () => {
+  it("blocks all roles from finalizing directly via the queue action (must finalize in consultation workspace)", () => {
+    expect(
+      canSetAppointmentStatus(Role.receptionist, AppointmentStatus.done)
+    ).toBe(false);
+    expect(canSetAppointmentStatus(Role.doctor, AppointmentStatus.done)).toBe(
+      false
+    );
+    expect(canSetAppointmentStatus(Role.admin, AppointmentStatus.done)).toBe(
+      false
+    );
+  });
+
+  it("allows hospital staff to cancel or mark no-show", () => {
     expect(
       canSetAppointmentStatus(Role.admin, AppointmentStatus.cancelled)
     ).toBe(true);
@@ -106,7 +103,7 @@ describe("canSetAppointmentStatus", () => {
     ).toBe(true);
     expect(
       canSetAppointmentStatus(Role.doctor, AppointmentStatus.cancelled)
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

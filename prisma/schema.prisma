@@ -204,6 +204,7 @@ model Clinic {
   clinicPatients          ClinicPatient[]
   doctorAvailabilities    DoctorAvailability[]
   doctorLeaves            DoctorLeave[]
+  stockMovements          StockMovement[]
 }
 
 model User {
@@ -244,6 +245,7 @@ model User {
   labItemsResulted      LabOrderItem[] @relation("LabItemResultedBy")
   availabilities        DoctorAvailability[]
   leaves                DoctorLeave[]
+  stockMovementsCreated StockMovement[]
 
   @@index([clinicId])
 }
@@ -520,10 +522,21 @@ model FeeItem {
 }
 
 model DrugCatalogItem {
-  id             String   @id @default(uuid())
+  id             String          @id @default(uuid())
   clinicId       String
   name           String
   normalizedName String
+  genericName    String?
+  category       String?
+  strength       String?
+  manufacturer   String?
+  batchNumber    String?
+  expiryDate     DateTime?       @db.Date
+  stockQuantity  Int             @default(0)
+  reorderLevel   Int             @default(10)
+  unitPrice      Decimal?        @db.Decimal(10, 2)
+  purchasePrice  Decimal?        @db.Decimal(10, 2)
+  rackLocation   String?
   /// Default dose string applied when this medicine is picked in Rx.
   dosage         String?
   /// Default route of administration (e.g. Oral, Topical).
@@ -532,16 +545,38 @@ model DrugCatalogItem {
   duration       String?
   quantity       String?
   instructions   String?
-  isActive       Boolean  @default(true)
-  usageCount     Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isActive       Boolean         @default(true)
+  usageCount     Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  clinic         Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
 
   @@unique([clinicId, normalizedName])
   @@index([clinicId, isActive, usageCount])
   @@index([clinicId, name])
+  @@index([clinicId, stockQuantity])
+}
+
+model StockMovement {
+  id                String          @id @default(uuid())
+  clinicId          String
+  drugCatalogItemId String
+  type              String          // purchase, consultation, adjustment, return, expired
+  quantity          Int             // positive for additions, negative for deductions
+  balanceAfter      Int
+  reference         String?         // consultationId, invoice #, purchase order #
+  notes             String?
+  createdById       String?
+  createdAt         DateTime        @default(now())
+
+  clinic          Clinic          @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  drugCatalogItem DrugCatalogItem @relation(fields: [drugCatalogItemId], references: [id], onDelete: Cascade)
+  createdBy       User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([clinicId, createdAt])
+  @@index([drugCatalogItemId])
 }
 
 model PrescriptionTemplate {

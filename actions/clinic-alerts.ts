@@ -125,6 +125,38 @@ export async function listClinicAlerts(): Promise<ClinicAlert[]> {
     );
   }
 
+  if (can(session, "drugs.search")) {
+    tasks.push(
+      (async () => {
+        const items = await prisma.drugCatalogItem.findMany({
+          where: {
+            clinicId: session.clinicId,
+            isActive: true,
+          },
+          select: {
+            stockQuantity: true,
+            reorderLevel: true,
+          },
+        });
+        const lowOrOut = items.filter(
+          (item) => item.stockQuantity <= item.reorderLevel
+        ).length;
+        if (lowOrOut <= 0) return;
+        alerts.push({
+          id: "medicines:low_stock",
+          title:
+            lowOrOut === 1
+              ? "1 medicine low on stock"
+              : `${lowOrOut} medicines low on stock`,
+          description: "Inventory below reorder level — restock needed",
+          href: "/medicines?status=low_stock",
+          createdAt: nowIso,
+          tone: "warning",
+        });
+      })()
+    );
+  }
+
   if (can(session, "clinic.manage")) {
     tasks.push(
       (async () => {

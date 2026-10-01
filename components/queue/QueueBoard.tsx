@@ -114,10 +114,10 @@ export function QueueBoard({
   const inProgress = queue.filter((q) => q.status === "in_progress");
   const waiting = queue.filter((q) => q.status === "waiting");
 
-  const tabs: { id: QueueTab; label: string }[] = [
-    { id: "waiting", label: "Waiting" },
-    { id: "in_progress", label: "In consult" },
-    { id: "completed", label: "Done" },
+  const tabs: { id: QueueTab; label: string; count: number }[] = [
+    { id: "waiting", label: "Waiting", count: waiting.length },
+    { id: "in_progress", label: "In consult", count: inProgress.length },
+    { id: "completed", label: "Completed", count: completed.length },
   ];
 
   return (
@@ -137,6 +137,74 @@ export function QueueBoard({
         }
       />
 
+      {/* LIVE STAT KPI BAR */}
+      <div className="border-b border-border bg-card px-4 py-4 sm:px-6 md:px-8">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <div
+            onClick={() => setTab("waiting")}
+            className={cn(
+              "cursor-pointer rounded-xl border p-3.5 transition-all",
+              tab === "waiting"
+                ? "border-sky-300 bg-sky-50/70 shadow-xs"
+                : "border-border bg-surface hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
+                Waiting
+              </span>
+              <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+            </div>
+            <div className="mt-1 font-display text-2xl font-bold text-ink">
+              {waiting.length}
+            </div>
+            <span className="text-[11px] text-muted-foreground">in waiting room</span>
+          </div>
+
+          <div
+            onClick={() => setTab("in_progress")}
+            className={cn(
+              "cursor-pointer rounded-xl border p-3.5 transition-all",
+              tab === "in_progress"
+                ? "border-blue-300 bg-blue-50/70 shadow-xs"
+                : "border-border bg-surface hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+                In Consult
+              </span>
+              <span className="size-2 rounded-full bg-blue-600" />
+            </div>
+            <div className="mt-1 font-display text-2xl font-bold text-ink">
+              {inProgress.length}
+            </div>
+            <span className="text-[11px] text-muted-foreground">with doctor</span>
+          </div>
+
+          <div
+            onClick={() => setTab("completed")}
+            className={cn(
+              "cursor-pointer rounded-xl border p-3.5 transition-all",
+              tab === "completed"
+                ? "border-emerald-300 bg-emerald-50/70 shadow-xs"
+                : "border-border bg-surface hover:bg-slate-50"
+            )}
+          >
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                Completed
+              </span>
+              <span className="size-2 rounded-full bg-emerald-500" />
+            </div>
+            <div className="mt-1 font-display text-2xl font-bold text-ink">
+              {completed.length}
+            </div>
+            <span className="text-[11px] text-emerald-700 font-medium">ready for billing</span>
+          </div>
+        </div>
+      </div>
+
       <div className="border-b border-border bg-card">
         <div
           role="tablist"
@@ -153,14 +221,24 @@ export function QueueBoard({
                 aria-selected={selected}
                 onClick={() => setTab(item.id)}
                 className={cn(
-                  "inline-flex min-h-11 flex-1 items-center justify-center px-2 text-sm font-medium transition-[background-color,color] duration-150",
+                  "inline-flex min-h-11 flex-1 items-center justify-center gap-2 px-2 text-sm font-semibold transition-[background-color,color] duration-150",
                   "border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                   selected
-                    ? "border-primary bg-white text-ink"
+                    ? "border-primary bg-white text-primary shadow-xs"
                     : "border-transparent text-muted-foreground hover:bg-white/70 hover:text-ink"
                 )}
               >
-                {item.label}
+                <span>{item.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
+                    selected
+                      ? "bg-primary text-white"
+                      : "bg-slate-200 text-slate-700"
+                  )}
+                >
+                  {item.count}
+                </span>
               </button>
             );
           })}
@@ -488,6 +566,19 @@ function CompletedCard({
 
           {(showVisit || showBilling) && (
             <div className="flex flex-wrap gap-2">
+              {showBilling && item.consultation && (
+                <Button
+                  nativeButton={false}
+                  render={
+                    <Link href={`/billing/${item.consultation.id}`} />
+                  }
+                  size="sm"
+                  variant="primary"
+                >
+                  <Icon icon={faReceipt} data-icon="inline-start" />
+                  Bill Patient
+                </Button>
+              )}
               {showVisit && item.consultation && (
                 <Button
                   nativeButton={false}
@@ -499,19 +590,6 @@ function CompletedCard({
                 >
                   <Icon icon={faEye} data-icon="inline-start" />
                   View visit
-                </Button>
-              )}
-              {showBilling && item.consultation && (
-                <Button
-                  nativeButton={false}
-                  render={
-                    <Link href={`/billing/${item.consultation.id}`} />
-                  }
-                  size="sm"
-                  variant="secondary"
-                >
-                  <Icon icon={faReceipt} data-icon="inline-start" />
-                  Billing
                 </Button>
               )}
             </div>

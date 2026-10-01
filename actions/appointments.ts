@@ -47,6 +47,7 @@ export type CreateAppointmentInput = {
   type?: AppointmentType;
   scheduledAt?: string | Date | null;
   doctorId?: string | null;
+  reasonForVisit?: string | null;
 };
 
 export async function createAppointment(
@@ -152,6 +153,7 @@ export async function createAppointment(
                 : BookingSource.walkin,
             scheduledAt: scheduled,
             doctorId,
+            reasonForVisit: input.reasonForVisit?.trim() || null,
             createdById: session.userId,
           },
         });
@@ -588,31 +590,40 @@ export async function listScheduledAppointments(input?: {
   date?: string;
   from?: string;
   to?: string;
+  view?: "day" | "upcoming" | "all";
 }) {
   const session = await requireSessionUser();
   if (!can(session, "appointments.schedule") && !can(session, "queue.read")) {
     return [];
   }
 
+  const today = todayDate();
   const day =
     (input?.date?.trim()
       ? parseLocalDateInput(input.date.trim())
-      : null) ?? todayDate();
+      : null) ?? today;
 
-  const start = input?.from
-    ? parseLocalDateInput(input.from) ?? day
-    : day;
-  const end = input?.to
-    ? parseLocalDateInput(input.to) ?? day
-    : day;
+  let startDay: Date;
+  let endDay: Date;
 
-  const startDay = dateOnly(start);
-  const endDay = dateOnly(end);
+  if (input?.view === "upcoming") {
+    startDay = dateOnly(today);
+    endDay = new Date(startDay);
+    endDay.setDate(endDay.getDate() + 30);
+  } else {
+    const start = input?.from ? parseLocalDateInput(input.from) ?? day : day;
+    const end = input?.to ? parseLocalDateInput(input.to) ?? day : day;
+    startDay = dateOnly(start);
+    endDay = dateOnly(end);
+  }
+
+  const typeFilter =
+    input?.view === "all" ? undefined : AppointmentType.scheduled;
 
   return prisma.appointment.findMany({
     where: {
       clinicId: session.clinicId,
-      type: AppointmentType.scheduled,
+      ...(typeFilter ? { type: typeFilter } : {}),
       queueDate: { gte: startDay, lte: endDay },
       status: {
         in: [
@@ -624,7 +635,11 @@ export async function listScheduledAppointments(input?: {
         ],
       },
     },
-    orderBy: [{ scheduledAt: "asc" }, { tokenNumber: "asc" }],
+    orderBy: [
+      { queueDate: "asc" },
+      { scheduledAt: "asc" },
+      { tokenNumber: "asc" },
+    ],
     include: {
       patient: {
         select: { id: true, name: true, phone: true, mrn: true },
@@ -633,6 +648,63 @@ export async function listScheduledAppointments(input?: {
       consultation: { select: { id: true } },
     },
   });
+}
+
+export async function getAppointmentMetrics() {
+  const session = await requireSessionUser();
+  if (!can(session, "appointments.schedule") && !can(session, "queue.read")) {
+    return {
+      todayTotal: 0,
+      todayWaiting: 0,
+      todayCheckedIn: 0,
+      upcomingCount: 0,
+    };
+  }
+
+  const today = dateOnly(todayDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextMonth = new Date(today);
+  nextMonth.setDate(nextMonth.getDate() + 30);
+
+  const [todayAppts, upcomingCount] = await Promise.all([
+    prisma.appointment.findMany({
+      where: {
+        clinicId: session.clinicId,
+        queueDate: today,
+        status: { notIn: [AppointmentStatus.cancelled, AppointmentStatus.no_show] },
+      },
+      select: {
+        status: true,
+        checkedInAt: true,
+        type: true,
+      },
+    }),
+    prisma.appointment.count({
+      where: {
+        clinicId: session.clinicId,
+        queueDate: { gte: tomorrow, lte: nextMonth },
+        status: { in: [AppointmentStatus.waiting, AppointmentStatus.in_progress] },
+      },
+    }),
+  ]);
+
+  const todayWaiting = todayAppts.filter(
+    (a) => a.status === AppointmentStatus.waiting && !a.checkedInAt
+  ).length;
+  const todayCheckedIn = todayAppts.filter(
+    (a) =>
+      Boolean(a.checkedInAt) ||
+      a.status === AppointmentStatus.in_progress ||
+      a.status === AppointmentStatus.done
+  ).length;
+
+  return {
+    todayTotal: todayAppts.length,
+    todayWaiting,
+    todayCheckedIn,
+    upcomingCount,
+  };
 }
 
 export async function rescheduleAppointment(

@@ -6,6 +6,7 @@ import {
   AppointmentType,
   BookingSource,
   Gender,
+  Role,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -960,3 +961,218 @@ export async function downloadPortalPrescription(
     },
   };
 }
+
+export type HomepageBookingInput = {
+  patientName: string;
+  phone: string;
+  age?: number | string | null;
+  gender?: string | null;
+  specialty?: string | null;
+  date: string;
+  timeSlot: string;
+  symptoms?: string | null;
+};
+
+export async function bookHomepageAppointment(
+  input: HomepageBookingInput
+): Promise<
+  ActionResult<{
+    appointmentId: string;
+    tokenNumber: number;
+    queueDate: string;
+    patientName: string;
+    mrn: string;
+    scheduledTime: string;
+    doctorName: string;
+    clinicName: string;
+    clinicPhone: string;
+    clinicAddress: string;
+  }>
+> {
+  try {
+    const rawName = input.patientName?.trim();
+    const rawPhone = input.phone?.trim();
+    if (!rawName || rawName.length < 2) {
+      return { success: false, error: "Please enter a valid patient full name." };
+    }
+    if (!rawPhone || rawPhone.replace(/\D/g, "").length < 10) {
+      return {
+        success: false,
+        error: "Please enter a valid 10-digit mobile number.",
+      };
+    }
+
+    const normalizedPhone = normalizePhone(rawPhone);
+
+    // 1. Find clinic (prefer "dr-orthos" or first in database)
+    let clinic = await prisma.clinic.findFirst({
+      where: { slug: "dr-orthos" },
+    });
+    if (!clinic) {
+      clinic = await prisma.clinic.findFirst({
+        orderBy: { createdAt: "asc" },
+      });
+    }
+    if (!clinic) {
+      return {
+        success: false,
+        error: "Clinic not found. Please contact the reception desk.",
+      };
+    }
+
+    // 2. Resolve Doctor (prefer specialist or active doctor)
+    let doctor = await prisma.user.findFirst({
+      where: {
+        clinicId: clinic.id,
+        role: { in: [Role.doctor, Role.owner] },
+        isActive: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!doctor) {
+      doctor = await prisma.user.findFirst({
+        where: { clinicId: clinic.id, isActive: true },
+      });
+    }
+    if (!doctor) {
+      return {
+        success: false,
+        error: "No consultant doctor is currently available.",
+      };
+    }
+
+    // 3. Upsert or find Patient
+    let patient = await prisma.patient.findFirst({
+      where: {
+        clinicId: clinic.id,
+        phone: { contains: normalizedPhone.slice(-10) },
+      },
+    });
+
+    const parsedAge = input.age ? parseInt(String(input.age), 10) : null;
+    const genderEnum =
+      input.gender === "female"
+        ? Gender.female
+        : input.gender === "other"
+        ? Gender.other
+        : Gender.male;
+
+    if (!patient) {
+      const mrn = await generateMrn(clinic.id);
+      patient = await prisma.patient.create({
+        data: {
+          clinicId: clinic.id,
+          name: rawName,
+          phone: normalizedPhone,
+          age: parsedAge && !isNaN(parsedAge) ? parsedAge : null,
+          gender: genderEnum,
+          mrn,
+        },
+      });
+    } else {
+      patient = await prisma.patient.update({
+        where: { id: patient.id },
+        data: {
+          name: rawName,
+          age: parsedAge && !isNaN(parsedAge) ? parsedAge : patient.age,
+          gender: genderEnum,
+        },
+      });
+    }
+
+    // 4. Calculate Scheduled DateTime
+    const scheduledDateObj =
+      parseLocalDateInput(input.date) ?? clinicTodayDate();
+    const queueDate = dateOnly(scheduledDateObj);
+
+    let hours = 10;
+    let minutes = 0;
+    if (input.timeSlot) {
+      const parts = input.timeSlot.trim().match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (parts) {
+        hours = parseInt(parts[1], 10);
+        minutes = parseInt(parts[2], 10);
+        const meridiem = parts[3]?.toUpperCase();
+        if (meridiem === "PM" && hours < 12) hours += 12;
+        if (meridiem === "AM" && hours === 12) hours = 0;
+      }
+    }
+    const scheduledAt = new Date(queueDate);
+    scheduledAt.setHours(hours, minutes, 0, 0);
+
+    // 5. Get next sequential token number for this clinic/day
+    const lastAppt = await prisma.appointment.findFirst({
+      where: { clinicId: clinic.id, queueDate },
+      orderBy: { tokenNumber: "desc" },
+      select: { tokenNumber: true },
+    });
+    const nextToken = (lastAppt?.tokenNumber ?? 0) + 1;
+
+    // 6. Create the Appointment
+    const reason =
+      [
+        input.specialty ? `Specialty: ${input.specialty}` : null,
+        input.symptoms ? `Symptoms: ${input.symptoms}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || "Online Homepage Consultation Booking";
+
+    const appointment = await prisma.appointment.create({
+      data: {
+        clinicId: clinic.id,
+        patientId: patient.id,
+        doctorId: doctor.id,
+        tokenNumber: nextToken,
+        queueDate,
+        type: AppointmentType.scheduled,
+        bookingSource: BookingSource.portal,
+        scheduledAt,
+        slotEnd: new Date(scheduledAt.getTime() + 15 * 60 * 1000),
+        reasonForVisit: reason,
+        status: AppointmentStatus.waiting,
+      },
+    });
+
+    revalidatePath("/appointments");
+    revalidatePath("/queue");
+    revalidatePath("/patients");
+    revalidatePath("/");
+
+    const timeDisplay = scheduledAt.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const dateDisplay = scheduledAt.toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    return {
+      success: true,
+      data: {
+        appointmentId: appointment.id,
+        tokenNumber: nextToken,
+        queueDate: dateDisplay,
+        scheduledTime: `${timeDisplay} on ${dateDisplay}`,
+        patientName: patient.name,
+        mrn: patient.mrn,
+        doctorName: doctor.name,
+        clinicName: clinic.name,
+        clinicPhone: clinic.phone,
+        clinicAddress: clinic.address,
+      },
+    };
+  } catch (err) {
+    logger.error("homepage_booking_failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return {
+      success: false,
+      error:
+        "We could not complete your booking at this moment. Please call our clinic directly.",
+    };
+  }
+}
+

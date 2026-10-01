@@ -17,22 +17,25 @@ export type DemoStaffAccount = {
   tagline: string;
 };
 
+export const UNIFIED_HOSPITAL_ACCOUNT: DemoStaffAccount = {
+  id: "demo-owner",
+  name: "Dr. Orthos Lead Consultant & Hospital Administrator",
+  email: "admin@demo.local",
+  password: DEMO_STAFF_PASSWORD,
+  role: "owner",
+  roleLabel: "Hospital OPD Master (Doctor + Admin + Billing)",
+  specialty: "Orthopedic Surgeon & Hospital Director",
+  qualifications: "MBBS, MS (Orthopedics), DNB, Fellowship in Arthroscopy",
+  consultationFee: 800,
+  phone: "9876543210",
+  description:
+    "Unified hospital master account. Full authority over doctor consultations, e-prescriptions, live queue tokens, billing invoices, patient records, lab investigations, and hospital settings.",
+  avatarColor: "bg-sky-700 text-white shadow-sky-700/30",
+  tagline: "All-in-One Hospital OPD Access",
+};
+
 export const DEMO_STAFF_ACCOUNTS: DemoStaffAccount[] = [
-  {
-    id: "demo-owner",
-    name: "Dr. Orthos Lead Consultant",
-    email: "admin@demo.local",
-    password: DEMO_STAFF_PASSWORD,
-    role: "owner",
-    roleLabel: "Owner & Chief Surgeon",
-    specialty: "Orthopedic Surgeon & Joint Specialist",
-    qualifications: "MBBS, MS (Orthopedics), DNB, Fellowship in Arthroscopy",
-    consultationFee: 800,
-    phone: "9876543210",
-    description: "Complete clinic ownership, surgeries, clinical consultations, invoicing & system settings.",
-    avatarColor: "bg-amber-600 text-white shadow-amber-600/30",
-    tagline: "Full Clinic Control",
-  },
+  UNIFIED_HOSPITAL_ACCOUNT,
   {
     id: "demo-doctor",
     name: "Dr. Meera Rao",

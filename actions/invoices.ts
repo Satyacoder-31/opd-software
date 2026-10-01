@@ -9,7 +9,7 @@ import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 import { renderReceiptPdf } from "@/lib/pdf";
 import { validateBillingInput, validateReason } from "@/lib/validation";
-import { parseLocalDateInput, clinicTodayDate } from "@/lib/date-utils";
+import { parseLocalDateInput, clinicTodayDate, formatPatientAge } from "@/lib/date-utils";
 import {
   matchesBillingHubSearch,
   matchesBillingHubStatus,
@@ -169,8 +169,53 @@ export async function getBillingContext(consultationId: string) {
   const consultation = await prisma.consultation.findFirst({
     where: { id: consultationId, clinicId: session.clinicId },
     include: {
-      patient: { select: { id: true, name: true, mrn: true } },
-      invoice: true,
+      patient: true,
+      doctor: {
+        select: {
+          id: true,
+          name: true,
+          specialty: true,
+          qualifications: true,
+          registrationNo: true,
+        },
+      },
+      appointment: {
+        select: {
+          id: true,
+          tokenNumber: true,
+          queueDate: true,
+          type: true,
+          bookingSource: true,
+          reasonForVisit: true,
+          status: true,
+        },
+      },
+      prescription: {
+        select: {
+          id: true,
+          medicines: true,
+          advice: true,
+          followUp: true,
+        },
+      },
+      clinic: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          address: true,
+          gstin: true,
+          logoUrl: true,
+          email: true,
+        },
+      },
+      invoice: {
+        include: {
+          payments: {
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      },
     },
   });
 
@@ -185,6 +230,71 @@ export async function getBillingContext(consultationId: string) {
   });
 
   return consultation;
+}
+
+export async function updateBillingVitals(
+  consultationId: string,
+  vitals: {
+    bp?: string;
+    pulse?: string;
+    temp?: string;
+    weight?: string;
+    spo2?: string;
+    height?: string;
+    bmi?: string;
+    respiratoryRate?: string;
+  }
+): Promise<ActionResult<{ success: true }>> {
+  const session = await requireSessionUser();
+  if (!can(session, "billing.write") && !can(session, "consultations.write")) {
+    return permissionDenied();
+  }
+
+  const consultation = await prisma.consultation.findFirst({
+    where: { id: consultationId, clinicId: session.clinicId },
+  });
+
+  if (!consultation) {
+    return { success: false, error: "Consultation not found." };
+  }
+
+  const existingVitals = (consultation.vitals as Record<string, string> | null) ?? {};
+  const mergedVitals: Record<string, string> = {
+    ...existingVitals,
+  };
+
+  for (const [key, val] of Object.entries(vitals)) {
+    if (val !== undefined && val !== null) {
+      const trimmed = String(val).trim();
+      if (trimmed) {
+        mergedVitals[key] = trimmed;
+      }
+    }
+  }
+
+  await prisma.consultation.update({
+    where: { id: consultationId },
+    data: {
+      vitals: mergedVitals,
+      updatedById: session.userId,
+    },
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "update",
+    resourceType: "consultation",
+    resourceId: consultationId,
+    metadata: { vitals: mergedVitals },
+  });
+
+  revalidatePath(`/billing/${consultationId}`);
+  revalidatePath(`/consultations/${consultationId}`);
+  revalidatePath("/billing");
+  revalidatePath("/queue");
+
+  return { success: true, data: { success: true } };
 }
 
 export async function createOrUpdateInvoice(
@@ -473,7 +583,25 @@ export async function generateReceiptPdf(
   const invoice = await prisma.invoice.findFirst({
     where: { consultationId, clinicId: session.clinicId },
     include: {
-      consultation: { include: { patient: true } },
+      consultation: {
+        include: {
+          patient: true,
+          doctor: {
+            select: {
+              name: true,
+              specialty: true,
+              registrationNo: true,
+              qualifications: true,
+            },
+          },
+          appointment: {
+            select: {
+              tokenNumber: true,
+              queueDate: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -494,13 +622,36 @@ export async function generateReceiptPdf(
   const taxRate = invoice.taxRate != null ? Number(invoice.taxRate) : 0;
   const taxAmount = invoice.taxAmount != null ? Number(invoice.taxAmount) : 0;
 
+  const consultation = invoice.consultation;
+  const patient = consultation.patient;
+  const doctor = consultation.doctor;
+  const appointment = consultation.appointment;
+  const vitals = (consultation.vitals as any) ?? null;
+
   const pdfBytes = await renderReceiptPdf({
     clinicName: clinic.name,
     clinicPhone: clinic.phone,
     clinicAddress: clinic.address,
     clinicGstin: clinic.gstin ?? undefined,
+    clinicEmail: clinic.email ?? undefined,
     clinicLogoUrl: clinic.logoUrl,
-    patientName: invoice.consultation.patient.name,
+    patientName: patient.name,
+    patientMrn: patient.mrn,
+    patientAge: formatPatientAge(patient),
+    patientGender: patient.gender
+      ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
+      : null,
+    patientPhone: patient.phone,
+    doctorName: doctor.name,
+    doctorSpecialty: doctor.specialty ?? undefined,
+    doctorRegNo: doctor.registrationNo ?? undefined,
+    tokenNumber: appointment?.tokenNumber,
+    queueDate: appointment?.queueDate
+      ? new Date(appointment.queueDate).toLocaleDateString("en-IN")
+      : undefined,
+    chiefComplaint: consultation.chiefComplaint ?? undefined,
+    diagnosis: consultation.diagnosis ?? undefined,
+    vitals,
     lineItems,
     amount,
     taxableAmount,

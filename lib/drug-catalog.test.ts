@@ -198,4 +198,25 @@ describe("drug catalog", () => {
       })
     ).toBe("Oral · 1 tablet · Twice daily · 5 Days");
   });
+
+  it("finds branded medicines by searching their generic salt composition", () => {
+    const suggestions = buildDrugSuggestions([]);
+    const matches = filterDrugSuggestions(suggestions, "amoxicillin", 10);
+
+    expect(matches.some((item) => item.name === "Augmentin 625 Duo tablet")).toBe(true);
+    expect(matches.some((item) => item.name === "Amoxicillin 500 mg capsule")).toBe(true);
+  });
+
+  it("includes all types of medicines: syrups, injections, gels, inhalers, drops, sachets", () => {
+    const suggestions = buildDrugSuggestions([]);
+    
+    expect(suggestions.some((item) => item.category === "Syrup")).toBe(true);
+    expect(suggestions.some((item) => item.category === "Injection")).toBe(true);
+    expect(suggestions.some((item) => item.category === "Gel / Ointment")).toBe(true);
+    expect(suggestions.some((item) => item.category === "Inhaler")).toBe(true);
+    expect(suggestions.some((item) => item.category === "Drops")).toBe(true);
+    expect(suggestions.some((item) => item.category === "Sachet")).toBe(true);
+    expect(suggestions.some((item) => item.category === "IV Fluid")).toBe(true);
+    expect(suggestions.some((item) => item.category === "Suppository")).toBe(true);
+  });
 });

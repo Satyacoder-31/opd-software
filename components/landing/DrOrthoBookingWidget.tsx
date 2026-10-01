@@ -37,14 +37,17 @@ const availableTimeSlots = [
   "07:30 PM",
 ];
 
+import { bookHomepageAppointment } from "@/actions/booking";
+
 export function DrOrthoBookingWidget() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [specialty, setSpecialty] = useState(specialties[0].label);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
-  });
+  const todayStr = new Date().toISOString().split("T")[0];
+  const tomorrowObj = new Date();
+  tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+  const tomorrowStr = tomorrowObj.toISOString().split("T")[0];
+
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [selectedSlot, setSelectedSlot] = useState(availableTimeSlots[1]);
   const [patientName, setPatientName] = useState("");
   const [phone, setPhone] = useState("");
@@ -52,7 +55,15 @@ export function DrOrthoBookingWidget() {
   const [gender, setGender] = useState("male");
   const [symptoms, setSymptoms] = useState("");
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
-  const [confirmedToken, setConfirmedToken] = useState<number | null>(null);
+  const [confirmedData, setConfirmedData] = useState<{
+    tokenNumber: number;
+    mrn: string;
+    scheduledTime: string;
+    doctorName: string;
+    clinicName: string;
+    clinicAddress: string;
+    clinicPhone: string;
+  } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -65,10 +76,23 @@ export function DrOrthoBookingWidget() {
     setErrorMsg("");
 
     startTransition(async () => {
-      // Simulate real confirmation delay & token generation
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      const generatedToken = Math.floor(Math.random() * 20) + 12;
-      setConfirmedToken(generatedToken);
+      const result = await bookHomepageAppointment({
+        patientName,
+        phone,
+        age,
+        gender,
+        specialty,
+        date: selectedDate,
+        timeSlot: selectedSlot,
+        symptoms,
+      });
+
+      if (!result.success) {
+        setErrorMsg(result.error);
+        return;
+      }
+
+      setConfirmedData(result.data);
       setBookingConfirmed(true);
       setStep(4);
     });
@@ -156,20 +180,46 @@ export function DrOrthoBookingWidget() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Date selection */}
               <div>
-                <label htmlFor="booking-date" className="block text-sm font-semibold text-slate-200">
-                  <Icon icon={faCalendarDays} className="mr-2 text-sky-400" />
-                  Select Consultation Date:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="booking-date" className="block text-sm font-semibold text-slate-200">
+                    <Icon icon={faCalendarDays} className="mr-2 text-sky-400" />
+                    Select Consultation Date:
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(todayStr)}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                        selectedDate === todayStr
+                          ? "bg-sky-500 text-white font-semibold"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(tomorrowStr)}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                        selectedDate === tomorrowStr
+                          ? "bg-sky-500 text-white font-semibold"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      Tomorrow
+                    </button>
+                  </div>
+                </div>
                 <input
                   id="booking-date"
                   type="date"
                   value={selectedDate}
-                  min={new Date().toISOString().split("T")[0]}
+                  min={todayStr}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-sm text-white focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
                 />
                 <p className="mt-2 text-xs text-slate-400">
-                  Dr Orthos OPD runs Monday to Saturday with morning &amp; evening clinics.
+                  Select {selectedDate === todayStr ? "Today for urgent same-day assessment" : selectedDate === tomorrowStr ? "Tomorrow for planned consult" : "your preferred date"}.
                 </p>
               </div>
 
@@ -355,41 +405,53 @@ export function DrOrthoBookingWidget() {
           </form>
         )}
 
-        {step === 4 && bookingConfirmed && (
+        {step === 4 && bookingConfirmed && confirmedData && (
           <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/20 p-6 sm:p-8 text-center animate-in zoom-in-95 duration-200">
             <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 ring-8 ring-emerald-500/10">
               <Icon icon={faCheckCircle} className="size-8" />
             </div>
             <h4 className="mt-4 text-2xl font-bold text-white">
-              Appointment Successfully Reserved!
+              Appointment Confirmed in Live OPD Queue!
             </h4>
             <p className="mt-1.5 text-sm text-slate-300">
-              Your appointment is scheduled with Dr Orthos Clinical Team.
+              Your appointment is registered with {confirmedData.clinicName}.
             </p>
 
-            <div className="mx-auto mt-6 max-w-md rounded-xl border border-slate-700 bg-slate-800/80 p-5 text-left">
+            <div className="mx-auto mt-6 max-w-md rounded-xl border border-slate-700 bg-slate-800/90 p-5 text-left shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-700 pb-3">
-                <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
-                  Queue Token Number
-                </span>
-                <span className="rounded-md bg-sky-500/20 px-2.5 py-1 text-sm font-extrabold text-sky-400">
-                  #{confirmedToken}
+                <div>
+                  <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold block">
+                    Confirmed OPD Token
+                  </span>
+                  <span className="font-mono text-xs text-sky-400 font-bold">
+                    UHID: {confirmedData.mrn}
+                  </span>
+                </div>
+                <span className="rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 px-3.5 py-1.5 text-lg font-black text-white shadow-md shadow-sky-500/30">
+                  Token #{confirmedData.tokenNumber}
                 </span>
               </div>
-              <div className="mt-3 space-y-2 text-xs text-slate-300">
-                <div>
-                  <span className="text-slate-400">Patient:</span>{" "}
+              <div className="mt-3.5 space-y-2.5 text-xs text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Patient Name:</span>
                   <strong className="text-white font-medium">{patientName}</strong>
                 </div>
-                <div>
-                  <span className="text-slate-400">Specialty:</span> {specialty}
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Specialty:</span>
+                  <strong className="text-white font-medium">{specialty}</strong>
                 </div>
-                <div>
-                  <span className="text-slate-400">Date &amp; Time:</span>{" "}
-                  <strong className="text-white font-medium">{selectedDate} at {selectedSlot}</strong>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Doctor:</span>
+                  <strong className="text-sky-300 font-medium">Dr. {confirmedData.doctorName}</strong>
                 </div>
-                <div>
-                  <span className="text-slate-400">Clinic Location:</span> Dr Orthos Healthcare Pavilion, Marine Lines, Mumbai
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Appointment Slot:</span>
+                  <strong className="text-emerald-400 font-semibold">{confirmedData.scheduledTime}</strong>
+                </div>
+                <div className="border-t border-slate-700/80 pt-2 text-[11px] text-slate-400">
+                  <span className="block text-slate-400">Clinic Address:</span>
+                  <span className="text-slate-200">{confirmedData.clinicAddress}</span>
+                  <span className="block mt-0.5 text-slate-400">Tel: {confirmedData.clinicPhone}</span>
                 </div>
               </div>
             </div>
@@ -397,13 +459,14 @@ export function DrOrthoBookingWidget() {
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
               <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 px-5 py-2.5 text-xs sm:text-sm font-medium text-emerald-300">
                 <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                Present token at clinic reception on arrival
+                Present Token #{confirmedData.tokenNumber} at clinic reception for priority check-in
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setStep(1);
                   setBookingConfirmed(false);
+                  setConfirmedData(null);
                 }}
                 className="text-xs font-medium text-slate-400 hover:text-white underline"
               >

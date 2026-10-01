@@ -15,6 +15,9 @@ export type Vitals = {
   temp?: string;
   weight?: string;
   spo2?: string;
+  height?: string;
+  bmi?: string;
+  respiratoryRate?: string;
 };
 
 export type ClinicalPresentation = {

@@ -2,7 +2,7 @@
 export const AUTH_VISUAL_PANEL = {
   src: "/landing/signup-panel-morning-clinic.png",
   alt: "Quiet clinic waiting area in soft morning light",
-  headline: "Ready before the first patient",
+  headline: "Hospital OPD Management System",
   subhead:
-    "Appointments, queue, and records in one place — so the front desk and doctors stay in sync.",
+    "Live Queue, Doctor Consultations, E-Prescriptions, Patient Records, Lab Orders & Billing in one unified hospital workspace.",
 } as const;

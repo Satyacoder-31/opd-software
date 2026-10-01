@@ -7,8 +7,8 @@ import { AUTH_VISUAL_PANEL } from "@/components/auth/auth-visual-panel";
 export default function LoginPage() {
   return (
     <AuthShell
-      title="Sign in"
-      description="Access your clinic workspace"
+      title="Hospital OPD Sign In"
+      description="Hospital OPD Management System — Unified Staff Portal"
       panel={AUTH_VISUAL_PANEL}
     >
       <Suspense fallback={null}>
