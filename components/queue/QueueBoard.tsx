@@ -8,8 +8,13 @@ import {
   faCircleCheck,
   faClipboardList,
   faEye,
+  faHashtag,
+  faPhone,
   faReceipt,
+  faStethoscope,
   faUserClock,
+  faUserDoctor,
+  faVenusMars,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   getCompletedQueue,
@@ -17,7 +22,6 @@ import {
   updateAppointmentStatus,
 } from "@/actions/appointments";
 import { Button } from "@/components/ui/Button";
-import { StatusBadge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Banner } from "@/components/ui/Banner";
@@ -286,7 +290,8 @@ export function QueueBoard({
               className="bg-card"
             />
           ) : (
-            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="mx-4 my-4 overflow-hidden rounded-2xl border border-border shadow-sm md:mx-6 md:my-5">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {waiting.map((item) => (
                 <QueueCard
                   key={item.id}
@@ -297,6 +302,7 @@ export function QueueBoard({
                   isPending={isPending}
                 />
               ))}
+              </div>
             </div>
           )}
         </section>
@@ -321,7 +327,8 @@ export function QueueBoard({
               className="bg-card"
             />
           ) : (
-            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mx-4 my-4 overflow-hidden rounded-2xl border border-border shadow-sm md:mx-6 md:my-5">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {inProgress.map((item) => (
                 <QueueCard
                   key={item.id}
@@ -332,6 +339,7 @@ export function QueueBoard({
                   isPending={isPending}
                 />
               ))}
+              </div>
             </div>
           )}
         </section>
@@ -352,7 +360,8 @@ export function QueueBoard({
               className="bg-card"
             />
           ) : (
-            <div className="grid gap-px bg-border md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="mx-4 my-4 overflow-hidden rounded-2xl border border-border shadow-sm md:mx-6 md:my-5">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {completed.map((item) => (
                 <CompletedCard
                   key={item.id}
@@ -361,6 +370,7 @@ export function QueueBoard({
                   canAccessBilling={canAccessBilling}
                 />
               ))}
+              </div>
             </div>
           )}
         </section>
@@ -391,6 +401,38 @@ function QueueTabSummary({
   );
 }
 
+function PatientAvatar({ name, status }: { name: string; status: string }) {
+  const initials = name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+  const gradient =
+    status === "waiting"
+      ? "from-amber-400 to-orange-500"
+      : "from-blue-500 to-indigo-600";
+  return (
+    <div
+      className={cn(
+        "flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br font-bold text-sm text-white shadow-sm",
+        gradient
+      )}
+      aria-hidden="true"
+    >
+      {initials || "P"}
+    </div>
+  );
+}
+
+function MetaPill({ icon, text, color }: { icon: typeof faPhone; text: string; color: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", color)}>
+      <Icon icon={icon} className="size-2.5" />
+      {text}
+    </span>
+  );
+}
+
 function QueueCard({
   item,
   onStatus,
@@ -406,104 +448,148 @@ function QueueCard({
 }) {
   const loading = isPending(item.id);
   const ageLabel = formatPatientAge(item.patient);
-  const meta = [
-    formatPhone(item.patient.phone),
-    ageLabel,
-    item.consultation?.doctor ? `Dr. ${item.consultation.doctor.name}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const phone = formatPhone(item.patient.phone);
+  const doctorName = item.consultation?.doctor?.name;
+  const isWaiting = item.status === "waiting";
+  const isInProgress = item.status === "in_progress";
 
   return (
-    <Card flush className="bg-card">
-            <div className="flex min-h-30">
+    <div
+      className={cn(
+        "group relative flex flex-col overflow-hidden rounded-none bg-card transition-all",
+        "border-b border-border last:border-b-0",
+        isWaiting && "hover:bg-amber-50/40",
+        isInProgress && "hover:bg-blue-50/40",
+      )}
+    >
+      {/* Status accent bar on left */}
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 w-1",
+          isWaiting ? "bg-amber-400" : "bg-blue-500"
+        )}
+      />
+
+      <div className="flex items-start gap-3.5 px-5 pt-4 pb-3 pl-6">
+        {/* Token badge */}
         <div
           className={cn(
-            "flex w-16 shrink-0 flex-col items-center justify-center border-r border-border",
-            item.status === "waiting"
-              ? "bg-accent/10"
-              : "bg-primary/10"
+            "flex min-w-[2.75rem] flex-col items-center justify-center rounded-xl px-2 py-1.5 text-center",
+            isWaiting
+              ? "bg-amber-100 text-amber-800 border border-amber-200"
+              : "bg-blue-100 text-blue-800 border border-blue-200"
           )}
-          aria-label={`Token number ${item.tokenNumber}`}
+          aria-label={`Token ${item.tokenNumber}`}
         >
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Token
-          </span>
-          <span className="font-display text-2xl font-semibold tabular-nums text-ink">
+          <Icon icon={faHashtag} className="size-2.5 opacity-60" />
+          <span className="font-black text-lg leading-none tabular-nums">
             {item.tokenNumber}
           </span>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-4 py-4">
-          <div className="min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <Link
-                  href={`/patients/${item.patient.id}`}
-                  className="block truncate font-medium text-ink hover:text-primary"
-                >
-                  {item.patient.name}
-                </Link>
-                <p className="truncate text-sm text-muted-foreground">
-                  {item.patient.mrn}
-                </p>
-              </div>
-              <StatusBadge status={item.status} className="shrink-0" />
-            </div>
-
-            {meta ? (
-              <p className="mt-1.5 truncate text-sm text-muted-foreground">
-                {meta}
-              </p>
-            ) : null}
+        {/* Patient info */}
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              href={`/patients/${item.patient.id}`}
+              className="block truncate font-bold text-[15px] text-ink hover:text-primary transition-colors leading-snug"
+            >
+              {item.patient.name}
+            </Link>
+            <span
+              className={cn(
+                "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                isWaiting
+                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                  : "border-blue-200 bg-blue-50 text-blue-700 flex items-center gap-1"
+              )}
+            >
+              {isInProgress && <span className="inline-block size-1.5 rounded-full bg-blue-500 animate-pulse mr-0.5" />}
+              {isWaiting ? "Waiting" : "In Consult"}
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {item.status === "waiting" && canStart && (
-              <Button
-                size="sm"
-                onClick={() => onStatus(item.id, AppointmentStatus.in_progress)}
-                loading={loading}
-              >
-                <Icon icon={faClipboardList} data-icon="inline-start" />
-                Start consultation
-              </Button>
+          <p className="text-xs text-muted-foreground font-mono">{item.patient.mrn}</p>
+
+          {/* Meta pills */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {phone && (
+              <MetaPill
+                icon={faPhone}
+                text={phone}
+                color="border-slate-200 bg-slate-50 text-slate-600"
+              />
             )}
-            {item.status === "waiting" && !canStart && (
-              <Button
-                nativeButton={false}
-                render={<Link href={`/patients/${item.patient.id}`} />}
-                size="sm"
-                variant="secondary"
-              >
-                Patient record
-              </Button>
+            {ageLabel && (
+              <MetaPill
+                icon={faVenusMars}
+                text={ageLabel}
+                color="border-violet-200 bg-violet-50 text-violet-700"
+              />
             )}
-            {item.status === "in_progress" &&
-              item.consultation &&
-              canOpenConsultation && (
-                <Button
-                  nativeButton={false}
-                  render={
-                    <Link href={`/consultations/${item.consultation.id}`} />
-                  }
-                  size="sm"
-                >
-                  <Icon icon={faEye} data-icon="inline-start" />
-                  Open consultation
-                </Button>
-              )}
-            {item.status === "in_progress" &&
-              item.consultation &&
-              !canOpenConsultation && (
-                <p className="text-sm text-muted-foreground">
-                  With Dr. {item.consultation.doctor?.name ?? "doctor"}
-                </p>
-              )}
+            {doctorName && (
+              <MetaPill
+                icon={faUserDoctor}
+                text={`Dr. ${doctorName}`}
+                color="border-teal-200 bg-teal-50 text-teal-700"
+              />
+            )}
           </div>
+
+          {item.reasonForVisit && (
+            <p className="mt-2 text-xs text-muted-foreground italic line-clamp-1">
+              &ldquo;{item.reasonForVisit}&rdquo;
+            </p>
+          )}
         </div>
       </div>
-    </Card>
+
+      {/* Action footer */}
+      <div className={cn(
+        "flex items-center gap-2 border-t px-5 py-2.5 pl-6",
+        isWaiting ? "border-amber-100 bg-amber-50/30" : "border-blue-100 bg-blue-50/30"
+      )}>
+        {isWaiting && canStart && (
+          <Button
+            size="sm"
+            className="h-8 text-xs gap-1.5 shadow-sm"
+            onClick={() => onStatus(item.id, AppointmentStatus.in_progress)}
+            loading={loading}
+          >
+            <Icon icon={faStethoscope} className="size-3" />
+            Start Consultation
+          </Button>
+        )}
+        {isWaiting && !canStart && (
+          <Button
+            nativeButton={false}
+            render={<Link href={`/patients/${item.patient.id}`} />}
+            size="sm"
+            variant="secondary"
+            className="h-8 text-xs"
+          >
+            View Record
+          </Button>
+        )}
+        {isInProgress && item.consultation && canOpenConsultation && (
+          <Button
+            nativeButton={false}
+            render={<Link href={`/consultations/${item.consultation.id}`} />}
+            size="sm"
+            className="h-8 text-xs gap-1.5 shadow-sm"
+          >
+            <Icon icon={faClipboardList} className="size-3" />
+            Open Consultation
+          </Button>
+        )}
+        {isInProgress && item.consultation && !canOpenConsultation && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Icon icon={faUserDoctor} className="size-3 text-blue-500" />
+            With Dr. {item.consultation.doctor?.name ?? "doctor"}
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -517,85 +603,102 @@ function CompletedCard({
   canAccessBilling: boolean;
 }) {
   const ageLabel = formatPatientAge(item.patient);
+  const phone = formatPhone(item.patient.phone);
+  const doctorName = item.consultation?.doctor?.name;
   const showVisit = Boolean(item.consultation && canOpenConsultation);
   const showBilling = Boolean(item.consultation && canAccessBilling);
 
   return (
-    <Card flush className="bg-card">
-            <div className="flex min-h-30">
+    <div
+      className="group relative flex flex-col overflow-hidden rounded-none bg-card border-b border-border last:border-b-0 hover:bg-emerald-50/30 transition-colors"
+    >
+      {/* Emerald accent bar */}
+      <div className="absolute inset-y-0 left-0 w-1 bg-emerald-400" />
+
+      <div className="flex items-start gap-3.5 px-5 pt-4 pb-3 pl-6">
+        {/* Token badge */}
         <div
-          className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-border bg-muted/50"
-          aria-label={`Token number ${item.tokenNumber}`}
+          className="flex min-w-[2.75rem] flex-col items-center justify-center rounded-xl px-2 py-1.5 text-center bg-emerald-100 text-emerald-800 border border-emerald-200"
+          aria-label={`Token ${item.tokenNumber}`}
         >
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Token
-          </span>
-          <span className="font-display text-2xl font-semibold tabular-nums text-ink">
+          <Icon icon={faHashtag} className="size-2.5 opacity-60" />
+          <span className="font-black text-lg leading-none tabular-nums">
             {item.tokenNumber}
           </span>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 px-4 py-4">
-          <div className="min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <Link
-                  href={`/patients/${item.patient.id}`}
-                  className="block truncate font-medium text-ink hover:text-primary"
-                >
-                  {item.patient.name}
-                </Link>
-                <p className="truncate text-sm text-muted-foreground">
-                  {item.patient.mrn}
-                </p>
-              </div>
-              <StatusBadge status={item.status} className="shrink-0" />
-            </div>
-            <p className="mt-1.5 truncate text-sm text-muted-foreground">
-              {[
-                formatPhone(item.patient.phone),
-                ageLabel,
-                item.consultation?.doctor
-                  ? `Dr. ${item.consultation.doctor.name}`
-                  : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
+        {/* Patient info */}
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              href={`/patients/${item.patient.id}`}
+              className="block truncate font-bold text-[15px] text-ink hover:text-primary transition-colors leading-snug"
+            >
+              {item.patient.name}
+            </Link>
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+              <Icon icon={faCircleCheck} className="size-2.5" />
+              Done
+            </span>
           </div>
 
-          {(showVisit || showBilling) && (
-            <div className="flex flex-wrap gap-2">
-              {showBilling && item.consultation && (
-                <Button
-                  nativeButton={false}
-                  render={
-                    <Link href={`/billing/${item.consultation.id}`} />
-                  }
-                  size="sm"
-                  variant="primary"
-                >
-                  <Icon icon={faReceipt} data-icon="inline-start" />
-                  Bill Patient
-                </Button>
-              )}
-              {showVisit && item.consultation && (
-                <Button
-                  nativeButton={false}
-                  render={
-                    <Link href={`/consultations/${item.consultation.id}`} />
-                  }
-                  size="sm"
-                  variant="secondary"
-                >
-                  <Icon icon={faEye} data-icon="inline-start" />
-                  View visit
-                </Button>
-              )}
-            </div>
-          )}
+          <p className="text-xs text-muted-foreground font-mono">{item.patient.mrn}</p>
+
+          {/* Meta pills */}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {phone && (
+              <MetaPill
+                icon={faPhone}
+                text={phone}
+                color="border-slate-200 bg-slate-50 text-slate-600"
+              />
+            )}
+            {ageLabel && (
+              <MetaPill
+                icon={faVenusMars}
+                text={ageLabel}
+                color="border-violet-200 bg-violet-50 text-violet-700"
+              />
+            )}
+            {doctorName && (
+              <MetaPill
+                icon={faUserDoctor}
+                text={`Dr. ${doctorName}`}
+                color="border-teal-200 bg-teal-50 text-teal-700"
+              />
+            )}
+          </div>
         </div>
       </div>
-    </Card>
+
+      {/* Action footer */}
+      {(showVisit || showBilling) && (
+        <div className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50/30 px-5 py-2.5 pl-6">
+          {showBilling && item.consultation && (
+            <Button
+              nativeButton={false}
+              render={<Link href={`/billing/${item.consultation.id}`} />}
+              size="sm"
+              className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+            >
+              <Icon icon={faReceipt} className="size-3" />
+              Bill Patient
+            </Button>
+          )}
+          {showVisit && item.consultation && (
+            <Button
+              nativeButton={false}
+              render={<Link href={`/consultations/${item.consultation.id}`} />}
+              size="sm"
+              variant="secondary"
+              className="h-8 text-xs gap-1.5"
+            >
+              <Icon icon={faEye} className="size-3" />
+              View Visit
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
