@@ -16,8 +16,15 @@ import {
 } from "@/actions/templates";
 import { PatientPreviousPrescriptions } from "@/components/consultation/PatientPreviousPrescriptions";
 import { COMMON_ILLNESS_TEMPLATES } from "@/lib/clinical-templates";
+import {
+  DOSAGE_RECOMMENDATIONS,
+  DURATION_PRESETS,
+  ADVICE_RECOMMENDATIONS,
+  FOLLOW_UP_RECOMMENDATIONS,
+} from "@/lib/clinical-recommendations";
 import { MedicineCombobox } from "@/components/consultation/MedicineCombobox";
 import { PrescriptionOptionCombobox } from "@/components/consultation/PrescriptionOptionCombobox";
+import { ClinicalDropdownTextarea } from "@/components/consultation/ClinicalDropdownTextarea";
 import { DurationField } from "@/components/consultation/DurationField";
 import {
   PrescriptionQuickTemplates,
@@ -673,15 +680,15 @@ export function PrescriptionBuilder({
 
                 <div className="flex flex-col gap-2.5">
                   <div className="grid grid-cols-2 gap-2.5">
-                    <Input
+                    <PrescriptionOptionCombobox
                       label="Dosage"
                       name={`med-dosage-${index}`}
                       value={med.dosage}
-                      onChange={(e) =>
-                        updateMedicine(index, "dosage", e.target.value)
+                      onChange={(value) =>
+                        updateMedicine(index, "dosage", value)
                       }
-                      placeholder="e.g. 1 tablet"
-                      className="h-10"
+                      options={DOSAGE_RECOMMENDATIONS}
+                      placeholder="e.g. 1 tablet, 5 ml, 1 cap…"
                     />
                     <PrescriptionOptionCombobox
                       label="Frequency"
@@ -700,13 +707,31 @@ export function PrescriptionBuilder({
                   </div>
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
-                    <DurationField
-                      name={`med-dur-${index}`}
-                      value={med.duration}
-                      onChange={(value) =>
-                        updateMedicine(index, "duration", value)
-                      }
-                    />
+                    <div>
+                      <DurationField
+                        name={`med-dur-${index}`}
+                        value={med.duration}
+                        onChange={(value) =>
+                          updateMedicine(index, "duration", value)
+                        }
+                      />
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <span className="text-[10px] text-muted-foreground">Presets:</span>
+                        {DURATION_PRESETS.slice(0, 5).map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => updateMedicine(index, "duration", preset)}
+                            className={cn(
+                              "rounded px-1.5 py-0.2 text-[10px] font-medium border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:border-primary hover:text-primary",
+                              med.duration === preset && "border-primary bg-primary/10 text-primary font-semibold"
+                            )}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <PrescriptionOptionCombobox
                       label="Instructions"
                       name={`med-inst-${index}`}
@@ -747,25 +772,27 @@ export function PrescriptionBuilder({
         className="scroll-mt-2 grid gap-2.5 border-b border-border px-3 py-3 md:grid-cols-2 md:px-4"
         tabIndex={-1}
       >
-        <Textarea
+        <ClinicalDropdownTextarea
           label="Advice"
           name="advice"
           value={advice}
-          onChange={(e) => setAdvice(e.target.value)}
+          onChange={(val) => setAdvice(val)}
+          options={ADVICE_RECOMMENDATIONS}
           placeholder={
             "Drink plenty of fluids.\nWarm saline gargles.\nTake adequate rest."
           }
           rows={3}
-          className="min-h-16"
+          chipsCount={3}
         />
-        <Textarea
+        <ClinicalDropdownTextarea
           label="Follow-up"
           name="followUp"
           value={followUp}
-          onChange={(e) => setFollowUp(e.target.value)}
+          onChange={(val) => setFollowUp(val)}
+          options={FOLLOW_UP_RECOMMENDATIONS}
           placeholder="After 5 days if symptoms persist."
           rows={3}
-          className="min-h-16"
+          chipsCount={3}
         />
       </div>
 

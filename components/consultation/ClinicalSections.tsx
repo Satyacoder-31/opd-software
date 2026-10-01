@@ -3,7 +3,8 @@
 import type { Dispatch, SetStateAction } from "react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
+import { ClinicalDropdownInput } from "@/components/consultation/ClinicalDropdownInput";
+import { ClinicalDropdownTextarea } from "@/components/consultation/ClinicalDropdownTextarea";
 import {
   emptyClinicalPresentation,
   emptyExamination,
@@ -15,6 +16,32 @@ import {
   vitalFieldLabel,
   VITAL_FIELDS,
 } from "@/lib/consultation-clinical";
+import {
+  CHIEF_COMPLAINT_RECOMMENDATIONS,
+  DIAGNOSIS_NOTES_RECOMMENDATIONS,
+  HPI_RECOMMENDATIONS,
+  ONSET_RECOMMENDATIONS,
+  DURATION_RECOMMENDATIONS,
+  PAST_MEDICAL_RECOMMENDATIONS,
+  PAST_SURGICAL_RECOMMENDATIONS,
+  ALLERGIES_RECOMMENDATIONS,
+  CURRENT_MEDICATIONS_RECOMMENDATIONS,
+  FAMILY_HISTORY_RECOMMENDATIONS,
+  SOCIAL_HISTORY_RECOMMENDATIONS,
+  GENERAL_EXAM_RECOMMENDATIONS,
+  CVS_EXAM_RECOMMENDATIONS,
+  RESP_EXAM_RECOMMENDATIONS,
+  ABDOMEN_EXAM_RECOMMENDATIONS,
+  NEURO_EXAM_RECOMMENDATIONS,
+  OTHER_EXAM_RECOMMENDATIONS,
+  ADDITIONAL_NOTES_RECOMMENDATIONS,
+  LAB_RESULTS_RECOMMENDATIONS,
+  IMAGING_RESULTS_RECOMMENDATIONS,
+  OTHER_INVESTIGATION_RECOMMENDATIONS,
+  MED_CERT_DIAGNOSIS_RECOMMENDATIONS,
+  MED_CERT_FITNESS_RECOMMENDATIONS,
+  MED_CERT_REMARKS_RECOMMENDATIONS,
+} from "@/lib/clinical-recommendations";
 import type {
   ClinicalPresentation,
   ConsultationClinicalData,
@@ -138,30 +165,29 @@ export function ConsultationClinicalSections({
         >
           <div className="flex flex-col gap-2.5">
             <div className="grid gap-2.5 md:grid-cols-2">
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Chief complaint"
                 name="chiefComplaint"
                 value={value.chiefComplaint ?? ""}
-                onChange={(e) =>
-                  patchClinical(value, onChange, {
-                    chiefComplaint: e.target.value,
-                  })
+                onChange={(text) =>
+                  patchClinical(value, onChange, { chiefComplaint: text })
                 }
+                options={CHIEF_COMPLAINT_RECOMMENDATIONS}
+                placeholder="e.g. Pain in right knee joint aggravated by walking"
                 rows={2}
-                className="min-h-14"
+                chipsCount={4}
               />
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Diagnosis notes"
                 name="diagnosis"
                 value={value.diagnosis ?? ""}
-                onChange={(e) =>
-                  patchClinical(value, onChange, {
-                    diagnosis: e.target.value,
-                  })
+                onChange={(text) =>
+                  patchClinical(value, onChange, { diagnosis: text })
                 }
+                options={DIAGNOSIS_NOTES_RECOMMENDATIONS}
+                placeholder="Free-text notes (or select common clinical diagnosis)"
                 rows={2}
-                className="min-h-14"
-                placeholder="Free-text notes (optional if ICD codes set)"
+                chipsCount={3}
               />
             </div>
             <DiagnosisCodesField
@@ -170,48 +196,44 @@ export function ConsultationClinicalSections({
                 patchClinical(value, onChange, { diagnosisCodes })
               }
             />
-            <Textarea
+            <ClinicalDropdownTextarea
               label="History of present illness"
               name="historyOfPresentIllness"
               value={clinicalPresentation.historyOfPresentIllness ?? ""}
-              onChange={(e) =>
+              onChange={(text) =>
                 updateRecordField(
                   setClinicalPresentation,
                   "historyOfPresentIllness",
-                  e.target.value,
+                  text,
                 )
               }
+              options={HPI_RECOMMENDATIONS}
+              placeholder="Onset, progression, aggravating/relieving factors, radiation…"
               rows={3}
-              className="min-h-16"
+              chipsCount={2}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
-              <Input
+              <ClinicalDropdownInput
                 label="Onset"
                 name="onset"
                 value={clinicalPresentation.onset ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setClinicalPresentation,
-                    "onset",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setClinicalPresentation, "onset", text)
                 }
-                placeholder="e.g. 3 days ago"
-                className="h-10"
+                options={ONSET_RECOMMENDATIONS}
+                placeholder="e.g. Acute onset (2-3 days ago)"
+                chipsCount={4}
               />
-              <Input
+              <ClinicalDropdownInput
                 label="Duration"
                 name="duration"
                 value={clinicalPresentation.duration ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setClinicalPresentation,
-                    "duration",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setClinicalPresentation, "duration", text)
                 }
-                placeholder="e.g. intermittent"
-                className="h-10"
+                options={DURATION_RECOMMENDATIONS}
+                placeholder="e.g. 5 days, 2 weeks, intermittent"
+                chipsCount={4}
               />
             </div>
           </div>
@@ -228,92 +250,80 @@ export function ConsultationClinicalSections({
           filled={completion.patientHistory.filled}
         >
           <div className="flex flex-col gap-2.5">
-            <Textarea
+            <ClinicalDropdownTextarea
               label="Past medical history"
               name="pastMedical"
               value={patientHistory.pastMedical ?? ""}
-              onChange={(e) =>
-                updateRecordField(
-                  setPatientHistory,
-                  "pastMedical",
-                  e.target.value,
-                )
+              onChange={(text) =>
+                updateRecordField(setPatientHistory, "pastMedical", text)
               }
+              options={PAST_MEDICAL_RECOMMENDATIONS}
+              placeholder="e.g. Hypertension, Type 2 Diabetes Mellitus"
               rows={2}
-              className="min-h-14"
+              chipsCount={4}
             />
-            <Textarea
+            <ClinicalDropdownTextarea
               label="Past surgical history"
               name="pastSurgical"
               value={patientHistory.pastSurgical ?? ""}
-              onChange={(e) =>
-                updateRecordField(
-                  setPatientHistory,
-                  "pastSurgical",
-                  e.target.value,
-                )
+              onChange={(text) =>
+                updateRecordField(setPatientHistory, "pastSurgical", text)
               }
+              options={PAST_SURGICAL_RECOMMENDATIONS}
+              placeholder="e.g. Total Knee Replacement, Appendectomy"
               rows={2}
-              className="min-h-14"
+              chipsCount={4}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Allergies"
                 name="allergies"
                 value={patientHistory.allergies ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setPatientHistory,
-                    "allergies",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setPatientHistory, "allergies", text)
                 }
+                options={ALLERGIES_RECOMMENDATIONS}
+                placeholder="e.g. NKDA, Penicillin, NSAIDs"
                 rows={2}
-                className="min-h-14"
+                chipsCount={3}
               />
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Current medications"
                 name="medications"
                 value={patientHistory.medications ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setPatientHistory,
-                    "medications",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setPatientHistory, "medications", text)
                 }
+                options={CURRENT_MEDICATIONS_RECOMMENDATIONS}
+                placeholder="e.g. Tab Telmisartan 40 mg OD, Tab Metformin 500 mg BD"
                 rows={2}
-                className="min-h-14"
+                chipsCount={3}
               />
             </div>
             <div className="grid gap-2.5 md:grid-cols-2">
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Family history"
                 name="familyHistory"
                 value={patientHistory.familyHistory ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setPatientHistory,
-                    "familyHistory",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setPatientHistory, "familyHistory", text)
                 }
+                options={FAMILY_HISTORY_RECOMMENDATIONS}
+                placeholder="e.g. Hypertension, CAD, Osteoarthritis"
                 rows={2}
-                className="min-h-14"
+                chipsCount={3}
               />
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Social history"
                 name="socialHistory"
                 value={patientHistory.socialHistory ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setPatientHistory,
-                    "socialHistory",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setPatientHistory, "socialHistory", text)
                 }
+                options={SOCIAL_HISTORY_RECOMMENDATIONS}
+                placeholder="e.g. Non-smoker, sedentary lifestyle, desk job"
                 rows={2}
-                className="min-h-14"
+                chipsCount={3}
               />
             </div>
           </div>
@@ -330,79 +340,79 @@ export function ConsultationClinicalSections({
           filled={completion.examination.filled}
         >
           <div className="flex flex-col gap-2.5">
-            <Textarea
+            <ClinicalDropdownTextarea
               label="General"
               name="general"
               value={examination.general ?? ""}
-              onChange={(e) =>
-                updateRecordField(setExamination, "general", e.target.value)
+              onChange={(text) =>
+                updateRecordField(setExamination, "general", text)
               }
+              options={GENERAL_EXAM_RECOMMENDATIONS}
+              placeholder="General appearance, consciousness, pallor, icterus, pedal edema…"
               rows={2}
-              className="min-h-14"
+              chipsCount={3}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Cardiovascular"
                 name="cardiovascular"
                 value={examination.cardiovascular ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setExamination,
-                    "cardiovascular",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setExamination, "cardiovascular", text)
                 }
+                options={CVS_EXAM_RECOMMENDATIONS}
+                placeholder="Heart sounds, rhythm, murmurs…"
                 rows={2}
-                className="min-h-14"
+                chipsCount={2}
               />
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Respiratory"
                 name="respiratory"
                 value={examination.respiratory ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setExamination,
-                    "respiratory",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setExamination, "respiratory", text)
                 }
+                options={RESP_EXAM_RECOMMENDATIONS}
+                placeholder="Air entry, breath sounds, wheezing, crepitations…"
                 rows={2}
-                className="min-h-14"
+                chipsCount={2}
               />
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Abdomen"
                 name="abdomen"
                 value={examination.abdomen ?? ""}
-                onChange={(e) =>
-                  updateRecordField(setExamination, "abdomen", e.target.value)
+                onChange={(text) =>
+                  updateRecordField(setExamination, "abdomen", text)
                 }
+                options={ABDOMEN_EXAM_RECOMMENDATIONS}
+                placeholder="Tenderness, guarding, bowel sounds, organomegaly…"
                 rows={2}
-                className="min-h-14"
+                chipsCount={2}
               />
-              <Textarea
+              <ClinicalDropdownTextarea
                 label="Neurological"
                 name="neurological"
                 value={examination.neurological ?? ""}
-                onChange={(e) =>
-                  updateRecordField(
-                    setExamination,
-                    "neurological",
-                    e.target.value,
-                  )
+                onChange={(text) =>
+                  updateRecordField(setExamination, "neurological", text)
                 }
+                options={NEURO_EXAM_RECOMMENDATIONS}
+                placeholder="Motor power, DTR, sensations, SLR test…"
                 rows={2}
-                className="min-h-14"
+                chipsCount={2}
               />
             </div>
-            <Textarea
+            <ClinicalDropdownTextarea
               label="Other findings"
               name="other"
               value={examination.other ?? ""}
-              onChange={(e) =>
-                updateRecordField(setExamination, "other", e.target.value)
+              onChange={(text) =>
+                updateRecordField(setExamination, "other", text)
               }
+              options={OTHER_EXAM_RECOMMENDATIONS}
+              placeholder="Local joint examination: tenderness, crepitus, range of motion, tests…"
               rows={2}
-              className="min-h-14"
+              chipsCount={3}
             />
           </div>
         </CollapsibleSection>
@@ -417,16 +427,17 @@ export function ConsultationClinicalSections({
           summary={sectionSummary(completion.notes)}
           filled={completion.notes.filled}
         >
-          <Textarea
+          <ClinicalDropdownTextarea
             label="Notes"
             name="notes"
             value={value.notes ?? ""}
-            onChange={(e) =>
-              patchClinical(value, onChange, { notes: e.target.value })
+            onChange={(text) =>
+              patchClinical(value, onChange, { notes: text })
             }
-            placeholder="Additional clinical notes or annotations"
+            options={ADDITIONAL_NOTES_RECOMMENDATIONS}
+            placeholder="Additional clinical notes, patient counseling, red flag warnings…"
             rows={3}
-            className="min-h-16"
+            chipsCount={3}
           />
         </CollapsibleSection>
       </div>
@@ -460,43 +471,41 @@ export function InvestigationSections({
         filled={completion.investigationResults.filled}
       >
         <div className="flex flex-col gap-2.5">
-          <Textarea
+          <ClinicalDropdownTextarea
             label="Lab results"
             name="labs"
             value={investigationResults.labs ?? ""}
-            onChange={(e) =>
-              updateRecordField(setInvestigationResults, "labs", e.target.value)
+            onChange={(text) =>
+              updateRecordField(setInvestigationResults, "labs", text)
             }
+            options={LAB_RESULTS_RECOMMENDATIONS}
+            placeholder="e.g. CBC, ESR/CRP, Blood sugar, Uric acid, LFT, KFT findings…"
             rows={3}
-            className="min-h-16"
+            chipsCount={4}
           />
-          <Textarea
+          <ClinicalDropdownTextarea
             label="Imaging"
             name="imaging"
             value={investigationResults.imaging ?? ""}
-            onChange={(e) =>
-              updateRecordField(
-                setInvestigationResults,
-                "imaging",
-                e.target.value,
-              )
+            onChange={(text) =>
+              updateRecordField(setInvestigationResults, "imaging", text)
             }
+            options={IMAGING_RESULTS_RECOMMENDATIONS}
+            placeholder="e.g. X-ray knee OA, Lumbar spine MRI, Chest X-ray, Ultrasound findings…"
             rows={3}
-            className="min-h-16"
+            chipsCount={4}
           />
-          <Textarea
+          <ClinicalDropdownTextarea
             label="Other investigations"
             name="otherInvestigations"
             value={investigationResults.other ?? ""}
-            onChange={(e) =>
-              updateRecordField(
-                setInvestigationResults,
-                "other",
-                e.target.value,
-              )
+            onChange={(text) =>
+              updateRecordField(setInvestigationResults, "other", text)
             }
+            options={OTHER_INVESTIGATION_RECOMMENDATIONS}
+            placeholder="e.g. ECG normal sinus rhythm, DEXA bone scan T-score, EMG/NCV…"
             rows={2}
-            className="min-h-14"
+            chipsCount={3}
           />
         </div>
       </CollapsibleSection>
@@ -530,19 +539,21 @@ export function MedicalCertificateSections({
         filled={completion.medicalCertificate.filled}
       >
         <div className="flex flex-col gap-2.5">
-          <Textarea
+          <ClinicalDropdownTextarea
             label="Diagnosis for certificate"
             name="diagnosisForCertificate"
             value={medicalCertificate.diagnosisForCertificate ?? ""}
-            onChange={(e) =>
+            onChange={(text) =>
               updateRecordField(
                 setMedicalCertificate,
                 "diagnosisForCertificate",
-                e.target.value,
+                text,
               )
             }
+            options={MED_CERT_DIAGNOSIS_RECOMMENDATIONS}
+            placeholder="Diagnosis certified on official medical certificate"
             rows={2}
-            className="min-h-14"
+            chipsCount={3}
           />
           <div className="grid gap-2.5 md:grid-cols-2">
             <Input
@@ -574,33 +585,36 @@ export function MedicalCertificateSections({
               className="h-10"
             />
           </div>
-          <Input
+          <ClinicalDropdownInput
             label="Fitness status"
             name="fitnessStatus"
             value={medicalCertificate.fitnessStatus ?? ""}
-            onChange={(e) =>
+            onChange={(text) =>
               updateRecordField(
                 setMedicalCertificate,
                 "fitnessStatus",
-                e.target.value,
+                text,
               )
             }
-            placeholder="e.g. Fit for duty, unfit for 5 days"
-            className="h-10"
+            options={MED_CERT_FITNESS_RECOMMENDATIONS}
+            placeholder="e.g. Unfit for duty — Advised strict medical rest"
+            chipsCount={3}
           />
-          <Textarea
+          <ClinicalDropdownTextarea
             label="Remarks"
             name="remarks"
             value={medicalCertificate.remarks ?? ""}
-            onChange={(e) =>
+            onChange={(text) =>
               updateRecordField(
                 setMedicalCertificate,
                 "remarks",
-                e.target.value,
+                text,
               )
             }
+            options={MED_CERT_REMARKS_RECOMMENDATIONS}
+            placeholder="e.g. Advised strict rest; avoid weight bearing; review on expiry"
             rows={2}
-            className="min-h-14"
+            chipsCount={3}
           />
         </div>
       </CollapsibleSection>

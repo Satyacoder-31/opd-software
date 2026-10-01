@@ -4,10 +4,16 @@ import { useState } from "react";
 import { generateReferralPdf } from "@/actions/consultations";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
 import { Banner } from "@/components/ui/Banner";
+import { ClinicalDropdownInput } from "@/components/consultation/ClinicalDropdownInput";
+import { ClinicalDropdownTextarea } from "@/components/consultation/ClinicalDropdownTextarea";
 import { sectionCompletion, sectionSummary } from "@/lib/consultation-clinical";
+import {
+  REFERRAL_SPECIALTY_RECOMMENDATIONS,
+  REFERRAL_FACILITY_RECOMMENDATIONS,
+  REFERRAL_REASON_RECOMMENDATIONS,
+  REFERRAL_NOTES_RECOMMENDATIONS,
+} from "@/lib/clinical-recommendations";
 import type { ConsultationClinicalData, ReferralLetter } from "@/lib/types";
 
 export function ReferralSections({
@@ -23,9 +29,11 @@ export function ReferralSections({
   const completion = sectionCompletion(value).referral;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   function patch(patchValue: Partial<ReferralLetter>) {
     onChange({ ...value, referral: { ...referral, ...patchValue } });
   }
+
   async function download() {
     setLoading(true);
     setError(null);
@@ -43,6 +51,7 @@ export function ReferralSections({
     anchor.click();
     URL.revokeObjectURL(url);
   }
+
   return (
     <CollapsibleSection
       flush
@@ -54,11 +63,48 @@ export function ReferralSections({
     >
       <div className="flex flex-col gap-3">
         <div className="grid gap-3 md:grid-cols-2">
-          <Input label="Specialty" value={referral.toSpecialty ?? ""} onChange={(e) => patch({ toSpecialty: e.target.value })} placeholder="e.g. Cardiology" />
-          <Input label="Facility / clinician" value={referral.toFacility ?? ""} onChange={(e) => patch({ toFacility: e.target.value })} />
+          <ClinicalDropdownInput
+            label="Specialty"
+            name="toSpecialty"
+            value={referral.toSpecialty ?? ""}
+            onChange={(val) => patch({ toSpecialty: val })}
+            options={REFERRAL_SPECIALTY_RECOMMENDATIONS}
+            placeholder="e.g. Orthopedics, Spine Surgery, Neurology"
+            chipsCount={4}
+          />
+          <ClinicalDropdownInput
+            label="Facility / clinician"
+            name="toFacility"
+            value={referral.toFacility ?? ""}
+            onChange={(val) => patch({ toFacility: val })}
+            options={REFERRAL_FACILITY_RECOMMENDATIONS}
+            placeholder="e.g. Tertiary Care Center, Government Medical College"
+            chipsCount={3}
+          />
         </div>
-        <Textarea label="Reason for referral" value={referral.reason ?? ""} onChange={(e) => patch({ reason: e.target.value })} rows={2} />
-        <Textarea label="Clinical notes" value={referral.notes ?? ""} onChange={(e) => patch({ notes: e.target.value })} rows={3} />
+
+        <ClinicalDropdownTextarea
+          label="Reason for referral"
+          name="reason"
+          value={referral.reason ?? ""}
+          onChange={(val) => patch({ reason: val })}
+          options={REFERRAL_REASON_RECOMMENDATIONS}
+          placeholder="Clinical justification for specialist consultation or surgical evaluation…"
+          rows={2}
+          chipsCount={3}
+        />
+
+        <ClinicalDropdownTextarea
+          label="Clinical notes"
+          name="notes"
+          value={referral.notes ?? ""}
+          onChange={(val) => patch({ notes: val })}
+          options={REFERRAL_NOTES_RECOMMENDATIONS}
+          placeholder="Summary of presentation, findings, and current treatment for recipient clinician…"
+          rows={3}
+          chipsCount={2}
+        />
+
         {error ? <Banner variant="error">{error}</Banner> : null}
         <div>
           <Button type="button" variant="secondary" onClick={download} loading={loading}>
