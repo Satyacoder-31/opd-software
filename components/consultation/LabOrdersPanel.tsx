@@ -100,35 +100,45 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
       }
     >
       <div className="flex flex-col gap-3.5">
-        {/* Recommended Panels */}
+        {/* Clean Recommended Panels Dropdown */}
         {tests.length > 0 && (
-          <div>
-            <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-ink">
-              <Icon icon={faFlaskVial} className="size-3 text-primary" />
-              <span>Recommended test panels (1-click select):</span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Icon icon={faFlaskVial} className="size-3.5 text-primary" />
+              <label htmlFor="lab-panel-dropdown" className="text-xs font-semibold text-ink">
+                Test panels:
+              </label>
+              <select
+                id="lab-panel-dropdown"
+                defaultValue=""
+                onChange={(e) => {
+                  const found = RECOMMENDED_LAB_PANELS.find((p) => p.name === e.target.value);
+                  if (found) {
+                    applyPanel(found.keywords);
+                    e.target.value = "";
+                  }
+                }}
+                className="h-8 rounded-md border border-border bg-card px-2.5 text-xs font-medium text-ink transition-colors hover:border-primary/50 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="" disabled>Select recommended panel ▾</option>
+                {RECOMMENDED_LAB_PANELS.map((p) => (
+                  <option key={p.name} value={p.name}>
+                    + {p.name}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {RECOMMENDED_LAB_PANELS.map((panel) => (
-                <button
-                  key={panel.name}
-                  type="button"
-                  onClick={() => applyPanel(panel.keywords)}
-                  className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-ink transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
-                  title={`Select tests matching: ${panel.keywords.join(", ")}`}
-                >
-                  + {panel.name}
-                </button>
-              ))}
-              {selected.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setSelected([])}
-                  className="ml-auto text-xs font-medium text-danger hover:underline"
-                >
-                  Clear selected ({selected.length})
-                </button>
-              )}
-            </div>
+
+            {selected.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelected([])}
+                className="text-xs font-medium text-muted-foreground hover:text-danger transition-colors px-1"
+                title="Clear selected tests"
+              >
+                Clear selected ({selected.length})
+              </button>
+            )}
           </div>
         )}
 

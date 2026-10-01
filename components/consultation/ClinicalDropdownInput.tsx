@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
+import { Icon } from "@/components/ui/Icon";
 import { Field, FieldLabel } from "@/components/ui/shadcn/field";
 import { Input } from "@/components/ui/shadcn/input";
 import { cn } from "@/lib/utils";
@@ -13,8 +15,6 @@ type ClinicalDropdownInputProps = {
   placeholder?: string;
   className?: string;
   onChange: (value: string) => void;
-  /** Max quick chips to render beneath the input (default: 3) */
-  chipsCount?: number;
 };
 
 export function ClinicalDropdownInput({
@@ -25,7 +25,6 @@ export function ClinicalDropdownInput({
   placeholder,
   className,
   onChange,
-  chipsCount = 3,
 }: ClinicalDropdownInputProps) {
   const generatedId = useId();
   const inputId = `${generatedId}-input`;
@@ -96,10 +95,6 @@ export function ClinicalDropdownInput({
     }
   }
 
-  const quickChips = useMemo(() => {
-    return options.slice(0, chipsCount);
-  }, [options, chipsCount]);
-
   const activeOptionId =
     open && matches[activeIndex]
       ? `${listboxId}-option-${activeIndex}`
@@ -107,42 +102,60 @@ export function ClinicalDropdownInput({
 
   return (
     <Field className={className}>
-      <div className="flex items-center justify-between">
-        <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
-        {options.length > 0 && (
-          <span className="text-[11px] text-muted-foreground">
-            {options.length} options
-          </span>
+      <div className="flex items-center justify-between pb-1">
+        <FieldLabel htmlFor={inputId} className="text-xs font-semibold text-ink sm:text-xs">
+          {label}
+        </FieldLabel>
+        {value.trim().length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-xs font-medium text-muted-foreground hover:text-danger transition-colors px-1"
+            title={`Clear ${label}`}
+          >
+            Clear
+          </button>
         )}
       </div>
 
       <div ref={containerRef} className={cn("relative", open && "z-50")}>
-        <Input
-          id={inputId}
-          name={name}
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          autoComplete="off"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-activedescendant={activeOptionId}
-          className="h-10 text-sm"
-        />
+        <div className="relative">
+          <Input
+            id={inputId}
+            name={name}
+            value={value}
+            onChange={(event) => {
+              onChange(event.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            autoComplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={listboxId}
+            aria-activedescendant={activeOptionId}
+            className="h-10 pr-8 text-sm"
+          />
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setOpen((prev) => !prev)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-ink transition-colors"
+            aria-label="Toggle options"
+          >
+            <Icon icon={open ? faChevronUp : faChevronDown} className="size-3" />
+          </button>
+        </div>
 
         {open && (
           <div
             id={listboxId}
             role="listbox"
             aria-label={`${label} recommendations`}
-            className="absolute inset-x-0 top-[calc(100%+0.25rem)] z-50 max-h-64 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+            className="absolute inset-x-0 top-[calc(100%+0.25rem)] z-50 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl ring-1 ring-border"
           >
             {matches.length > 0 ? (
               matches.map((option, index) => (
@@ -154,7 +167,7 @@ export function ClinicalDropdownInput({
                   aria-selected={index === activeIndex}
                   tabIndex={-1}
                   className={cn(
-                    "flex w-full rounded-md px-3 py-1.5 text-left text-xs sm:text-sm",
+                    "flex w-full rounded-md px-3 py-1.5 text-left text-xs sm:text-sm transition-colors",
                     index === activeIndex
                       ? "bg-accent text-accent-foreground font-medium"
                       : "hover:bg-accent/70 hover:text-accent-foreground"
@@ -168,33 +181,12 @@ export function ClinicalDropdownInput({
               ))
             ) : (
               <p className="px-3 py-2 text-xs text-muted-foreground">
-                No match — your text will be saved as typed.
+                No match — your text will be saved as entered.
               </p>
             )}
           </div>
         )}
       </div>
-
-      {/* Quick 1-click recommendation pills */}
-      {quickChips.length > 0 && (
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          {quickChips.map((chip) => (
-            <button
-              key={chip}
-              type="button"
-              onClick={() => onChange(chip)}
-              className={cn(
-                "rounded-md border border-border/70 bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors",
-                "hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
-                value === chip && "border-primary bg-primary/10 font-semibold text-primary"
-              )}
-              title={`Click to set "${chip}"`}
-            >
-              + {chip}
-            </button>
-          ))}
-        </div>
-      )}
     </Field>
   );
 }

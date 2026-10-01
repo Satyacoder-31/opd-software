@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   faBookmark,
   faChevronDown,
@@ -40,9 +40,36 @@ export function PrescriptionQuickTemplates({
   onDelete,
   deleting = false,
 }: PrescriptionQuickTemplatesProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const dropdownFiltered = useMemo(() => {
+    const q = dropdownSearch.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.illness && t.illness.toLowerCase().includes(q)) ||
+        (t.category && t.category.toLowerCase().includes(q))
+    );
+  }, [templates, dropdownSearch]);
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -85,7 +112,7 @@ export function PrescriptionQuickTemplates({
       aria-label="Prescription templates"
       className="border-b border-border bg-surface-muted/40 transition-colors"
     >
-      {/* Header bar */}
+      {/* Header bar: Icon + Title on left, Clean Dropdown Menu on right */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 md:px-4">
         <div className="flex items-center gap-2.5 min-w-0">
           <div
@@ -109,17 +136,128 @@ export function PrescriptionQuickTemplates({
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="h-8 gap-1.5 px-2.5 text-xs font-medium text-ink"
-          aria-expanded={isOpen}
-        >
-          <span>{isOpen ? "Collapse regimens" : "Browse regimens"}</span>
-          <Icon icon={isOpen ? faChevronUp : faChevronDown} className="size-3 text-muted-foreground" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Clean Dropdown Menu Trigger */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setDropdownOpen((prev) => !prev)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-ink transition-colors",
+                "hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
+                dropdownOpen && "border-primary ring-1 ring-primary bg-primary/5 text-primary"
+              )}
+              aria-expanded={dropdownOpen}
+            >
+              <span>Select standard regimen</span>
+              <Icon
+                icon={dropdownOpen ? faChevronUp : faChevronDown}
+                className="size-2.5 text-muted-foreground"
+              />
+            </button>
+
+            {dropdownOpen && (
+              <div
+                className="absolute right-0 top-[calc(100%+0.25rem)] z-50 w-80 sm:w-96 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-xl ring-1 ring-border"
+                role="region"
+                aria-label="Prescription regimens"
+              >
+                <div className="relative mb-2">
+                  <Icon
+                    icon={faMagnifyingGlass}
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-3 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <input
+                    type="text"
+                    value={dropdownSearch}
+                    onChange={(e) => setDropdownSearch(e.target.value)}
+                    placeholder="Search regimens (flu, back pain, OA)…"
+                    className="h-7 w-full rounded border border-border bg-card pl-7 pr-6 text-xs text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    autoFocus
+                  />
+                  {dropdownSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDropdownSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-ink"
+                    >
+                      <Icon icon={faXmark} className="size-2.5" />
+                    </button>
+                  )}
+                </div>
+
+                <ul className="max-h-60 space-y-1 overflow-y-auto pr-0.5">
+                  {dropdownFiltered.length > 0 ? (
+                    dropdownFiltered.map((tpl) => (
+                      <li
+                        key={tpl.id}
+                        className="group flex items-center justify-between gap-2 rounded-md p-1.5 text-xs transition-colors hover:bg-accent"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 font-medium text-ink group-hover:text-accent-foreground">
+                            {tpl.isBuiltIn && (
+                              <Icon
+                                icon={faShieldHalved}
+                                className="size-2.5 shrink-0 text-primary/70"
+                              />
+                            )}
+                            <span className="truncate">{tpl.name}</span>
+                          </div>
+                          {tpl.illness && (
+                            <span className="line-clamp-1 text-[11px] text-muted-foreground">
+                              {tpl.illness} · {tpl.medicineCount ?? 0} meds
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onApply(tpl.id, "replace");
+                              setDropdownOpen(false);
+                            }}
+                            className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20"
+                            title="Load into prescription (replaces draft)"
+                          >
+                            Load
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onApply(tpl.id, "append");
+                              setDropdownOpen(false);
+                            }}
+                            className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent hover:text-ink"
+                            title="Append medicines to prescription"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      No regimens matching “{dropdownSearch}”.
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="h-8 gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-ink"
+            aria-expanded={isOpen}
+          >
+            <span>{isOpen ? "Hide cards" : "Browse all"}</span>
+            <Icon icon={isOpen ? faChevronUp : faChevronDown} className="size-2.5 text-muted-foreground" />
+          </Button>
+        </div>
       </div>
 
       {/* Main Content Area */}

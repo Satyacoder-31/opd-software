@@ -17,8 +17,11 @@ import {
 import { PatientPreviousPrescriptions } from "@/components/consultation/PatientPreviousPrescriptions";
 import { COMMON_ILLNESS_TEMPLATES } from "@/lib/clinical-templates";
 import {
+  faCalendarDays,
+  faClipboard,
+} from "@fortawesome/free-solid-svg-icons";
+import {
   DOSAGE_RECOMMENDATIONS,
-  DURATION_PRESETS,
   ADVICE_RECOMMENDATIONS,
   FOLLOW_UP_RECOMMENDATIONS,
 } from "@/lib/clinical-recommendations";
@@ -707,31 +710,13 @@ export function PrescriptionBuilder({
                   </div>
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
-                    <div>
-                      <DurationField
-                        name={`med-dur-${index}`}
-                        value={med.duration}
-                        onChange={(value) =>
-                          updateMedicine(index, "duration", value)
-                        }
-                      />
-                      <div className="mt-1 flex flex-wrap items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">Presets:</span>
-                        {DURATION_PRESETS.slice(0, 5).map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => updateMedicine(index, "duration", preset)}
-                            className={cn(
-                              "rounded px-1.5 py-0.2 text-[10px] font-medium border border-border/60 bg-muted/30 text-muted-foreground transition-colors hover:border-primary hover:text-primary",
-                              med.duration === preset && "border-primary bg-primary/10 text-primary font-semibold"
-                            )}
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <DurationField
+                      name={`med-dur-${index}`}
+                      value={med.duration}
+                      onChange={(value) =>
+                        updateMedicine(index, "duration", value)
+                      }
+                    />
                     <PrescriptionOptionCombobox
                       label="Instructions"
                       name={`med-inst-${index}`}
@@ -773,6 +758,7 @@ export function PrescriptionBuilder({
         tabIndex={-1}
       >
         <ClinicalDropdownTextarea
+          icon={faClipboard}
           label="Advice"
           name="advice"
           value={advice}
@@ -782,9 +768,9 @@ export function PrescriptionBuilder({
             "Drink plenty of fluids.\nWarm saline gargles.\nTake adequate rest."
           }
           rows={3}
-          chipsCount={3}
         />
         <ClinicalDropdownTextarea
+          icon={faCalendarDays}
           label="Follow-up"
           name="followUp"
           value={followUp}
@@ -792,7 +778,6 @@ export function PrescriptionBuilder({
           options={FOLLOW_UP_RECOMMENDATIONS}
           placeholder="After 5 days if symptoms persist."
           rows={3}
-          chipsCount={3}
         />
       </div>
 

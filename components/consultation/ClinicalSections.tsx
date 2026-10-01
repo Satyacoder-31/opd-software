@@ -1,6 +1,27 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import {
+  faBone,
+  faBrain,
+  faCertificate,
+  faClipboard,
+  faClipboardList,
+  faClockRotateLeft,
+  faFileMedical,
+  faFileWaveform,
+  faFlaskVial,
+  faHeartPulse,
+  faLungs,
+  faNotesMedical,
+  faPills,
+  faShieldHalved,
+  faStethoscope,
+  faUser,
+  faUserCheck,
+  faUsers,
+  faXRay,
+} from "@fortawesome/free-solid-svg-icons";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Input } from "@/components/ui/Input";
 import { ClinicalDropdownInput } from "@/components/consultation/ClinicalDropdownInput";
@@ -166,6 +187,7 @@ export function ConsultationClinicalSections({
           <div className="flex flex-col gap-2.5">
             <div className="grid gap-2.5 md:grid-cols-2">
               <ClinicalDropdownTextarea
+                icon={faClipboardList}
                 label="Chief complaint"
                 name="chiefComplaint"
                 value={value.chiefComplaint ?? ""}
@@ -175,9 +197,9 @@ export function ConsultationClinicalSections({
                 options={CHIEF_COMPLAINT_RECOMMENDATIONS}
                 placeholder="e.g. Pain in right knee joint aggravated by walking"
                 rows={2}
-                chipsCount={4}
               />
               <ClinicalDropdownTextarea
+                icon={faStethoscope}
                 label="Diagnosis notes"
                 name="diagnosis"
                 value={value.diagnosis ?? ""}
@@ -187,7 +209,6 @@ export function ConsultationClinicalSections({
                 options={DIAGNOSIS_NOTES_RECOMMENDATIONS}
                 placeholder="Free-text notes (or select common clinical diagnosis)"
                 rows={2}
-                chipsCount={3}
               />
             </div>
             <DiagnosisCodesField
@@ -197,6 +218,7 @@ export function ConsultationClinicalSections({
               }
             />
             <ClinicalDropdownTextarea
+              icon={faClockRotateLeft}
               label="History of present illness"
               name="historyOfPresentIllness"
               value={clinicalPresentation.historyOfPresentIllness ?? ""}
@@ -210,7 +232,6 @@ export function ConsultationClinicalSections({
               options={HPI_RECOMMENDATIONS}
               placeholder="Onset, progression, aggravating/relieving factors, radiation…"
               rows={3}
-              chipsCount={2}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
               <ClinicalDropdownInput
@@ -222,7 +243,6 @@ export function ConsultationClinicalSections({
                 }
                 options={ONSET_RECOMMENDATIONS}
                 placeholder="e.g. Acute onset (2-3 days ago)"
-                chipsCount={4}
               />
               <ClinicalDropdownInput
                 label="Duration"
@@ -233,7 +253,6 @@ export function ConsultationClinicalSections({
                 }
                 options={DURATION_RECOMMENDATIONS}
                 placeholder="e.g. 5 days, 2 weeks, intermittent"
-                chipsCount={4}
               />
             </div>
           </div>
@@ -251,6 +270,7 @@ export function ConsultationClinicalSections({
         >
           <div className="flex flex-col gap-2.5">
             <ClinicalDropdownTextarea
+              icon={faFileMedical}
               label="Past medical history"
               name="pastMedical"
               value={patientHistory.pastMedical ?? ""}
@@ -260,9 +280,9 @@ export function ConsultationClinicalSections({
               options={PAST_MEDICAL_RECOMMENDATIONS}
               placeholder="e.g. Hypertension, Type 2 Diabetes Mellitus"
               rows={2}
-              chipsCount={4}
             />
             <ClinicalDropdownTextarea
+              icon={faBone}
               label="Past surgical history"
               name="pastSurgical"
               value={patientHistory.pastSurgical ?? ""}
@@ -272,10 +292,10 @@ export function ConsultationClinicalSections({
               options={PAST_SURGICAL_RECOMMENDATIONS}
               placeholder="e.g. Total Knee Replacement, Appendectomy"
               rows={2}
-              chipsCount={4}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
               <ClinicalDropdownTextarea
+                icon={faShieldHalved}
                 label="Allergies"
                 name="allergies"
                 value={patientHistory.allergies ?? ""}
@@ -285,9 +305,9 @@ export function ConsultationClinicalSections({
                 options={ALLERGIES_RECOMMENDATIONS}
                 placeholder="e.g. NKDA, Penicillin, NSAIDs"
                 rows={2}
-                chipsCount={3}
               />
               <ClinicalDropdownTextarea
+                icon={faPills}
                 label="Current medications"
                 name="medications"
                 value={patientHistory.medications ?? ""}
@@ -297,11 +317,11 @@ export function ConsultationClinicalSections({
                 options={CURRENT_MEDICATIONS_RECOMMENDATIONS}
                 placeholder="e.g. Tab Telmisartan 40 mg OD, Tab Metformin 500 mg BD"
                 rows={2}
-                chipsCount={3}
               />
             </div>
             <div className="grid gap-2.5 md:grid-cols-2">
               <ClinicalDropdownTextarea
+                icon={faUsers}
                 label="Family history"
                 name="familyHistory"
                 value={patientHistory.familyHistory ?? ""}
@@ -311,9 +331,9 @@ export function ConsultationClinicalSections({
                 options={FAMILY_HISTORY_RECOMMENDATIONS}
                 placeholder="e.g. Hypertension, CAD, Osteoarthritis"
                 rows={2}
-                chipsCount={3}
               />
               <ClinicalDropdownTextarea
+                icon={faUser}
                 label="Social history"
                 name="socialHistory"
                 value={patientHistory.socialHistory ?? ""}
@@ -323,7 +343,6 @@ export function ConsultationClinicalSections({
                 options={SOCIAL_HISTORY_RECOMMENDATIONS}
                 placeholder="e.g. Non-smoker, sedentary lifestyle, desk job"
                 rows={2}
-                chipsCount={3}
               />
             </div>
           </div>
@@ -341,6 +360,7 @@ export function ConsultationClinicalSections({
         >
           <div className="flex flex-col gap-2.5">
             <ClinicalDropdownTextarea
+              icon={faUserCheck}
               label="General"
               name="general"
               value={examination.general ?? ""}
@@ -350,10 +370,10 @@ export function ConsultationClinicalSections({
               options={GENERAL_EXAM_RECOMMENDATIONS}
               placeholder="General appearance, consciousness, pallor, icterus, pedal edema…"
               rows={2}
-              chipsCount={3}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
               <ClinicalDropdownTextarea
+                icon={faHeartPulse}
                 label="Cardiovascular"
                 name="cardiovascular"
                 value={examination.cardiovascular ?? ""}
@@ -363,9 +383,9 @@ export function ConsultationClinicalSections({
                 options={CVS_EXAM_RECOMMENDATIONS}
                 placeholder="Heart sounds, rhythm, murmurs…"
                 rows={2}
-                chipsCount={2}
               />
               <ClinicalDropdownTextarea
+                icon={faLungs}
                 label="Respiratory"
                 name="respiratory"
                 value={examination.respiratory ?? ""}
@@ -375,9 +395,9 @@ export function ConsultationClinicalSections({
                 options={RESP_EXAM_RECOMMENDATIONS}
                 placeholder="Air entry, breath sounds, wheezing, crepitations…"
                 rows={2}
-                chipsCount={2}
               />
               <ClinicalDropdownTextarea
+                icon={faStethoscope}
                 label="Abdomen"
                 name="abdomen"
                 value={examination.abdomen ?? ""}
@@ -387,9 +407,9 @@ export function ConsultationClinicalSections({
                 options={ABDOMEN_EXAM_RECOMMENDATIONS}
                 placeholder="Tenderness, guarding, bowel sounds, organomegaly…"
                 rows={2}
-                chipsCount={2}
               />
               <ClinicalDropdownTextarea
+                icon={faBrain}
                 label="Neurological"
                 name="neurological"
                 value={examination.neurological ?? ""}
@@ -399,10 +419,10 @@ export function ConsultationClinicalSections({
                 options={NEURO_EXAM_RECOMMENDATIONS}
                 placeholder="Motor power, DTR, sensations, SLR test…"
                 rows={2}
-                chipsCount={2}
               />
             </div>
             <ClinicalDropdownTextarea
+              icon={faNotesMedical}
               label="Other findings"
               name="other"
               value={examination.other ?? ""}
@@ -412,7 +432,6 @@ export function ConsultationClinicalSections({
               options={OTHER_EXAM_RECOMMENDATIONS}
               placeholder="Local joint examination: tenderness, crepitus, range of motion, tests…"
               rows={2}
-              chipsCount={3}
             />
           </div>
         </CollapsibleSection>
@@ -428,6 +447,7 @@ export function ConsultationClinicalSections({
           filled={completion.notes.filled}
         >
           <ClinicalDropdownTextarea
+            icon={faClipboard}
             label="Notes"
             name="notes"
             value={value.notes ?? ""}
@@ -437,7 +457,6 @@ export function ConsultationClinicalSections({
             options={ADDITIONAL_NOTES_RECOMMENDATIONS}
             placeholder="Additional clinical notes, patient counseling, red flag warnings…"
             rows={3}
-            chipsCount={3}
           />
         </CollapsibleSection>
       </div>
@@ -472,6 +491,7 @@ export function InvestigationSections({
       >
         <div className="flex flex-col gap-2.5">
           <ClinicalDropdownTextarea
+            icon={faFlaskVial}
             label="Lab results"
             name="labs"
             value={investigationResults.labs ?? ""}
@@ -481,9 +501,9 @@ export function InvestigationSections({
             options={LAB_RESULTS_RECOMMENDATIONS}
             placeholder="e.g. CBC, ESR/CRP, Blood sugar, Uric acid, LFT, KFT findings…"
             rows={3}
-            chipsCount={4}
           />
           <ClinicalDropdownTextarea
+            icon={faXRay}
             label="Imaging"
             name="imaging"
             value={investigationResults.imaging ?? ""}
@@ -493,9 +513,9 @@ export function InvestigationSections({
             options={IMAGING_RESULTS_RECOMMENDATIONS}
             placeholder="e.g. X-ray knee OA, Lumbar spine MRI, Chest X-ray, Ultrasound findings…"
             rows={3}
-            chipsCount={4}
           />
           <ClinicalDropdownTextarea
+            icon={faFileWaveform}
             label="Other investigations"
             name="otherInvestigations"
             value={investigationResults.other ?? ""}
@@ -505,7 +525,6 @@ export function InvestigationSections({
             options={OTHER_INVESTIGATION_RECOMMENDATIONS}
             placeholder="e.g. ECG normal sinus rhythm, DEXA bone scan T-score, EMG/NCV…"
             rows={2}
-            chipsCount={3}
           />
         </div>
       </CollapsibleSection>
@@ -540,6 +559,7 @@ export function MedicalCertificateSections({
       >
         <div className="flex flex-col gap-2.5">
           <ClinicalDropdownTextarea
+            icon={faCertificate}
             label="Diagnosis for certificate"
             name="diagnosisForCertificate"
             value={medicalCertificate.diagnosisForCertificate ?? ""}
@@ -553,7 +573,6 @@ export function MedicalCertificateSections({
             options={MED_CERT_DIAGNOSIS_RECOMMENDATIONS}
             placeholder="Diagnosis certified on official medical certificate"
             rows={2}
-            chipsCount={3}
           />
           <div className="grid gap-2.5 md:grid-cols-2">
             <Input
@@ -598,9 +617,9 @@ export function MedicalCertificateSections({
             }
             options={MED_CERT_FITNESS_RECOMMENDATIONS}
             placeholder="e.g. Unfit for duty — Advised strict medical rest"
-            chipsCount={3}
           />
           <ClinicalDropdownTextarea
+            icon={faFileMedical}
             label="Remarks"
             name="remarks"
             value={medicalCertificate.remarks ?? ""}
@@ -614,7 +633,6 @@ export function MedicalCertificateSections({
             options={MED_CERT_REMARKS_RECOMMENDATIONS}
             placeholder="e.g. Advised strict rest; avoid weight bearing; review on expiry"
             rows={2}
-            chipsCount={3}
           />
         </div>
       </CollapsibleSection>

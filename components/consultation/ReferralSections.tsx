@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { faClipboard, faFileMedical } from "@fortawesome/free-solid-svg-icons";
 import { generateReferralPdf } from "@/actions/consultations";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -70,7 +71,6 @@ export function ReferralSections({
             onChange={(val) => patch({ toSpecialty: val })}
             options={REFERRAL_SPECIALTY_RECOMMENDATIONS}
             placeholder="e.g. Orthopedics, Spine Surgery, Neurology"
-            chipsCount={4}
           />
           <ClinicalDropdownInput
             label="Facility / clinician"
@@ -79,11 +79,11 @@ export function ReferralSections({
             onChange={(val) => patch({ toFacility: val })}
             options={REFERRAL_FACILITY_RECOMMENDATIONS}
             placeholder="e.g. Tertiary Care Center, Government Medical College"
-            chipsCount={3}
           />
         </div>
 
         <ClinicalDropdownTextarea
+          icon={faFileMedical}
           label="Reason for referral"
           name="reason"
           value={referral.reason ?? ""}
@@ -91,10 +91,10 @@ export function ReferralSections({
           options={REFERRAL_REASON_RECOMMENDATIONS}
           placeholder="Clinical justification for specialist consultation or surgical evaluation…"
           rows={2}
-          chipsCount={3}
         />
 
         <ClinicalDropdownTextarea
+          icon={faClipboard}
           label="Clinical notes"
           name="notes"
           value={referral.notes ?? ""}
@@ -102,7 +102,6 @@ export function ReferralSections({
           options={REFERRAL_NOTES_RECOMMENDATIONS}
           placeholder="Summary of presentation, findings, and current treatment for recipient clinician…"
           rows={3}
-          chipsCount={2}
         />
 
         {error ? <Banner variant="error">{error}</Banner> : null}
