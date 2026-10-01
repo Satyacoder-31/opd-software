@@ -498,6 +498,46 @@ async function main() {
     include: { prescription: true },
   });
 
+  const standardTests = [
+    { name: "Complete Blood Count (CBC)", code: "CBC", sampleType: "Blood (EDTA)", feeAmount: 350 },
+    { name: "Erythrocyte Sedimentation Rate (ESR)", code: "ESR", sampleType: "Blood", feeAmount: 150 },
+    { name: "C-Reactive Protein (CRP) Quantitative", code: "CRP", sampleType: "Blood (Serum)", feeAmount: 450 },
+    { name: "Serum Uric Acid", code: "URIC", sampleType: "Blood (Serum)", feeAmount: 250 },
+    { name: "Serum Calcium", code: "CA", sampleType: "Blood (Serum)", feeAmount: 250 },
+    { name: "Serum Vitamin D3 (25-OH)", code: "VITD", sampleType: "Blood (Serum)", feeAmount: 1200 },
+    { name: "Serum Vitamin B12", code: "VITB12", sampleType: "Blood (Serum)", feeAmount: 900 },
+    { name: "Rheumatoid Factor (RA / RF Quantitative)", code: "RF", sampleType: "Blood (Serum)", feeAmount: 500 },
+    { name: "Anti-CCP (Cyclic Citrullinated Peptide)", code: "ANTICCP", sampleType: "Blood (Serum)", feeAmount: 1400 },
+    { name: "Serum Alkaline Phosphatase (ALP)", code: "ALP", sampleType: "Blood (Serum)", feeAmount: 250 },
+    { name: "Fasting Blood Sugar (FBS / Glucose)", code: "FBS", sampleType: "Blood (Fluoride)", feeAmount: 120 },
+    { name: "Post Prandial Blood Sugar (PPBS)", code: "PPBS", sampleType: "Blood (Fluoride)", feeAmount: 120 },
+    { name: "HbA1c (Glycated Hemoglobin)", code: "HBA1C", sampleType: "Blood (EDTA)", feeAmount: 500 },
+    { name: "Kidney Function Test (KFT / Creatinine & Urea)", code: "KFT", sampleType: "Blood (Serum)", feeAmount: 700 },
+    { name: "Serum Creatinine", code: "CREAT", sampleType: "Blood (Serum)", feeAmount: 200 },
+    { name: "Liver Function Test (LFT)", code: "LFT", sampleType: "Blood (Serum)", feeAmount: 750 },
+    { name: "Lipid Profile (Cholesterol, Triglycerides)", code: "LIPID", sampleType: "Blood (Serum)", feeAmount: 650 },
+    { name: "Urine Routine & Microscopic Examination", code: "URINE", sampleType: "Urine", feeAmount: 180 },
+    { name: "Thyroid Profile (Total T3, T4, TSH)", code: "THYROID", sampleType: "Blood (Serum)", feeAmount: 550 },
+    { name: "Prothrombin Time with INR (PT/INR)", code: "PTINR", sampleType: "Blood (Citrate)", feeAmount: 350 },
+    { name: "Blood Grouping & Rh Typing", code: "BGRP", sampleType: "Blood (EDTA)", feeAmount: 150 },
+    { name: "Viral Serology Screening (HIV, HBsAg, HCV)", code: "VIRAL", sampleType: "Blood (Serum)", feeAmount: 800 },
+    { name: "Widal Test (Typhoid Slide/Tube)", code: "WIDAL", sampleType: "Blood (Serum)", feeAmount: 250 },
+    { name: "Dengue Serology (NS1 Antigen & IgM/IgG)", code: "DENGUE", sampleType: "Blood (Serum)", feeAmount: 900 },
+    { name: "Serum Ferritin", code: "FERRITIN", sampleType: "Blood (Serum)", feeAmount: 600 },
+  ];
+
+  await prisma.labTest.createMany({
+    data: standardTests.map((t) => ({
+      clinicId: clinic.id,
+      name: t.name,
+      code: t.code,
+      sampleType: t.sampleType,
+      feeAmount: t.feeAmount,
+      isActive: true,
+    })),
+    skipDuplicates: true,
+  });
+
   console.log("Dr Orthos Seed complete:");
   console.log(`  Clinic: ${clinic.name} (${clinic.id}, slug: ${clinic.slug})`);
   console.log(`  Admin / Lead Surgeon: ${admin.name} (${admin.email})`);
