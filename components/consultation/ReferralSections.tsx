@@ -1,11 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { faClipboard, faFileMedical } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowRightFromBracket,
+  faClipboard,
+  faDownload,
+  faFileMedical,
+} from "@fortawesome/free-solid-svg-icons";
 import { generateReferralPdf } from "@/actions/consultations";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Banner } from "@/components/ui/Banner";
+import { Icon } from "@/components/ui/Icon";
 import { ClinicalDropdownInput } from "@/components/consultation/ClinicalDropdownInput";
 import { ClinicalDropdownTextarea } from "@/components/consultation/ClinicalDropdownTextarea";
 import { sectionCompletion, sectionSummary } from "@/lib/consultation-clinical";
@@ -59,6 +65,8 @@ export function ReferralSections({
       density="compact"
       contentClassName="px-3 py-3 md:px-4"
       title="Referral letter"
+      icon={faArrowRightFromBracket}
+      iconColor="bg-indigo-500/15 text-indigo-600"
       summary={sectionSummary(completion)}
       filled={completion.filled}
     >
@@ -106,7 +114,14 @@ export function ReferralSections({
 
         {error ? <Banner variant="error">{error}</Banner> : null}
         <div>
-          <Button type="button" variant="secondary" onClick={download} loading={loading}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={download}
+            loading={loading}
+            className="gap-1.5"
+          >
+            <Icon icon={faDownload} className="size-3.5" />
             Download referral PDF
           </Button>
         </div>

@@ -17,6 +17,7 @@ import {
   faPills,
   faShieldHalved,
   faStethoscope,
+  faTemperatureHalf,
   faUser,
   faUserCheck,
   faUsers,
@@ -137,8 +138,11 @@ export function ConsultationClinicalSections({
           density="compact"
           contentClassName="px-3 py-3 md:px-4"
           title="Vitals"
+          icon={faTemperatureHalf}
+          iconColor="bg-rose-500/15 text-rose-600"
           summary={sectionSummary(completion.vitals)}
           filled={completion.vitals.filled}
+          badgeText={completion.vitals.filled ? "Recorded" : "Pending"}
         >
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
             {VITAL_FIELDS.map((field) => (
@@ -168,6 +172,8 @@ export function ConsultationClinicalSections({
           density="compact"
           contentClassName="px-3 py-3 md:px-4"
           title="Chief complaint & diagnosis"
+          icon={faClipboardList}
+          iconColor="bg-blue-500/15 text-blue-600"
           summary={sectionSummary({
             filled:
               completion.clinicalPresentation.filled ||
@@ -265,6 +271,8 @@ export function ConsultationClinicalSections({
           density="compact"
           contentClassName="px-3 py-3 md:px-4"
           title="Patient history"
+          icon={faFileMedical}
+          iconColor="bg-amber-500/15 text-amber-600"
           summary={sectionSummary(completion.patientHistory)}
           filled={completion.patientHistory.filled}
         >
@@ -355,6 +363,8 @@ export function ConsultationClinicalSections({
           density="compact"
           contentClassName="px-3 py-3 md:px-4"
           title="Examination"
+          icon={faStethoscope}
+          iconColor="bg-violet-500/15 text-violet-600"
           summary={sectionSummary(completion.examination)}
           filled={completion.examination.filled}
         >
@@ -443,6 +453,8 @@ export function ConsultationClinicalSections({
           density="compact"
           contentClassName="px-3 py-3 md:px-4"
           title="Additional notes"
+          icon={faNotesMedical}
+          iconColor="bg-teal-500/15 text-teal-600"
           summary={sectionSummary(completion.notes)}
           filled={completion.notes.filled}
         >
@@ -486,6 +498,8 @@ export function InvestigationSections({
         density="compact"
         contentClassName="px-3 py-3 md:px-4"
         title="Investigation results"
+        icon={faFlaskVial}
+        iconColor="bg-sky-500/15 text-sky-600"
         summary={sectionSummary(completion.investigationResults)}
         filled={completion.investigationResults.filled}
       >
@@ -554,6 +568,8 @@ export function MedicalCertificateSections({
         density="compact"
         contentClassName="px-3 py-3 md:px-4"
         title="Medical certificate"
+        icon={faCertificate}
+        iconColor="bg-orange-500/15 text-orange-600"
         summary={sectionSummary(completion.medicalCertificate)}
         filled={completion.medicalCertificate.filled}
       >

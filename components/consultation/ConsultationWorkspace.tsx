@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  faCheckCircle,
+  faCloudArrowUp,
+  faFileLines,
+  faFlaskVial,
+  faPaperclip,
+  faPills,
+  faStethoscope,
+  faWifi,
+  faWifiSlash,
+} from "@fortawesome/free-solid-svg-icons";
 import { completeVisit, saveVisitDraft } from "@/actions/consultations";
 import {
   ConsultationClinicalSections,
@@ -18,6 +29,7 @@ import { PatientSafetyBanner } from "@/components/patients/PatientSafetyBanner";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { Icon } from "@/components/ui/Icon";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { firstFieldError } from "@/lib/form-utils";
@@ -255,7 +267,8 @@ export function ConsultationWorkspace({
 
   return (
     <PageShell className="min-h-0">
-      <div className="border-b border-border bg-card">
+      {/* Patient Header — gradient card */}
+      <div className="border-b border-border bg-gradient-to-b from-card to-muted/20">
         <PageHeader
           className="pb-3 md:pb-3"
           title={patientName}
@@ -267,19 +280,29 @@ export function ConsultationWorkspace({
                 role="status"
                 className={
                   autosaveStatus === "saved"
-                    ? "shrink-0 rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-success"
+                    ? "inline-flex items-center gap-1.5 shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"
                     : autosaveStatus === "saving"
-                      ? "shrink-0 text-xs font-medium text-muted-foreground"
-                      : "shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-accent-foreground"
+                      ? "inline-flex items-center gap-1.5 shrink-0 text-xs font-medium text-muted-foreground"
+                      : "inline-flex items-center gap-1.5 shrink-0 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
                 }
               >
+                <Icon
+                  icon={
+                    autosaveStatus === "saved"
+                      ? faCheckCircle
+                      : autosaveStatus === "saving"
+                        ? faCloudArrowUp
+                        : faWifiSlash
+                  }
+                  className="size-3"
+                />
                 {autosaveLabel}
               </span>
             ) : null
           }
         />
         <PatientContextRail
-          className="px-6 pb-4 md:px-8"
+          className="px-6 pb-5 md:px-8"
           hideName
           patientName={patientName}
           uhid={uhid}
@@ -308,18 +331,28 @@ export function ConsultationWorkspace({
           }}
           className="gap-0"
         >
-          <div className="sticky top-0 z-1 overflow-x-auto border-b border-border bg-card/95 px-2 py-1.5 backdrop-blur scrollbar-hide md:px-3">
+          {/* Sticky tab bar */}
+          <div className="sticky top-0 z-10 overflow-x-auto border-b border-border bg-card/95 px-2 py-2 backdrop-blur scrollbar-hide md:px-3">
             <TabsList
               variant="line"
               className="h-auto w-max min-w-full justify-start gap-0.5"
             >
-              {WORKSPACE_TABS.map((item) => (
+              {([
+                { id: "consultation", label: "Consultation", icon: faStethoscope, color: "text-blue-600" },
+                { id: "prescription", label: "Prescription", icon: faPills, color: "text-violet-600" },
+                { id: "investigations", label: "Investigations", icon: faFlaskVial, color: "text-sky-600" },
+                { id: "documents", label: "Documents", icon: faFileLines, color: "text-orange-600" },
+              ] as const).map((item) => (
                 <TabsTrigger
                   key={item.id}
                   value={item.id}
-                  className="min-h-10 flex-none shrink-0 px-2.5"
+                  className="min-h-10 flex-none shrink-0 px-3 gap-1.5"
                   title={item.label}
                 >
+                  <Icon
+                    icon={item.icon}
+                    className={`size-3.5 ${tab === item.id ? item.color : "text-muted-foreground"}`}
+                  />
                   {item.label}
                 </TabsTrigger>
               ))}
@@ -331,7 +364,7 @@ export function ConsultationWorkspace({
               allergies: patientAllergies,
               chronicConditions: patientChronicConditions,
             }) ? (
-              <div className="border-b border-border px-3 py-3 md:px-4">
+              <div className="border-b border-border/70 bg-rose-50/50 px-3 py-3 md:px-4">
                 <PatientSafetyBanner
                   allergies={patientAllergies}
                   chronicConditions={patientChronicConditions}
@@ -380,6 +413,8 @@ export function ConsultationWorkspace({
               density="compact"
               contentClassName="px-3 py-3 md:px-4"
               title="Attachments"
+              icon={faPaperclip}
+              iconColor="bg-slate-500/15 text-slate-600"
             >
               <ConsultationAttachments consultationId={consultationId} />
             </CollapsibleSection>
@@ -387,26 +422,35 @@ export function ConsultationWorkspace({
         </Tabs>
       </div>
 
+      {/* Sticky footer actions */}
       <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur">
-        <div className="flex flex-wrap items-center justify-end gap-2 px-3 py-2.5 md:px-4">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 md:px-4">
+          <div className="hidden text-xs text-muted-foreground sm:block">
+            <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+S</kbd>{" "}
+            Save draft &nbsp;·&nbsp;{" "}
+            <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+↵</kbd>{" "}
+            Complete visit
+          </div>
+          <div className="flex flex-wrap gap-2 ml-auto">
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              className="min-h-10"
+              className="min-h-10 gap-1.5"
               onClick={handleSaveDraft}
               loading={isPending("save")}
             >
+              <Icon icon={faCloudArrowUp} className="size-3.5" />
               Save draft
             </Button>
             <Button
               type="button"
               size="sm"
-              className="min-h-10"
+              className="min-h-10 gap-1.5 bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-shadow"
               onClick={handleCompleteVisit}
               loading={isPending("complete")}
             >
+              <Icon icon={faCheckCircle} className="size-3.5" />
               Complete visit
             </Button>
           </div>

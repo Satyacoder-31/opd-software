@@ -1,4 +1,13 @@
 import Link from "next/link";
+import {
+  faArrowUpRightFromSquare,
+  faCalendarDays,
+  faIdCard,
+  faPhone,
+  faUserDoctor,
+  faVenusMars,
+} from "@fortawesome/free-solid-svg-icons";
+import { Icon } from "@/components/ui/Icon";
 import { cn, formatPhone } from "@/lib/utils";
 
 type PatientContextRailProps = {
@@ -16,27 +25,57 @@ type PatientContextRailProps = {
   hideName?: boolean;
 };
 
-function MetaCell({
-  label,
-  value,
-}: {
+type ChipProps = {
+  icon: React.ComponentProps<typeof Icon>["icon"];
   label: string;
   value?: string | null;
-}) {
+  iconColor: string;
+  href?: string;
+};
+
+function InfoChip({ icon, label, value, iconColor, href }: ChipProps) {
   const display = value?.trim();
-  return (
-    <div className="min-w-0">
-      <dt className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </dt>
-      <dd
-        className="mt-0.5 truncate text-sm font-medium text-ink"
-        title={display || undefined}
+  const inner = (
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-xl border border-border/70 bg-muted/40 px-3 py-1.5 text-xs transition-colors",
+        href && "hover:border-primary/50 hover:bg-muted cursor-pointer",
+      )}
+      title={`${label}: ${display ?? "—"}`}
+    >
+      <div
+        className={cn(
+          "flex size-6 shrink-0 items-center justify-center rounded-lg",
+          iconColor,
+        )}
       >
-        {display || <span className="font-normal text-muted-foreground">—</span>}
-      </dd>
+        <Icon icon={icon} className="size-3" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <p className="truncate font-semibold text-ink" style={{ maxWidth: "14ch" }}>
+          {display ?? <span className="font-normal text-muted-foreground">—</span>}
+        </p>
+      </div>
+      {href && (
+        <Icon
+          icon={faArrowUpRightFromSquare}
+          className="ml-auto size-2.5 shrink-0 text-muted-foreground"
+        />
+      )}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="contents">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
 }
 
 export function PatientContextRail({
@@ -51,64 +90,96 @@ export function PatientContextRail({
   className,
   hideName = false,
 }: PatientContextRailProps) {
+  const initials = patientName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
   return (
     <aside
       className={cn("border-border bg-card", className)}
       aria-label="Patient context"
     >
-      <div className="flex flex-col gap-0">
-        {!hideName ? (
-          patientHref ? (
+      {!hideName ? (
+        <div className="mb-3 flex items-center gap-3">
+          <div
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/80 to-primary font-bold text-sm text-white shadow-md shadow-primary/20"
+            aria-hidden="true"
+          >
+            {initials || "P"}
+          </div>
+          {patientHref ? (
             <Link
               href={patientHref}
-              className="mb-3 w-fit font-display text-base font-semibold text-ink hover:text-primary"
+              className="font-display text-xl font-bold text-ink hover:text-primary transition-colors"
             >
               {patientName}
             </Link>
           ) : (
-            <p className="mb-3 font-display text-base font-semibold text-ink">
-              {patientName}
-            </p>
-          )
-        ) : null}
-
-        <div className="overflow-x-auto overscroll-x-contain scrollbar-hide">
-          <dl className="grid w-full min-w-[36rem] grid-cols-4 gap-x-6 gap-y-3 lg:min-w-0">
-            <MetaCell label="UHID" value={uhid} />
-            <MetaCell label="Episode" value={episodeNo} />
-            <MetaCell
-              label="Phone"
-              value={patientPhone ? formatPhone(patientPhone) : null}
-            />
-            <MetaCell label="Age" value={patientAge} />
-            <MetaCell label="Gender" value={patientGender} />
-            <MetaCell
-              label="Doctor"
-              value={
-                doctorName
-                  ? doctorName.startsWith("Dr.")
-                    ? doctorName
-                    : `Dr. ${doctorName}`
-                  : null
-              }
-            />
-            {patientHref ? (
-              <div className="min-w-0">
-                <dt className="whitespace-nowrap text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Record
-                </dt>
-                <dd className="mt-0.5 whitespace-nowrap">
-                  <Link
-                    href={patientHref}
-                    className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    Patient record
-                  </Link>
-                </dd>
-              </div>
-            ) : null}
-          </dl>
+            <p className="font-display text-xl font-bold text-ink">{patientName}</p>
+          )}
         </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <InfoChip
+          icon={faIdCard}
+          label="UHID"
+          value={uhid}
+          iconColor="bg-blue-500/15 text-blue-600"
+        />
+        <InfoChip
+          icon={faCalendarDays}
+          label="Episode"
+          value={episodeNo}
+          iconColor="bg-violet-500/15 text-violet-600"
+        />
+        {patientPhone ? (
+          <InfoChip
+            icon={faPhone}
+            label="Phone"
+            value={formatPhone(patientPhone)}
+            iconColor="bg-emerald-500/15 text-emerald-600"
+          />
+        ) : null}
+        {patientAge ? (
+          <InfoChip
+            icon={faIdCard}
+            label="Age"
+            value={patientAge}
+            iconColor="bg-amber-500/15 text-amber-600"
+          />
+        ) : null}
+        {patientGender ? (
+          <InfoChip
+            icon={faVenusMars}
+            label="Gender"
+            value={patientGender}
+            iconColor="bg-rose-500/15 text-rose-600"
+          />
+        ) : null}
+        <InfoChip
+          icon={faUserDoctor}
+          label="Doctor"
+          value={
+            doctorName
+              ? doctorName.startsWith("Dr.")
+                ? doctorName
+                : `Dr. ${doctorName}`
+              : null
+          }
+          iconColor="bg-teal-500/15 text-teal-600"
+        />
+        {patientHref ? (
+          <InfoChip
+            icon={faArrowUpRightFromSquare}
+            label="Record"
+            value="Patient record"
+            iconColor="bg-primary/10 text-primary"
+            href={patientHref}
+          />
+        ) : null}
       </div>
     </aside>
   );
