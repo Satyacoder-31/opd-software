@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import {
   savePrescription,
   generatePrescriptionPdf,
+  getPatientPrescriptionHistory,
+  type PatientPrescriptionHistoryItem,
 } from "@/actions/prescriptions";
 import { listDrugSuggestions } from "@/actions/drug-catalog";
 import {
@@ -12,6 +14,8 @@ import {
   listPrescriptionTemplates,
   savePrescriptionTemplate,
 } from "@/actions/templates";
+import { PatientPreviousPrescriptions } from "@/components/consultation/PatientPreviousPrescriptions";
+import { COMMON_ILLNESS_TEMPLATES } from "@/lib/clinical-templates";
 import { MedicineCombobox } from "@/components/consultation/MedicineCombobox";
 import { PrescriptionOptionCombobox } from "@/components/consultation/PrescriptionOptionCombobox";
 import { DurationField } from "@/components/consultation/DurationField";
@@ -76,6 +80,7 @@ export const emptyMedicine = (): Medicine => ({
 
 type PrescriptionBuilderProps = {
   consultationId: string;
+  patientId?: string;
   initialMedicines?: Medicine[];
   initialAdvice?: string | null;
   initialFollowUp?: string | null;
@@ -111,6 +116,7 @@ function templateMedicineCount(medicines: unknown): number {
 
 export function PrescriptionBuilder({
   consultationId,
+  patientId,
   initialMedicines = [],
   initialAdvice,
   initialFollowUp,
@@ -136,7 +142,12 @@ export function PrescriptionBuilder({
   const [internalFollowUp, setInternalFollowUp] = useState(
     initialFollowUp ?? ""
   );
-  const [templates, setTemplates] = useState<TemplateRow[]>([]);
+  const [customTemplates, setCustomTemplates] = useState<TemplateRow[]>([]);
+  const [pastPrescriptions, setPastPrescriptions] = useState<
+    PatientPrescriptionHistoryItem[]
+  >([]);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [infoNotice, setInfoNotice] = useState<string | null>(null);
   const [drugSuggestions, setDrugSuggestions] = useState<DrugSuggestion[]>([]);
   const [drugSuggestionsLoading, setDrugSuggestionsLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -177,10 +188,55 @@ export function PrescriptionBuilder({
     setInternalFollowUp(next);
   }
 
+  const allTemplates = useMemo(() => {
+    const builtIn = COMMON_ILLNESS_TEMPLATES.map((t) => ({
+      id: t.id,
+      name: t.name,
+      category: t.category,
+      illness: t.illness,
+      description: t.description,
+      medicines: t.medicines,
+      advice: t.advice,
+      followUp: t.followUp,
+      isBuiltIn: true as const,
+    }));
+
+    const custom = customTemplates.map((t) => ({
+      id: t.id,
+      name: t.name,
+      category: "Custom Templates",
+      illness: undefined,
+      description: undefined,
+      medicines: t.medicines,
+      advice: t.advice,
+      followUp: t.followUp,
+      isBuiltIn: false as const,
+    }));
+
+    return [...builtIn, ...custom];
+  }, [customTemplates]);
+
   useEffect(() => {
     if (isAmendMode) return;
-    void listPrescriptionTemplates().then(setTemplates);
+    void listPrescriptionTemplates().then(setCustomTemplates);
   }, [isAmendMode]);
+
+  useEffect(() => {
+    if (!patientId || isAmendMode) return;
+    let active = true;
+    setPastLoading(true);
+    void getPatientPrescriptionHistory(patientId, consultationId)
+      .then((items) => {
+        if (active) setPastPrescriptions(items);
+      })
+      .finally(() => {
+        if (active) setPastLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [patientId, consultationId, isAmendMode]);
 
   useEffect(() => {
     let active = true;
@@ -253,7 +309,7 @@ export function PrescriptionBuilder({
   }
 
   function applyTemplate(templateId: string, mode: "replace" | "append") {
-    const template = templates.find((t) => t.id === templateId);
+    const template = allTemplates.find((t) => t.id === templateId);
     if (!template) return;
 
     const meds = (template.medicines as Medicine[]).map((med) => ({
@@ -270,6 +326,9 @@ export function PrescriptionBuilder({
       if (template.followUp?.trim() && !followUp.trim()) {
         setFollowUp(template.followUp);
       }
+      setInfoNotice(
+        `Appended medicines from “${template.name}”. You can adjust dosages and frequency below.`
+      );
       return;
     }
 
@@ -280,7 +339,7 @@ export function PrescriptionBuilder({
     if (
       hasContent &&
       !window.confirm(
-        `Replace the current prescription with “${template.name}”?`
+        `Replace current prescription with “${template.name}”?`
       )
     ) {
       return;
@@ -289,6 +348,72 @@ export function PrescriptionBuilder({
     setMedicines(meds.length > 0 ? meds : [emptyMedicine()]);
     setAdvice(template.advice ?? "");
     setFollowUp(template.followUp ?? "");
+    setInfoNotice(
+      `Loaded “${template.name}”. All dosages, duration, and instructions can now be edited in the rows below.`
+    );
+  }
+
+  function handleRepeatPrescription(
+    item: PatientPrescriptionHistoryItem,
+    mode: "replace" | "append"
+  ) {
+    const meds = item.medicines.map((med) => ({
+      ...emptyMedicine(),
+      ...med,
+    }));
+
+    if (mode === "append") {
+      const base = medicines.filter((med) => !isBlankMedicineRow(med));
+      setMedicines(meds.length > 0 ? [...base, ...meds] : base);
+      if (item.advice?.trim() && !advice.trim()) {
+        setAdvice(item.advice);
+      }
+      if (item.followUp?.trim() && !followUp.trim()) {
+        setFollowUp(item.followUp);
+      }
+      setInfoNotice(
+        `Appended past prescription medicines. You can adjust dosages and frequency in the rows below.`
+      );
+      return;
+    }
+
+    const hasContent =
+      medicines.some(medicineFilled) ||
+      advice.trim().length > 0 ||
+      followUp.trim().length > 0;
+    if (
+      hasContent &&
+      !window.confirm(
+        `Replace current prescription draft with past prescription from ${new Date(item.createdAt).toLocaleDateString()}?`
+      )
+    ) {
+      return;
+    }
+
+    setMedicines(meds.length > 0 ? meds : [emptyMedicine()]);
+    if (item.advice) setAdvice(item.advice);
+    if (item.followUp) setFollowUp(item.followUp);
+    setInfoNotice(
+      `Loaded past prescription from ${new Date(item.createdAt).toLocaleDateString()}. Make any dosage or frequency adjustments below.`
+    );
+  }
+
+  function handleRepeatMedicine(med: Medicine) {
+    const next: Medicine = {
+      ...emptyMedicine(),
+      ...med,
+    };
+    if (!next.route && next.name) next.route = "Oral";
+
+    const blankIndex = medicines.findIndex(isBlankMedicineRow);
+    if (blankIndex >= 0) {
+      setMedicines(
+        medicines.map((row, index) => (index === blankIndex ? next : row))
+      );
+    } else {
+      setMedicines([...medicines, next]);
+    }
+    setInfoNotice(`Added ${next.name} (${next.dosage}) to draft. You can adjust the dose below.`);
   }
 
   async function persistPrescription() {
@@ -362,12 +487,12 @@ export function PrescriptionBuilder({
         return;
       }
       setTemplateName("");
-      setTemplates(await listPrescriptionTemplates());
+      setCustomTemplates(await listPrescriptionTemplates());
     }, "template");
   }
 
   function handleDeleteTemplate(id: string) {
-    const template = templates.find((t) => t.id === id);
+    const template = customTemplates.find((t) => t.id === id);
     if (
       !window.confirm(
         `Delete template${template ? ` “${template.name}”` : ""}?`
@@ -382,7 +507,7 @@ export function PrescriptionBuilder({
         setError(result.error);
         return;
       }
-      setTemplates(await listPrescriptionTemplates());
+      setCustomTemplates(await listPrescriptionTemplates());
     }, "delete-template");
   }
 
@@ -397,17 +522,48 @@ export function PrescriptionBuilder({
 
   return (
     <div>
+      {pastPrescriptions.length > 0 && !isAmendMode ? (
+        <PatientPreviousPrescriptions
+          prescriptions={pastPrescriptions}
+          loading={pastLoading}
+          onRepeatPrescription={handleRepeatPrescription}
+          onRepeatMedicine={handleRepeatMedicine}
+          onCopyAdvice={(adv, fUp) => {
+            if (adv) setAdvice(adv);
+            if (fUp) setFollowUp(fUp);
+            setInfoNotice("Copied past clinical advice & follow-up into draft.");
+          }}
+        />
+      ) : null}
+
       {!isAmendMode ? (
         <PrescriptionQuickTemplates
-          templates={templates.map((template) => ({
+          templates={allTemplates.map((template) => ({
             id: template.id,
             name: template.name,
+            category: template.category,
+            illness: template.illness,
+            description: template.description,
+            isBuiltIn: template.isBuiltIn,
             medicineCount: templateMedicineCount(template.medicines),
           }))}
           onApply={applyTemplate}
           onDelete={handleDeleteTemplate}
           deleting={isPending("delete-template")}
         />
+      ) : null}
+
+      {infoNotice ? (
+        <div className="flex items-center justify-between gap-2 border-b border-border bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300 md:px-4">
+          <span className="font-medium">{infoNotice}</span>
+          <button
+            type="button"
+            onClick={() => setInfoNotice(null)}
+            className="text-xs font-semibold underline hover:opacity-80"
+          >
+            Dismiss
+          </button>
+        </div>
       ) : null}
 
       {safetyCues.length > 0 ? (

@@ -44,6 +44,63 @@ function formatPrescriptionDate(date: Date): string {
   });
 }
 
+export type PatientPrescriptionHistoryItem = {
+  id: string;
+  consultationId: string;
+  createdAt: string;
+  doctorName: string;
+  diagnosis: string | null;
+  medicines: Medicine[];
+  advice: string | null;
+  followUp: string | null;
+  tokenNumber?: number;
+};
+
+export async function getPatientPrescriptionHistory(
+  patientId: string,
+  excludeConsultationId?: string
+): Promise<PatientPrescriptionHistoryItem[]> {
+  const session = await requireSessionUser();
+  if (!can(session, "prescriptions.write") && !can(session, "consultations.read")) {
+    return [];
+  }
+
+  const prescriptions = await prisma.prescription.findMany({
+    where: {
+      clinicId: session.clinicId,
+      consultation: {
+        patientId,
+        ...(excludeConsultationId ? { id: { not: excludeConsultationId } } : {}),
+      },
+    },
+    include: {
+      consultation: {
+        select: {
+          id: true,
+          createdAt: true,
+          diagnosis: true,
+          doctor: { select: { name: true } },
+          appointment: { select: { tokenNumber: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 15,
+  });
+
+  return prescriptions.map((p) => ({
+    id: p.id,
+    consultationId: p.consultationId,
+    createdAt: p.createdAt.toISOString(),
+    doctorName: p.consultation.doctor.name,
+    diagnosis: p.consultation.diagnosis,
+    medicines: (p.medicines as Medicine[]) || [],
+    advice: p.advice,
+    followUp: p.followUp,
+    tokenNumber: p.consultation.appointment?.tokenNumber,
+  }));
+}
+
 export async function savePrescription(
   consultationId: string,
   medicines: Medicine[],

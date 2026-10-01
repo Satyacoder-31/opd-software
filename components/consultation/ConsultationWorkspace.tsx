@@ -347,6 +347,7 @@ export function ConsultationWorkspace({
           <TabsContent value="prescription" className="mt-0">
             <PrescriptionBuilder
               consultationId={consultationId}
+              patientId={patientId}
               medicines={medicines}
               advice={advice}
               followUp={followUp}

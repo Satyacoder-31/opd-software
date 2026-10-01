@@ -104,6 +104,7 @@ export function AmendConsultationPageClient({
       <Card title="Prescription" flush className="border-b border-border">
         <PrescriptionBuilder
           consultationId={consultationId}
+          patientId={patientId}
           initialMedicines={medicines}
           initialAdvice={advice}
           initialFollowUp={followUp}
