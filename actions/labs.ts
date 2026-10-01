@@ -19,7 +19,7 @@ const testSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export const DEFAULT_CLINICAL_LAB_TESTS = [
+const DEFAULT_CLINICAL_LAB_TESTS = [
   { name: "Complete Blood Count (CBC)", code: "CBC", sampleType: "Blood (EDTA)", feeAmount: 350 },
   { name: "Erythrocyte Sedimentation Rate (ESR)", code: "ESR", sampleType: "Blood", feeAmount: 150 },
   { name: "C-Reactive Protein (CRP) Quantitative", code: "CRP", sampleType: "Blood (Serum)", feeAmount: 450 },

@@ -4,14 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   faCheckCircle,
+  faCircleExclamation,
   faCloudArrowUp,
   faFileLines,
   faFlaskVial,
   faPaperclip,
   faPills,
   faStethoscope,
-  faWifi,
-  faWifiSlash,
 } from "@fortawesome/free-solid-svg-icons";
 import { completeVisit, saveVisitDraft } from "@/actions/consultations";
 import {
@@ -292,7 +291,7 @@ export function ConsultationWorkspace({
                       ? faCheckCircle
                       : autosaveStatus === "saving"
                         ? faCloudArrowUp
-                        : faWifiSlash
+                        : faCircleExclamation
                   }
                   className="size-3"
                 />

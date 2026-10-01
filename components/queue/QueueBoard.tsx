@@ -22,7 +22,6 @@ import {
   updateAppointmentStatus,
 } from "@/actions/appointments";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Banner } from "@/components/ui/Banner";
 import { Icon } from "@/components/ui/Icon";

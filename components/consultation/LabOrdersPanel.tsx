@@ -259,7 +259,7 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
                 <Button
                   type="submit"
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   className="h-8 px-2.5 text-xs shrink-0"
                   loading={addingCustom}
                   disabled={!customTestName.trim()}
@@ -324,7 +324,7 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   onClick={loadData}
                 >
                   <Icon icon={faRotate} className="mr-1.5 size-3" />
