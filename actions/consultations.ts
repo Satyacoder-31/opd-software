@@ -8,6 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { consultationClinicalSchema, hasMedicalCertificateContent, hasReferralContent, syncDiagnosisTextFromCodes } from "@/lib/consultation-clinical";
 import { isConsultationEditable } from "@/lib/consultation-utils";
 import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
+import { applyPrescriptionStockMovements } from "@/lib/prescription-stock.server";
 import { zodFieldErrors } from "@/lib/form-utils";
 import { renderMedicalCertificatePdf, renderReferralPdf } from "@/lib/pdf";
 import { formatPatientAge } from "@/lib/date-utils";
@@ -203,7 +204,11 @@ export async function submitConsultation(
 
   const consultation = await prisma.consultation.findFirst({
     where: { id, clinicId: session.clinicId },
-    include: { appointment: { select: { id: true, status: true } } },
+    include: {
+      appointment: { select: { id: true, status: true } },
+      patient: { select: { id: true, name: true, mrn: true } },
+      prescription: true,
+    },
   });
 
   if (!consultation) {
@@ -242,6 +247,21 @@ export async function submitConsultation(
       data: clinicalUpdateData(parsed.data, session.userId),
     });
 
+    if (
+      consultation.prescription &&
+      Array.isArray(consultation.prescription.medicines) &&
+      consultation.prescription.medicines.length > 0
+    ) {
+      await applyPrescriptionStockMovements(tx, {
+        clinicId: session.clinicId,
+        consultationId: id,
+        patientName: consultation.patient.name,
+        patientMrn: consultation.patient.mrn,
+        medicines: consultation.prescription.medicines as unknown as Medicine[],
+        userId: session.userId,
+      });
+    }
+
     return true;
   });
 
@@ -261,6 +281,8 @@ export async function submitConsultation(
   revalidatePath("/queue");
   revalidatePath(`/consultations/${id}`);
   revalidatePath(`/consultations/${id}/edit`);
+  revalidatePath(`/patients/${consultation.patientId}`);
+  revalidatePath("/medicines");
   return { success: true };
 }
 
@@ -347,7 +369,10 @@ export async function completeVisit(
 
   const consultation = await prisma.consultation.findFirst({
     where: { id, clinicId: session.clinicId },
-    include: { appointment: { select: { id: true, status: true } } },
+    include: {
+      appointment: { select: { id: true, status: true } },
+      patient: { select: { id: true, name: true, mrn: true } },
+    },
   });
 
   if (!consultation) {
@@ -404,7 +429,18 @@ export async function completeVisit(
       },
     });
 
+    // 1. Learn prescribing defaults for autocomplete
     await recordPrescribedDrugs(tx, session.clinicId, validated.medicines);
+
+    // 2. Decrement stock in clinic inventory & log consultation stock movements
+    await applyPrescriptionStockMovements(tx, {
+      clinicId: session.clinicId,
+      consultationId: id,
+      patientName: consultation.patient.name,
+      patientMrn: consultation.patient.mrn,
+      medicines: validated.medicines,
+      userId: session.userId,
+    });
 
     return true;
   });
@@ -425,6 +461,8 @@ export async function completeVisit(
   revalidatePath("/queue");
   revalidatePath(`/consultations/${id}`);
   revalidatePath(`/consultations/${id}/edit`);
+  revalidatePath(`/patients/${consultation.patientId}`);
+  revalidatePath("/medicines");
   return { success: true };
 }
 
