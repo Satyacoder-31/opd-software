@@ -32,6 +32,25 @@ type VisitSummaryViewProps = {
   amendmentReason?: string | null;
   amendedAt?: Date | null;
   canAmend?: boolean;
+  labOrders?: Array<{
+    id: string;
+    status: string;
+    createdAt: Date;
+    notes?: string | null;
+    items: Array<{
+      id: string;
+      status: string;
+      resultValue?: string | null;
+      resultUnit?: string | null;
+      resultNotes?: string | null;
+      resultedAt?: Date | null;
+      labTest: {
+        name: string;
+        code?: string | null;
+        sampleType?: string | null;
+      };
+    }>;
+  }>;
 };
 
 export function VisitSummaryView({
@@ -53,6 +72,7 @@ export function VisitSummaryView({
   amendmentReason,
   amendedAt,
   canAmend = true,
+  labOrders = [],
 }: VisitSummaryViewProps) {
   const hasPrescription = medicines.some((medicine) => medicine.name?.trim());
   const hasMedicalCertificate = hasMedicalCertificateContent(
@@ -139,6 +159,58 @@ export function VisitSummaryView({
             followUp={followUp}
           />
         </Card>
+        {labOrders && labOrders.length > 0 && (
+          <Card title={`Advised Investigations & Lab Results (${labOrders.length})`} flush>
+            <div className="divide-y divide-border px-4 py-3 sm:px-6">
+              {labOrders.map((order) => (
+                <div key={order.id} className="py-2.5 first:pt-0 last:pb-0">
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <span className="font-semibold text-ink">
+                      Ordered on {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 font-semibold capitalize text-primary">
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {order.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="rounded border border-border/70 bg-muted/20 p-2 text-xs"
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="font-medium text-ink">{item.labTest.name}</span>
+                          <span className="text-[10px] capitalize text-muted-foreground">
+                            {item.status}
+                          </span>
+                        </div>
+                        {item.resultValue ? (
+                          <div className="mt-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                            {item.resultValue} {item.resultUnit ?? ""}
+                            {item.resultNotes && (
+                              <span className="block font-normal text-[11px] text-muted-foreground italic">
+                                Note: {item.resultNotes}
+                              </span>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                  {order.notes && (
+                    <p className="mt-1.5 text-xs text-muted-foreground italic">
+                      Notes: {order.notes}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
         <ConsultationAttachments consultationId={consultationId} readOnly />
       </div>
     </PageShell>

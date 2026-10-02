@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   faArrowUpRightFromSquare,
   faCalendarDays,
+  faFlaskVial,
   faIdCard,
   faPhone,
   faUserDoctor,
@@ -23,6 +24,8 @@ type PatientContextRailProps = {
   className?: string;
   /** When true, name is omitted (page title already shows it). */
   hideName?: boolean;
+  labResultsCount?: number;
+  onViewInvestigations?: () => void;
 };
 
 type ChipProps = {
@@ -31,15 +34,16 @@ type ChipProps = {
   value?: string | null;
   iconColor: string;
   href?: string;
+  onClick?: () => void;
 };
 
-function InfoChip({ icon, label, value, iconColor, href }: ChipProps) {
+function InfoChip({ icon, label, value, iconColor, href, onClick }: ChipProps) {
   const display = value?.trim();
   const inner = (
     <div
       className={cn(
         "flex items-center gap-2 rounded-xl border border-border/70 bg-muted/40 px-3 py-1.5 text-xs transition-colors",
-        href && "hover:border-primary/50 hover:bg-muted cursor-pointer",
+        (href || onClick) && "hover:border-primary/50 hover:bg-muted cursor-pointer",
       )}
       title={`${label}: ${display ?? "—"}`}
     >
@@ -75,6 +79,13 @@ function InfoChip({ icon, label, value, iconColor, href }: ChipProps) {
       </Link>
     );
   }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="contents text-left">
+        {inner}
+      </button>
+    );
+  }
   return inner;
 }
 
@@ -89,6 +100,8 @@ export function PatientContextRail({
   patientHref,
   className,
   hideName = false,
+  labResultsCount,
+  onViewInvestigations,
 }: PatientContextRailProps) {
   const initials = patientName
     .split(" ")
@@ -171,6 +184,15 @@ export function PatientContextRail({
           }
           iconColor="bg-teal-500/15 text-teal-600"
         />
+        {labResultsCount != null && labResultsCount > 0 ? (
+          <InfoChip
+            icon={faFlaskVial}
+            label="Lab Reports"
+            value={`${labResultsCount} available`}
+            iconColor="bg-sky-500/15 text-sky-600"
+            onClick={onViewInvestigations}
+          />
+        ) : null}
         {patientHref ? (
           <InfoChip
             icon={faArrowUpRightFromSquare}

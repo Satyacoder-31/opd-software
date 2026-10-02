@@ -6,8 +6,10 @@ import type { Patient } from "@prisma/client";
 import {
   faCalendarXmark,
   faFilePrescription,
-  faPrint,
+  faFlaskVial,
   faNotesMedical,
+  faPrint,
+  faXRay,
 } from "@fortawesome/free-solid-svg-icons";
 import { PatientProfile } from "@/components/patients/PatientProfile";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -20,6 +22,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import type { Medicine } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type VisitAppointment = {
   id: string;
@@ -38,17 +41,51 @@ type VisitAppointment = {
       createdAt?: Date;
     } | null;
     invoice: { id: string } | null;
+    investigationResults?: unknown;
   } | null;
+};
+
+type LabOrderItemData = {
+  id: string;
+  status: string;
+  resultValue?: string | null;
+  resultUnit?: string | null;
+  resultNotes?: string | null;
+  resultedAt?: Date | null;
+  labTest: {
+    id: string;
+    name: string;
+    code?: string | null;
+    sampleType?: string | null;
+  };
+  resultedBy?: { name: string } | null;
+};
+
+type LabOrderData = {
+  id: string;
+  status: string;
+  createdAt: Date;
+  notes?: string | null;
+  orderedBy?: { name: string } | null;
+  consultation?: {
+    id: string;
+    createdAt: Date;
+    doctor?: { name: string } | null;
+    appointment?: { tokenNumber: number } | null;
+  } | null;
+  items: LabOrderItemData[];
 };
 
 type PatientDetailTabsProps = {
   patient: Patient;
   appointments: VisitAppointment[];
+  labOrders?: LabOrderData[];
 };
 
 export function PatientDetailTabs({
   patient,
   appointments,
+  labOrders = [],
 }: PatientDetailTabsProps) {
   const prescriptions = useMemo(() => {
     return appointments
@@ -69,6 +106,88 @@ export function PatientDetailTabs({
         };
       });
   }, [appointments]);
+
+  const allLabResults = useMemo(() => {
+    const results: Array<{
+      id: string;
+      orderId: string;
+      testName: string;
+      sampleType?: string | null;
+      status: string;
+      resultValue?: string | null;
+      resultUnit?: string | null;
+      resultNotes?: string | null;
+      resultedAt?: Date | null;
+      orderedAt: Date;
+      doctorName: string;
+      tokenNumber?: number;
+    }> = [];
+
+    for (const order of labOrders) {
+      const docName =
+        order.orderedBy?.name ??
+        order.consultation?.doctor?.name ??
+        "Attending Doctor";
+      const token = order.consultation?.appointment?.tokenNumber;
+      for (const item of order.items) {
+        if (item.resultValue != null || item.status === "resulted") {
+          results.push({
+            id: item.id,
+            orderId: order.id,
+            testName: item.labTest.name,
+            sampleType: item.labTest.sampleType,
+            status: item.status,
+            resultValue: item.resultValue,
+            resultUnit: item.resultUnit,
+            resultNotes: item.resultNotes,
+            resultedAt: item.resultedAt,
+            orderedAt: order.createdAt,
+            doctorName: docName,
+            tokenNumber: token,
+          });
+        }
+      }
+    }
+    return results;
+  }, [labOrders]);
+
+  const clinicalInvestigations = useMemo(() => {
+    return appointments
+      .filter((appt) => {
+        const inv = appt.consultation?.investigationResults as {
+          labs?: string | null;
+          imaging?: string | null;
+          other?: string | null;
+        } | null;
+        return (
+          inv &&
+          (Boolean(inv.labs?.trim()) ||
+            Boolean(inv.imaging?.trim()) ||
+            Boolean(inv.other?.trim()))
+        );
+      })
+      .map((appt) => {
+        const c = appt.consultation!;
+        const inv = c.investigationResults as {
+          labs?: string | null;
+          imaging?: string | null;
+          other?: string | null;
+        } | null;
+        return {
+          id: c.id,
+          date: appt.createdAt,
+          tokenNumber: appt.tokenNumber,
+          doctorName: c.doctor?.name ?? "Attending Doctor",
+          diagnosis: c.diagnosis,
+          labs: inv?.labs ?? null,
+          imaging: inv?.imaging ?? null,
+          other: inv?.other ?? null,
+        };
+      });
+  }, [appointments]);
+
+  const totalInvCount =
+    allLabResults.length + labOrders.length + clinicalInvestigations.length;
 
   return (
     <div className="border-y border-border bg-card">
@@ -103,6 +222,17 @@ export function PatientDetailTabs({
               {prescriptions.length > 0 ? (
                 <span className="text-muted-foreground">
                   ({prescriptions.length})
+                </span>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger
+              value="investigations"
+              className="min-h-10 flex-1 px-3 sm:flex-none"
+            >
+              Investigations & Labs
+              {totalInvCount > 0 ? (
+                <span className="text-muted-foreground">
+                  ({totalInvCount})
                 </span>
               ) : null}
             </TabsTrigger>
@@ -294,6 +424,192 @@ export function PatientDetailTabs({
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Investigations & Labs History Tab */}
+        <TabsContent value="investigations" className="mt-0">
+          <div className="max-h-[min(70vh,40rem)] overflow-y-auto px-5 py-5 space-y-6">
+            {/* Lab Results section */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Icon icon={faFlaskVial} className="size-4 text-sky-600" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-ink">
+                  Laboratory Test Results ({allLabResults.length})
+                </h3>
+              </div>
+              {allLabResults.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  No laboratory results reported yet for this patient.
+                </div>
+              ) : (
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {allLabResults.map((res) => (
+                    <div
+                      key={res.id}
+                      className="rounded-lg border border-border bg-card p-3 shadow-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-semibold text-ink line-clamp-1">
+                          {res.testName}
+                        </span>
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-semibold capitalize",
+                            res.status === "resulted"
+                              ? "bg-emerald-500/10 text-emerald-700"
+                              : "bg-sky-500/10 text-sky-700"
+                          )}
+                        >
+                          {res.status}
+                        </span>
+                      </div>
+                      <div className="my-2 rounded bg-muted/40 px-2 py-1">
+                        <span className="text-base font-bold text-ink">
+                          {res.resultValue ?? "—"}
+                        </span>
+                        {res.resultUnit && (
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            {res.resultUnit}
+                          </span>
+                        )}
+                        {res.resultNotes && (
+                          <p className="text-[11px] text-muted-foreground italic mt-0.5">
+                            {res.resultNotes}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/60 pt-1.5">
+                        <span>
+                          {new Date(res.resultedAt ?? res.orderedAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span>Dr. {res.doctorName}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Advised Investigations & Orders section */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Icon icon={faFlaskVial} className="size-4 text-violet-600" />
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-ink">
+                  Advised Investigation Orders ({labOrders.length})
+                </h3>
+              </div>
+              {labOrders.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  No investigation orders placed for this patient.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {labOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="rounded-lg border border-border bg-card p-3 shadow-xs"
+                    >
+                      <div className="flex items-center justify-between border-b border-border/60 pb-2 text-xs">
+                        <div>
+                          <strong className="text-ink">
+                            {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </strong>
+                          {order.consultation?.appointment?.tokenNumber && (
+                            <span className="ml-1.5 text-muted-foreground">
+                              · Token #{order.consultation.appointment.tokenNumber}
+                            </span>
+                          )}
+                          <span className="ml-1.5 text-muted-foreground">
+                            · Ordered by {order.orderedBy?.name ?? order.consultation?.doctor?.name ?? "Attending Doctor"}
+                          </span>
+                        </div>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-primary">
+                          {order.status}
+                        </span>
+                      </div>
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {order.items.map((item) => (
+                          <span
+                            key={item.id}
+                            className="inline-flex items-center gap-1 rounded border border-border bg-muted/30 px-2 py-1 text-xs"
+                          >
+                            <span className="font-medium text-ink">{item.labTest.name}</span>
+                            {item.resultValue ? (
+                              <span className="font-semibold text-emerald-600">
+                                ({item.resultValue} {item.resultUnit ?? ""})
+                              </span>
+                            ) : (
+                              <span className="text-[10px] capitalize text-muted-foreground">
+                                [{item.status}]
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Clinical Investigation Findings section */}
+            {clinicalInvestigations.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon icon={faXRay} className="size-4 text-teal-600" />
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-ink">
+                    Clinical Investigation Notes from Past Visits ({clinicalInvestigations.length})
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  {clinicalInvestigations.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-lg border border-border bg-card p-3 shadow-xs text-xs"
+                    >
+                      <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                        <strong className="text-ink">
+                          Visit on {new Date(item.date).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </strong>
+                        <span className="text-muted-foreground">
+                          Dr. {item.doctorName} {item.diagnosis ? `· ${item.diagnosis}` : ""}
+                        </span>
+                      </div>
+                      <div className="mt-2.5 space-y-2">
+                        {item.labs && (
+                          <div className="rounded bg-sky-500/10 p-2 text-sky-900 dark:text-sky-200">
+                            <strong>Lab findings:</strong> {item.labs}
+                          </div>
+                        )}
+                        {item.imaging && (
+                          <div className="rounded bg-violet-500/10 p-2 text-violet-900 dark:text-violet-200">
+                            <strong>Imaging:</strong> {item.imaging}
+                          </div>
+                        )}
+                        {item.other && (
+                          <div className="rounded bg-teal-500/10 p-2 text-teal-900 dark:text-teal-200">
+                            <strong>Other findings:</strong> {item.other}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

@@ -311,19 +311,52 @@ export async function getPatientHistory(patientId: string) {
 
   if (!patient) return null;
 
-  const appointments = await prisma.appointment.findMany({
-    where: { patientId, clinicId: session.clinicId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      consultation: {
-        include: {
-          doctor: { select: { name: true } },
-          prescription: true,
-          invoice: true,
+  const [appointments, labOrders] = await Promise.all([
+    prisma.appointment.findMany({
+      where: { patientId, clinicId: session.clinicId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        consultation: {
+          include: {
+            doctor: { select: { name: true } },
+            prescription: true,
+            invoice: true,
+            labOrders: {
+              include: {
+                items: {
+                  include: {
+                    labTest: true,
+                    resultedBy: { select: { name: true } },
+                  },
+                },
+              },
+            },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.labOrder.findMany({
+      where: { patientId, clinicId: session.clinicId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        items: {
+          include: {
+            labTest: true,
+            resultedBy: { select: { name: true } },
+          },
+        },
+        orderedBy: { select: { name: true } },
+        consultation: {
+          select: {
+            id: true,
+            createdAt: true,
+            doctor: { select: { name: true } },
+            appointment: { select: { tokenNumber: true } },
+          },
+        },
+      },
+    }),
+  ]);
 
   await logAudit({
     clinicId: session.clinicId,
@@ -334,7 +367,7 @@ export async function getPatientHistory(patientId: string) {
     metadata: { history: true },
   });
 
-  return { patient, appointments };
+  return { patient, appointments, labOrders };
 }
 
 export async function findPossibleDuplicatePatients(input: {

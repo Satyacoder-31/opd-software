@@ -86,6 +86,7 @@ export default async function ConsultationPage({ params }: Props) {
         amendmentReason={consultation.amendmentReason}
         amendedAt={consultation.amendedAt}
         canAmend={consultation.appointment.status === "done"}
+        labOrders={consultation.labOrders}
       />
     </div>
   );

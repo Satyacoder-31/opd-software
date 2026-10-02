@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import {
   faCheck,
+  faFilePrescription,
   faFlaskVial,
   faMagnifyingGlass,
   faPlus,
@@ -27,7 +28,11 @@ type Order = Awaited<ReturnType<typeof getLabOrdersForConsultation>>[number];
 const RECOMMENDED_LAB_PANELS = [
   {
     name: "Arthritis & Joint Panel",
-    keywords: ["uric", "crp", "esr", "cbc", "ra", "rheumatoid", "calcium"],
+    keywords: ["uric", "crp", "esr", "cbc", "ra", "rheumatoid", "calcium", "vitd"],
+  },
+  {
+    name: "Orthopedic & Spine Imaging",
+    keywords: ["x-ray", "mri", "knee", "spine", "dexa", "cxr"],
   },
   {
     name: "Diabetes & Metabolic Screen",
@@ -38,12 +43,26 @@ const RECOMMENDED_LAB_PANELS = [
     keywords: ["cbc", "esr", "crp", "urine", "widal", "dengue"],
   },
   {
+    name: "Cardiology & Chest Workup",
+    keywords: ["ecg", "echo", "chest", "lipid"],
+  },
+  {
     name: "Pre-Operative / Baseline Workup",
     keywords: ["cbc", "blood group", "pt", "inr", "creatinine", "viral", "hiv", "hcv", "hbsag"],
   },
 ] as const;
 
-export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
+export type LabOrdersPanelHandle = {
+  addTests: (testIds: string[]) => void;
+};
+
+type LabOrdersPanelProps = {
+  consultationId: string;
+  onAppendToRxAdvice?: (testsSummary: string) => void;
+};
+
+export const LabOrdersPanel = forwardRef<LabOrdersPanelHandle, LabOrdersPanelProps>(
+  function LabOrdersPanel({ consultationId, onAppendToRxAdvice }, ref) {
   const [tests, setTests] = useState<Test[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -52,6 +71,14 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
   const [messageType, setMessageType] = useState<"error" | "info" | "success">("error");
   const [pending, setPending] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useImperativeHandle(ref, () => ({
+    addTests: (testIds: string[]) => {
+      setSelected((prev) => Array.from(new Set([...prev, ...testIds])));
+      setMessage(`Added ${testIds.length} ${testIds.length === 1 ? "test" : "tests"} to current order selection.`);
+      setMessageType("info");
+    },
+  }));
 
   // Quick custom test creation
   const [customTestName, setCustomTestName] = useState("");
@@ -166,7 +193,9 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
       flush
       density="compact"
       contentClassName="px-3 py-3 md:px-4"
-      title="Lab orders"
+      title="Advise investigations & Lab orders"
+      icon={faFlaskVial}
+      iconColor="bg-sky-500/15 text-sky-600"
       summary={
         orders.length > 0
           ? `${orders.length} ${orders.length === 1 ? "order" : "orders"} placed`
@@ -340,7 +369,7 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
             ) : null}
 
             {/* Place Order Action Bar */}
-            <div className="flex items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <Button
                 type="button"
                 onClick={submit}
@@ -349,6 +378,40 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
               >
                 Order selected tests ({selected.length})
               </Button>
+
+              {onAppendToRxAdvice && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    const selectedTestNames = tests
+                      .filter((t) => selected.includes(t.id))
+                      .map((t) => `• ${t.name}`);
+                    if (selectedTestNames.length === 0 && orders.length > 0) {
+                      const orderTestNames = orders.flatMap((o) =>
+                        o.items.map((i) => `• ${i.labTest.name}`)
+                      );
+                      const unique = Array.from(new Set(orderTestNames));
+                      onAppendToRxAdvice(unique.join("\n"));
+                      setMessage("Appended ordered tests to prescription advice.");
+                      setMessageType("success");
+                      return;
+                    }
+                    if (selectedTestNames.length > 0) {
+                      onAppendToRxAdvice(selectedTestNames.join("\n"));
+                      setMessage("Appended selected tests to prescription advice.");
+                      setMessageType("success");
+                    }
+                  }}
+                  disabled={!selected.length && !orders.length}
+                  className="gap-1.5"
+                  title="Append advised tests to the patient prescription advice"
+                >
+                  <Icon icon={faFilePrescription} className="size-3 text-violet-600" />
+                  Add to Rx Advice
+                </Button>
+              )}
+
               {selected.length > 0 && (
                 <span className="text-xs text-muted-foreground">
                   {selected.length} {selected.length === 1 ? "test" : "tests"} ready to order
@@ -388,4 +451,4 @@ export function LabOrdersPanel({ consultationId }: { consultationId: string }) {
       </div>
     </CollapsibleSection>
   );
-}
+});

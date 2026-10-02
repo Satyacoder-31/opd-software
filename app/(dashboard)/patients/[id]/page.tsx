@@ -22,7 +22,7 @@ export default async function PatientDetailPage({ params }: Props) {
 
   if (!history) notFound();
 
-  const { patient, appointments } = history;
+  const { patient, appointments, labOrders } = history;
 
   return (
     <PageShell>
@@ -33,7 +33,11 @@ export default async function PatientDetailPage({ params }: Props) {
         doctors={doctors}
       />
 
-      <PatientDetailTabs patient={patient} appointments={appointments} />
+      <PatientDetailTabs
+        patient={patient}
+        appointments={appointments}
+        labOrders={labOrders}
+      />
     </PageShell>
   );
 }

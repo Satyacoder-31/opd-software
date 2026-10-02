@@ -43,8 +43,16 @@ import {
 import { hasPatientSafetyAlerts } from "@/lib/consultation-utils";
 import type { ConsultationClinicalData, Medicine } from "@/lib/types";
 import { usePendingAction } from "@/hooks/usePendingAction";
-import { LabOrdersPanel } from "@/components/consultation/LabOrdersPanel";
+import {
+  LabOrdersPanel,
+  type LabOrdersPanelHandle,
+} from "@/components/consultation/LabOrdersPanel";
 import { ReferralSections } from "@/components/consultation/ReferralSections";
+import {
+  getPatientInvestigationHistory,
+  type PatientInvestigationHistory,
+} from "@/actions/labs";
+import { PatientPreviousInvestigations } from "@/components/consultation/PatientPreviousInvestigations";
 
 const AUTOSAVE_MS = 3000;
 
@@ -103,6 +111,90 @@ export function ConsultationWorkspace({
   const autosaveInFlight = useRef(false);
   const isDirty = useRef(false);
   const skipDirtyMark = useRef(true);
+
+  // Patient previous investigations & lab results
+  const [investigationHistory, setInvestigationHistory] =
+    useState<PatientInvestigationHistory>({
+      labResults: [],
+      advisedInvestigations: [],
+      previousConsultationInvestigations: [],
+    });
+  const [investigationHistoryLoading, setInvestigationHistoryLoading] =
+    useState(false);
+  const labOrdersPanelRef = useRef<LabOrdersPanelHandle>(null);
+
+  useEffect(() => {
+    if (!patientId) return;
+    let active = true;
+    setInvestigationHistoryLoading(true);
+    void getPatientInvestigationHistory(patientId, consultationId)
+      .then((data) => {
+        if (active && data) {
+          setInvestigationHistory(data);
+        }
+      })
+      .finally(() => {
+        if (active) setInvestigationHistoryLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [patientId, consultationId]);
+
+  const handleCopyLabResult = useCallback((text: string) => {
+    setClinical((prev) => {
+      const existing = prev.investigationResults?.labs?.trim() ?? "";
+      const next = existing ? `${existing}\n• ${text}` : `• ${text}`;
+      return {
+        ...prev,
+        investigationResults: {
+          ...prev.investigationResults,
+          labs: next,
+        },
+      };
+    });
+    setMessage("Copied lab result into consultation notes.");
+    setMessageType("success");
+  }, []);
+
+  const handleCopyPastFindings = useCallback(
+    (field: "labs" | "imaging" | "other", text: string) => {
+      setClinical((prev) => {
+        const existing = prev.investigationResults?.[field]?.trim() ?? "";
+        const next = existing ? `${existing}\n${text}` : text;
+        return {
+          ...prev,
+          investigationResults: {
+            ...prev.investigationResults,
+            [field]: next,
+          },
+        };
+      });
+      setMessage(`Copied previous ${field} findings into consultation notes.`);
+      setMessageType("success");
+    },
+    []
+  );
+
+  const handleAppendAdvisedToRxAdvice = useCallback((testsSummary: string) => {
+    setAdvice((prev) => {
+      const prefix = "Advised Investigations:\n";
+      const existing = prev?.trim() ?? "";
+      if (existing.includes("Advised Investigations:")) {
+        return `${existing}\n${testsSummary}`;
+      }
+      return existing
+        ? `${existing}\n\n${prefix}${testsSummary}`
+        : `${prefix}${testsSummary}`;
+    });
+    setMessage("Appended advised investigations to prescription advice.");
+    setMessageType("success");
+  }, []);
+
+  const handleReorderTests = useCallback((testIds: string[]) => {
+    labOrdersPanelRef.current?.addTests(testIds);
+  }, []);
 
   const draftPayload = useCallback(
     () => ({
@@ -311,6 +403,8 @@ export function ConsultationWorkspace({
           patientGender={patientGender}
           doctorName={doctorName}
           patientHref={`/patients/${patientId}`}
+          labResultsCount={investigationHistory.labResults.length}
+          onViewInvestigations={() => setTab("investigations")}
         />
       </div>
 
@@ -341,20 +435,31 @@ export function ConsultationWorkspace({
                 { id: "prescription", label: "Prescription", icon: faPills, color: "text-violet-600" },
                 { id: "investigations", label: "Investigations", icon: faFlaskVial, color: "text-sky-600" },
                 { id: "documents", label: "Documents", icon: faFileLines, color: "text-orange-600" },
-              ] as const).map((item) => (
-                <TabsTrigger
-                  key={item.id}
-                  value={item.id}
-                  className="min-h-10 flex-none shrink-0 px-3 gap-1.5"
-                  title={item.label}
-                >
-                  <Icon
-                    icon={item.icon}
-                    className={`size-3.5 ${tab === item.id ? item.color : "text-muted-foreground"}`}
-                  />
-                  {item.label}
-                </TabsTrigger>
-              ))}
+              ] as const).map((item) => {
+                const totalInvCount =
+                  investigationHistory.labResults.length +
+                  investigationHistory.advisedInvestigations.length;
+
+                return (
+                  <TabsTrigger
+                    key={item.id}
+                    value={item.id}
+                    className="min-h-10 flex-none shrink-0 px-3 gap-1.5"
+                    title={item.label}
+                  >
+                    <Icon
+                      icon={item.icon}
+                      className={`size-3.5 ${tab === item.id ? item.color : "text-muted-foreground"}`}
+                    />
+                    {item.label}
+                    {item.id === "investigations" && totalInvCount > 0 && (
+                      <span className="ml-1 inline-flex items-center rounded-full bg-sky-500/15 px-1.5 py-0.2 text-[10px] font-bold text-sky-700 dark:text-sky-300">
+                        {totalInvCount}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
           </div>
 
@@ -370,6 +475,28 @@ export function ConsultationWorkspace({
                 />
               </div>
             ) : null}
+
+            {investigationHistory.labResults.length > 0 ||
+            investigationHistory.advisedInvestigations.length > 0 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-sky-500/10 px-3 py-2 text-xs text-sky-950 dark:text-sky-200 md:px-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Icon icon={faFlaskVial} className="size-3.5 shrink-0 text-sky-600" />
+                  <span className="truncate">
+                    <strong>Previous records:</strong> {investigationHistory.labResults.length} past lab {investigationHistory.labResults.length === 1 ? "result" : "results"}, {investigationHistory.advisedInvestigations.length} advised investigation {investigationHistory.advisedInvestigations.length === 1 ? "order" : "orders"} on file.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTab("investigations")}
+                  className="h-7 text-xs font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 shrink-0"
+                >
+                  View investigations ➔
+                </Button>
+              </div>
+            ) : null}
+
             <ConsultationClinicalSections
               value={clinical}
               onChange={setClinical}
@@ -393,8 +520,25 @@ export function ConsultationWorkspace({
           </TabsContent>
 
           <TabsContent value="investigations" className="mt-0">
-            <LabOrdersPanel consultationId={consultationId} />
-            <InvestigationSections value={clinical} onChange={setClinical} />
+            <PatientPreviousInvestigations
+              history={investigationHistory}
+              loading={investigationHistoryLoading}
+              onCopyLabResult={handleCopyLabResult}
+              onCopyPastFindings={handleCopyPastFindings}
+              onReorderTests={handleReorderTests}
+            />
+            <LabOrdersPanel
+              ref={labOrdersPanelRef}
+              consultationId={consultationId}
+              onAppendToRxAdvice={handleAppendAdvisedToRxAdvice}
+            />
+            <InvestigationSections
+              value={clinical}
+              onChange={setClinical}
+              previousLabsNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.labs}
+              previousImagingNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.imaging}
+              previousOtherNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.other}
+            />
           </TabsContent>
 
           <TabsContent value="documents" className="mt-0">

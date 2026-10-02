@@ -117,6 +117,16 @@ export async function getConsultation(id: string) {
       appointment: true,
       prescription: true,
       invoice: true,
+      labOrders: {
+        include: {
+          items: {
+            include: {
+              labTest: true,
+              resultedBy: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   });
 

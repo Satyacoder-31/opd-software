@@ -476,10 +476,19 @@ export function ConsultationClinicalSections({
   );
 }
 
+type InvestigationSectionsProps = ClinicalSectionsProps & {
+  previousLabsNote?: string;
+  previousImagingNote?: string;
+  previousOtherNote?: string;
+};
+
 export function InvestigationSections({
   value,
   onChange,
-}: ClinicalSectionsProps) {
+  previousLabsNote,
+  previousImagingNote,
+  previousOtherNote,
+}: InvestigationSectionsProps) {
   const investigationResults =
     (value.investigationResults as InvestigationResults) ??
     emptyInvestigationResults();
@@ -497,49 +506,99 @@ export function InvestigationSections({
         flush
         density="compact"
         contentClassName="px-3 py-3 md:px-4"
-        title="Investigation results"
+        title="Investigation findings & reports"
         icon={faFlaskVial}
         iconColor="bg-sky-500/15 text-sky-600"
         summary={sectionSummary(completion.investigationResults)}
         filled={completion.investigationResults.filled}
       >
         <div className="flex flex-col gap-2.5">
-          <ClinicalDropdownTextarea
-            icon={faFlaskVial}
-            label="Lab results"
-            name="labs"
-            value={investigationResults.labs ?? ""}
-            onChange={(text) =>
-              updateRecordField(setInvestigationResults, "labs", text)
-            }
-            options={LAB_RESULTS_RECOMMENDATIONS}
-            placeholder="e.g. CBC, ESR/CRP, Blood sugar, Uric acid, LFT, KFT findings…"
-            rows={3}
-          />
-          <ClinicalDropdownTextarea
-            icon={faXRay}
-            label="Imaging"
-            name="imaging"
-            value={investigationResults.imaging ?? ""}
-            onChange={(text) =>
-              updateRecordField(setInvestigationResults, "imaging", text)
-            }
-            options={IMAGING_RESULTS_RECOMMENDATIONS}
-            placeholder="e.g. X-ray knee OA, Lumbar spine MRI, Chest X-ray, Ultrasound findings…"
-            rows={3}
-          />
-          <ClinicalDropdownTextarea
-            icon={faFileWaveform}
-            label="Other investigations"
-            name="otherInvestigations"
-            value={investigationResults.other ?? ""}
-            onChange={(text) =>
-              updateRecordField(setInvestigationResults, "other", text)
-            }
-            options={OTHER_INVESTIGATION_RECOMMENDATIONS}
-            placeholder="e.g. ECG normal sinus rhythm, DEXA bone scan T-score, EMG/NCV…"
-            rows={2}
-          />
+          <div>
+            {previousLabsNote && !investigationResults.labs && (
+              <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Prior visit labs available</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateRecordField(setInvestigationResults, "labs", previousLabsNote)
+                  }
+                  className="font-medium text-sky-600 hover:underline"
+                >
+                  + Insert prior labs
+                </button>
+              </div>
+            )}
+            <ClinicalDropdownTextarea
+              icon={faFlaskVial}
+              label="Lab results"
+              name="labs"
+              value={investigationResults.labs ?? ""}
+              onChange={(text) =>
+                updateRecordField(setInvestigationResults, "labs", text)
+              }
+              options={LAB_RESULTS_RECOMMENDATIONS}
+              placeholder="e.g. CBC, ESR/CRP, Blood sugar, Uric acid, LFT, KFT findings…"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            {previousImagingNote && !investigationResults.imaging && (
+              <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Prior visit imaging available</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateRecordField(setInvestigationResults, "imaging", previousImagingNote)
+                  }
+                  className="font-medium text-violet-600 hover:underline"
+                >
+                  + Insert prior imaging
+                </button>
+              </div>
+            )}
+            <ClinicalDropdownTextarea
+              icon={faXRay}
+              label="Imaging"
+              name="imaging"
+              value={investigationResults.imaging ?? ""}
+              onChange={(text) =>
+                updateRecordField(setInvestigationResults, "imaging", text)
+              }
+              options={IMAGING_RESULTS_RECOMMENDATIONS}
+              placeholder="e.g. X-ray knee OA, Lumbar spine MRI, Chest X-ray, Ultrasound findings…"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            {previousOtherNote && !investigationResults.other && (
+              <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>Prior other investigations available</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateRecordField(setInvestigationResults, "other", previousOtherNote)
+                  }
+                  className="font-medium text-teal-600 hover:underline"
+                >
+                  + Insert prior other
+                </button>
+              </div>
+            )}
+            <ClinicalDropdownTextarea
+              icon={faFileWaveform}
+              label="Other investigations"
+              name="otherInvestigations"
+              value={investigationResults.other ?? ""}
+              onChange={(text) =>
+                updateRecordField(setInvestigationResults, "other", text)
+              }
+              options={OTHER_INVESTIGATION_RECOMMENDATIONS}
+              placeholder="e.g. ECG normal sinus rhythm, DEXA bone scan T-score, EMG/NCV…"
+              rows={2}
+            />
+          </div>
         </div>
       </CollapsibleSection>
     </div>
