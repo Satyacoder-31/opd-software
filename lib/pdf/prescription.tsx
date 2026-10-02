@@ -1,11 +1,17 @@
 import React from "react";
 import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
-import type { Medicine } from "@/lib/types";
+import type { Medicine, Vitals } from "@/lib/types";
 import {
   resolvePrescriptionLayout,
   type PrescriptionLayoutConfig,
 } from "@/lib/prescription-layouts";
+import {
+  type PdfLanguage,
+  PRESCRIPTION_I18N,
+  translateFrequency,
+  translateGender,
+} from "@/lib/pdf/translations";
 
 export type PrescriptionPdfProps = {
   clinicName: string;
@@ -31,21 +37,41 @@ export type PrescriptionPdfProps = {
   followUp?: string;
   /** Visual layout id from the prescription layout registry. */
   layout?: string | null;
+  /** Language for prescription labels: "en" | "hi". Defaults to "en". */
+  language?: PdfLanguage;
+  /** Patient address for legal prescription standards. */
+  patientAddress?: string | null;
+  /** Known patient drug allergies. */
+  patientAllergies?: string | null;
+  /** Chronic medical conditions (e.g. Hypertension, Diabetes). */
+  patientChronicConditions?: string | null;
+  /** Patient physical vitals at visit (BP, Pulse, Temp, Weight, BMI, SpO2). */
+  vitals?: Vitals | null;
+  /** Symptoms / Chief complaint. */
+  chiefComplaint?: string | null;
+  /** OPD Queue Token Number. */
+  tokenNumber?: number | null;
+  /** Ayushman Bharat Health Account number. */
+  abhaNumber?: string | null;
+  abhaAddress?: string | null;
 };
 
 type Theme = {
   layout: PrescriptionLayoutConfig;
   body: string;
   bold: string;
+  lang: PdfLanguage;
 };
 
-function buildTheme(layoutId?: string | null): Theme {
+function buildTheme(layoutId?: string | null, language: PdfLanguage = "en"): Theme {
   const layout = resolvePrescriptionLayout(layoutId);
-  const serif = layout.font === "Times-Roman";
+  const isHindi = language === "hi";
+  const serif = !isHindi && layout.font === "Times-Roman";
   return {
     layout,
-    body: layout.font,
-    bold: serif ? "Times-Bold" : "Helvetica-Bold",
+    body: isHindi ? "NotoSansDevanagari" : layout.font,
+    bold: isHindi ? "NotoSansDevanagari" : serif ? "Times-Bold" : "Helvetica-Bold",
+    lang: language,
   };
 }
 
@@ -137,6 +163,7 @@ function DoctorLines({
   color: string;
   mutedColor: string;
 }) {
+  const i18n = PRESCRIPTION_I18N[theme.lang];
   const meta: Style = {
     fontSize: 8.5,
     color: mutedColor,
@@ -158,14 +185,17 @@ function DoctorLines({
           textAlign: align,
         }}
       >
-        Dr. {displayName}
+        {theme.lang === "hi" ? "डॉ. " : "Dr. "}
+        {displayName}
       </Text>
       {props.doctorQualifications ? (
         <Text style={meta}>{props.doctorQualifications}</Text>
       ) : null}
       {specialtyLine ? <Text style={meta}>{specialtyLine}</Text> : null}
       {props.doctorRegistrationNo ? (
-        <Text style={meta}>Reg. No: {props.doctorRegistrationNo}</Text>
+        <Text style={meta}>
+          {i18n.doctorRegNo} {props.doctorRegistrationNo}
+        </Text>
       ) : null}
     </View>
   );
@@ -203,13 +233,12 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
               fontFamily: theme.bold,
               color: onBanner,
               letterSpacing: 0.8,
-              textTransform: "uppercase",
             }}
             metaStyle={{
               fontSize: 8.5,
               color: onBanner,
               opacity: 0.85,
-              marginTop: 5,
+              marginTop: 4,
             }}
           />
           <DoctorLines
@@ -237,12 +266,12 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
               props={props}
               clinicMeta={clinicMeta}
               nameStyle={{
-                fontSize: 16,
+                fontSize: 15,
                 fontFamily: theme.bold,
-                color: colors.accent,
-                letterSpacing: 0.6,
+                color: colors.ink,
+                letterSpacing: 0.4,
               }}
-              metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 5 }}
+              metaStyle={{ fontSize: 8.5, color: colors.muted, marginTop: 4 }}
             />
             <DoctorLines
               theme={theme}
@@ -406,16 +435,30 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
 
 type PatientField = { label: string; value: string };
 
-function patientFields(props: PrescriptionPdfProps): PatientField[] {
+function patientFields(props: PrescriptionPdfProps, lang: PdfLanguage): PatientField[] {
+  const i18n = PRESCRIPTION_I18N[lang];
   const fields: PatientField[] = [
-    { label: "Patient", value: props.patientName },
+    { label: i18n.patient, value: props.patientName },
   ];
-  if (props.patientAge) fields.push({ label: "Age", value: props.patientAge });
-  if (props.patientGender)
-    fields.push({ label: "Gender", value: props.patientGender });
-  fields.push({ label: "MRN", value: props.patientMrn });
-  fields.push({ label: "Phone", value: props.patientPhone });
-  fields.push({ label: "Date", value: props.date });
+  if (props.patientAge) fields.push({ label: i18n.age, value: props.patientAge });
+  if (props.patientGender) {
+    fields.push({
+      label: i18n.gender,
+      value: translateGender(props.patientGender, lang),
+    });
+  }
+  fields.push({ label: i18n.mrn, value: props.patientMrn });
+  fields.push({ label: i18n.phone, value: props.patientPhone });
+  fields.push({ label: i18n.date, value: props.date });
+  if (props.tokenNumber != null) {
+    fields.push({ label: i18n.token, value: String(props.tokenNumber) });
+  }
+  if (props.patientAddress?.trim()) {
+    fields.push({ label: i18n.address, value: props.patientAddress.trim() });
+  }
+  if (props.abhaNumber?.trim()) {
+    fields.push({ label: i18n.abha, value: props.abhaNumber.trim() });
+  }
   return fields;
 }
 
@@ -436,13 +479,19 @@ function FieldLabelValue({
           fontSize: 7,
           color: colors.muted,
           textTransform: "uppercase",
-          letterSpacing: 0.7,
+          letterSpacing: 0.5,
           marginBottom: 2,
         }}
       >
         {field.label}
       </Text>
-      <Text style={{ fontSize: 9.5, color: colors.ink, fontFamily: theme.body }}>
+      <Text
+        style={{
+          fontSize: 9,
+          color: colors.ink,
+          fontFamily: theme.bold,
+        }}
+      >
         {field.value}
       </Text>
     </View>
@@ -457,7 +506,7 @@ function PatientInfo({
   props: PrescriptionPdfProps;
 }) {
   const { colors } = theme.layout;
-  const fields = patientFields(props);
+  const fields = patientFields(props, theme.lang);
 
   if (theme.layout.patientInfo === "strip") {
     return (
@@ -466,8 +515,8 @@ function PatientInfo({
           backgroundColor: colors.soft,
           borderRadius: 4,
           paddingHorizontal: 12,
-          paddingTop: 9,
-          paddingBottom: 5,
+          paddingTop: 8,
+          paddingBottom: 4,
           flexDirection: "row",
           flexWrap: "wrap",
         }}
@@ -486,8 +535,8 @@ function PatientInfo({
           border: `1px solid ${colors.rule}`,
           borderRadius: 4,
           paddingHorizontal: 12,
-          paddingTop: 9,
-          paddingBottom: 5,
+          paddingTop: 8,
+          paddingBottom: 4,
           flexDirection: "row",
           flexWrap: "wrap",
         }}
@@ -497,14 +546,14 @@ function PatientInfo({
             key={field.label}
             theme={theme}
             field={field}
-            minWidth={110}
+            minWidth={105}
           />
         ))}
       </View>
     );
   }
 
-  // grid
+  // default grid
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
       {fields.map((field) => (
@@ -512,9 +561,215 @@ function PatientInfo({
           key={field.label}
           theme={theme}
           field={field}
-          minWidth={150}
+          minWidth={130}
         />
       ))}
+    </View>
+  );
+}
+
+/* ------------------- Clinical Vitals & Safety Badges ------------------- */
+
+function PatientSafetyAndVitals({
+  theme,
+  props,
+}: {
+  theme: Theme;
+  props: PrescriptionPdfProps;
+}) {
+  const { colors } = theme.layout;
+  const i18n = PRESCRIPTION_I18N[theme.lang];
+  const vitals = props.vitals;
+
+  // Check if any vitals are recorded
+  const hasBp = Boolean(vitals?.bp?.trim());
+  const hasPulse = Boolean(vitals?.pulse?.trim());
+  const hasTemp = Boolean(vitals?.temp?.trim());
+  const hasWeight = Boolean(vitals?.weight?.trim());
+  const hasSpo2 = Boolean(vitals?.spo2?.trim());
+  const hasHeight = Boolean(vitals?.height?.trim());
+  const hasBmi = Boolean(vitals?.bmi?.trim());
+  const hasVitals = hasBp || hasPulse || hasTemp || hasWeight || hasSpo2 || hasHeight || hasBmi;
+
+  const hasAllergies = Boolean(props.patientAllergies?.trim());
+  const hasChronic = Boolean(props.patientChronicConditions?.trim());
+  const hasChiefComplaint = Boolean(props.chiefComplaint?.trim());
+
+  return (
+    <View style={{ marginTop: 8 }}>
+      {/* 1. Allergies & Clinical Alerts */}
+      {hasAllergies ? (
+        <View
+          style={{
+            backgroundColor: "#fff1f2",
+            borderLeft: "3px solid #e11d48",
+            paddingVertical: 4,
+            paddingHorizontal: 8,
+            borderRadius: 3,
+            marginBottom: 6,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 8,
+              fontFamily: theme.bold,
+              color: "#be123c",
+              textTransform: "uppercase",
+            }}
+          >
+            ! {i18n.allergies}:{" "}
+          </Text>
+          <Text
+            style={{
+              fontSize: 8.5,
+              fontFamily: theme.bold,
+              color: "#9f1239",
+            }}
+          >
+            {props.patientAllergies}
+          </Text>
+        </View>
+      ) : (
+        <View
+          style={{
+            backgroundColor: "#f8fafc",
+            borderLeft: "2px solid #94a3b8",
+            paddingVertical: 3,
+            paddingHorizontal: 8,
+            borderRadius: 3,
+            marginBottom: 6,
+            flexDirection: "row",
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ fontSize: 7.5, color: "#64748b" }}>
+            {i18n.allergies}:{" "}
+          </Text>
+          <Text style={{ fontSize: 7.5, color: "#334155" }}>
+            {i18n.noAllergies}
+          </Text>
+        </View>
+      )}
+
+      {/* 2. Chronic History & Chief Complaints (if available) */}
+      {(hasChronic || hasChiefComplaint) && (
+        <View
+          style={{
+            backgroundColor: "#f8fafc",
+            border: `0.75px solid ${colors.rule}`,
+            borderRadius: 4,
+            padding: 6,
+            marginBottom: 6,
+          }}
+        >
+          {hasChiefComplaint && (
+            <View style={{ flexDirection: "row", marginBottom: hasChronic ? 3 : 0 }}>
+              <Text
+                style={{
+                  fontSize: 7.5,
+                  fontFamily: theme.bold,
+                  color: colors.accent,
+                  width: 95,
+                }}
+              >
+                {i18n.chiefComplaint}:
+              </Text>
+              <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
+                {props.chiefComplaint}
+              </Text>
+            </View>
+          )}
+          {hasChronic && (
+            <View style={{ flexDirection: "row" }}>
+              <Text
+                style={{
+                  fontSize: 7.5,
+                  fontFamily: theme.bold,
+                  color: "#475569",
+                  width: 95,
+                }}
+              >
+                {i18n.chronicConditions}:
+              </Text>
+              <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
+                {props.patientChronicConditions}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* 3. Vitals Strip */}
+      {hasVitals && (
+        <View
+          style={{
+            backgroundColor: "#f0f9ff",
+            border: "0.75px solid #bae6fd",
+            borderRadius: 4,
+            paddingVertical: 4,
+            paddingHorizontal: 8,
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 4,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 7,
+              fontFamily: theme.bold,
+              color: "#0369a1",
+              textTransform: "uppercase",
+              marginRight: 6,
+            }}
+          >
+            {i18n.vitalsTitle}:
+          </Text>
+
+          {hasBp && (
+            <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
+              <Text style={{ color: "#64748b" }}>{i18n.bp}: </Text>
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.bp}</Text> mmHg
+            </Text>
+          )}
+          {hasPulse && (
+            <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
+              <Text style={{ color: "#64748b" }}>{i18n.pulse}: </Text>
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.pulse}</Text> bpm
+            </Text>
+          )}
+          {hasTemp && (
+            <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
+              <Text style={{ color: "#64748b" }}>{i18n.temp}: </Text>
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.temp}</Text> °F
+            </Text>
+          )}
+          {hasWeight && (
+            <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
+              <Text style={{ color: "#64748b" }}>{i18n.weight}: </Text>
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.weight}</Text> kg
+            </Text>
+          )}
+          {(hasHeight || hasBmi) && (
+            <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
+              <Text style={{ color: "#64748b" }}>{i18n.height}/{i18n.bmi}: </Text>
+              <Text style={{ fontFamily: theme.bold }}>
+                {vitals?.height ? `${vitals.height} cm` : ""}
+                {vitals?.bmi ? ` (${vitals.bmi})` : ""}
+              </Text>
+            </Text>
+          )}
+          {hasSpo2 && (
+            <Text style={{ fontSize: 8, color: "#0f172a" }}>
+              <Text style={{ color: "#64748b" }}>{i18n.spo2}: </Text>
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.spo2}</Text> %
+            </Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -530,8 +785,8 @@ function SectionTitle({ theme, children }: { theme: Theme; children: string }) {
         fontFamily: theme.bold,
         color: colors.accent,
         textTransform: "uppercase",
-        letterSpacing: 1.2,
-        marginBottom: 7,
+        letterSpacing: 0.8,
+        marginBottom: 6,
       }}
     >
       {children}
@@ -545,14 +800,16 @@ function RxMark({ theme }: { theme: Theme }) {
       style={{
         flexDirection: "row",
         alignItems: "flex-end",
-        marginBottom: 8,
+        marginBottom: 6,
       }}
     >
       <Text
         style={{
-          fontSize: 18,
+          fontSize: 16,
           fontFamily:
-            theme.layout.font === "Times-Roman" ? "Times-BoldItalic" : theme.bold,
+            theme.layout.font === "Times-Roman" && theme.lang !== "hi"
+              ? "Times-BoldItalic"
+              : theme.bold,
           color: theme.layout.colors.accent,
         }}
       >
@@ -565,19 +822,22 @@ function RxMark({ theme }: { theme: Theme }) {
 function MedicinesTable({
   theme,
   medicines,
+  lang,
 }: {
   theme: Theme;
   medicines: Medicine[];
+  lang: PdfLanguage;
 }) {
+  const i18n = PRESCRIPTION_I18N[lang];
   const { colors } = theme.layout;
   const headCell: Style = {
     fontSize: 7.5,
     fontFamily: theme.bold,
     color: colors.accent,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   };
-  const cell: Style = { fontSize: 9.5, color: colors.ink };
+  const cell: Style = { fontSize: 9, color: colors.ink };
 
   return (
     <View>
@@ -585,16 +845,16 @@ function MedicinesTable({
         style={{
           flexDirection: "row",
           borderBottom: `1.5px solid ${colors.accent}`,
-          paddingBottom: 5,
+          paddingBottom: 4,
           marginBottom: 2,
         }}
       >
-        <Text style={[headCell, { width: 22 }]}>#</Text>
-        <Text style={[headCell, { flex: 2.6 }]}>Medicine</Text>
-        <Text style={[headCell, { flex: 1.2 }]}>Dosage</Text>
-        <Text style={[headCell, { flex: 1.1 }]}>Route</Text>
-        <Text style={[headCell, { flex: 1.5 }]}>Frequency</Text>
-        <Text style={[headCell, { flex: 1.1 }]}>Duration</Text>
+        <Text style={[headCell, { width: 22 }]}>{i18n.medIndex}</Text>
+        <Text style={[headCell, { flex: 2.6 }]}>{i18n.medName}</Text>
+        <Text style={[headCell, { flex: 1.2 }]}>{i18n.dosage}</Text>
+        <Text style={[headCell, { flex: 1.0 }]}>{i18n.route}</Text>
+        <Text style={[headCell, { flex: 1.6 }]}>{i18n.frequency}</Text>
+        <Text style={[headCell, { flex: 1.1 }]}>{i18n.duration}</Text>
       </View>
       {medicines.map((med, i) => (
         <View
@@ -603,7 +863,7 @@ function MedicinesTable({
           style={{
             borderBottom:
               i < medicines.length - 1 ? `0.75px solid ${colors.rule}` : undefined,
-            paddingVertical: 6,
+            paddingVertical: 5,
           }}
         >
           <View style={{ flexDirection: "row" }}>
@@ -614,17 +874,19 @@ function MedicinesTable({
               {med.name}
             </Text>
             <Text style={[cell, { flex: 1.2 }]}>{med.dosage || "—"}</Text>
-            <Text style={[cell, { flex: 1.1 }]}>{med.route || "—"}</Text>
-            <Text style={[cell, { flex: 1.5 }]}>{med.frequency || "—"}</Text>
+            <Text style={[cell, { flex: 1.0 }]}>{med.route || "—"}</Text>
+            <Text style={[cell, { flex: 1.6 }]}>
+              {translateFrequency(med.frequency, lang)}
+            </Text>
             <Text style={[cell, { flex: 1.1 }]}>{med.duration || "—"}</Text>
           </View>
           {med.instructions ? (
             <Text
               style={{
-                fontSize: 8.5,
+                fontSize: 8,
                 color: colors.muted,
                 marginLeft: 22,
-                marginTop: 3,
+                marginTop: 2,
               }}
             >
               {med.instructions}
@@ -639,22 +901,29 @@ function MedicinesTable({
 function MedicinesList({
   theme,
   medicines,
+  lang,
 }: {
   theme: Theme;
   medicines: Medicine[];
+  lang: PdfLanguage;
 }) {
   const { colors } = theme.layout;
   return (
     <View>
       {medicines.map((med, i) => {
-        const details = [med.dosage, med.route, med.frequency, med.duration]
+        const details = [
+          med.dosage,
+          med.route,
+          translateFrequency(med.frequency, lang),
+          med.duration,
+        ]
           .filter(Boolean)
           .join("  ·  ");
         return (
-          <View key={i} wrap={false} style={{ marginBottom: 10 }}>
+          <View key={i} wrap={false} style={{ marginBottom: 8 }}>
             <Text
               style={{
-                fontSize: 10,
+                fontSize: 9.5,
                 fontFamily: theme.bold,
                 color: colors.ink,
               }}
@@ -664,10 +933,10 @@ function MedicinesList({
             {details ? (
               <Text
                 style={{
-                  fontSize: 9.5,
+                  fontSize: 9,
                   color: colors.ink,
                   marginLeft: 16,
-                  marginTop: 3,
+                  marginTop: 2,
                 }}
               >
                 {details}
@@ -676,7 +945,7 @@ function MedicinesList({
             {med.instructions ? (
               <Text
                 style={{
-                  fontSize: 8.5,
+                  fontSize: 8,
                   color: colors.muted,
                   marginLeft: 16,
                   marginTop: 2,
@@ -695,15 +964,21 @@ function MedicinesList({
 function MedicinesCards({
   theme,
   medicines,
+  lang,
 }: {
   theme: Theme;
   medicines: Medicine[];
+  lang: PdfLanguage;
 }) {
   const { colors } = theme.layout;
   return (
     <View>
       {medicines.map((med, i) => {
-        const details = [med.dosage, med.route, med.frequency]
+        const details = [
+          med.dosage,
+          med.route,
+          translateFrequency(med.frequency, lang),
+        ]
           .filter(Boolean)
           .join("  ·  ");
         return (
@@ -714,14 +989,14 @@ function MedicinesCards({
               backgroundColor: colors.soft,
               borderRadius: 4,
               borderLeft: `2.5px solid ${colors.accent}`,
-              paddingVertical: 8,
-              paddingHorizontal: 11,
-              marginBottom: 7,
+              paddingVertical: 7,
+              paddingHorizontal: 10,
+              marginBottom: 6,
             }}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
               <Text
-                style={{ fontSize: 10, fontFamily: theme.bold, color: colors.ink }}
+                style={{ fontSize: 9.5, fontFamily: theme.bold, color: colors.ink }}
               >
                 {i + 1}.  {med.name}
               </Text>
@@ -732,12 +1007,12 @@ function MedicinesCards({
               ) : null}
             </View>
             {details ? (
-              <Text style={{ fontSize: 9, color: colors.ink, marginTop: 4 }}>
+              <Text style={{ fontSize: 8.5, color: colors.ink, marginTop: 3 }}>
                 {details}
               </Text>
             ) : null}
             {med.instructions ? (
-              <Text style={{ fontSize: 8.5, color: colors.muted, marginTop: 3 }}>
+              <Text style={{ fontSize: 8, color: colors.muted, marginTop: 2 }}>
                 {med.instructions}
               </Text>
             ) : null}
@@ -751,25 +1026,29 @@ function MedicinesCards({
 function Medicines({
   theme,
   medicines,
+  lang,
 }: {
   theme: Theme;
   medicines: Medicine[];
+  lang: PdfLanguage;
 }) {
   switch (theme.layout.medicines) {
     case "table":
-      return <MedicinesTable theme={theme} medicines={medicines} />;
+      return <MedicinesTable theme={theme} medicines={medicines} lang={lang} />;
     case "cards":
-      return <MedicinesCards theme={theme} medicines={medicines} />;
+      return <MedicinesCards theme={theme} medicines={medicines} lang={lang} />;
     case "list":
     default:
-      return <MedicinesList theme={theme} medicines={medicines} />;
+      return <MedicinesList theme={theme} medicines={medicines} lang={lang} />;
   }
 }
 
 /* ------------------------------ Document ------------------------------ */
 
 export function PrescriptionDocument(props: PrescriptionPdfProps) {
-  const theme = buildTheme(props.layout);
+  const lang = props.language ?? "en";
+  const i18n = PRESCRIPTION_I18N[lang];
+  const theme = buildTheme(props.layout, lang);
   const { colors, header } = theme.layout;
   const adviceLines = parseAdviceLines(props.advice);
 
@@ -779,20 +1058,20 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
   const contentLeft = isBanner ? 48 : isSideband ? 58 : 48;
   const contentRight = 48;
   // Room for fixed signature + page footer so body content never collides.
-  const pageBottomPad = 110;
+  const pageBottomPad = 105;
 
   const pageStyle: Style = {
-    fontSize: 10,
+    fontSize: 9.5,
     fontFamily: theme.body,
     color: colors.ink,
-    paddingTop: isBanner ? 0 : 44,
+    paddingTop: isBanner ? 0 : 36,
     paddingBottom: pageBottomPad,
     paddingLeft: isBanner ? 0 : contentLeft,
     paddingRight: isBanner ? 0 : contentRight,
   };
 
   const bodyStyle: Style = isBanner
-    ? { paddingTop: 24, paddingHorizontal: 48 }
+    ? { paddingTop: 20, paddingHorizontal: 48 }
     : {};
 
   const displayDoctorName = props.doctorName.replace(/^Dr\.?\s+/i, "");
@@ -817,32 +1096,39 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
         <Header theme={theme} props={props} />
 
         <View style={bodyStyle}>
-          <View style={{ marginTop: isBanner ? 0 : 16 }}>
+          {/* Patient Details Strip/Grid */}
+          <View style={{ marginTop: isBanner ? 0 : 12 }}>
             <PatientInfo theme={theme} props={props} />
           </View>
 
-          <View style={{ marginTop: 14 }}>
-            <SectionTitle theme={theme}>Diagnosis</SectionTitle>
-            <Text style={{ fontSize: 10, color: colors.ink }}>
+          {/* Patient Clinical Safety (Allergies), Chronic Conditions & Vitals */}
+          <PatientSafetyAndVitals theme={theme} props={props} />
+
+          {/* Provisional / Final Diagnosis */}
+          <View style={{ marginTop: 10 }}>
+            <SectionTitle theme={theme}>{i18n.diagnosis}</SectionTitle>
+            <Text style={{ fontSize: 9.5, color: colors.ink, fontFamily: theme.bold }}>
               {props.diagnosis || "—"}
             </Text>
           </View>
 
-          <View style={{ marginTop: 18 }}>
+          {/* Rx - Medicines */}
+          <View style={{ marginTop: 14 }}>
             <RxMark theme={theme} />
-            <Medicines theme={theme} medicines={props.medicines} />
+            <Medicines theme={theme} medicines={props.medicines} lang={lang} />
           </View>
 
+          {/* Advice / Precautions */}
           {adviceLines.length > 0 ? (
-            <View style={{ marginTop: 16 }}>
-              <SectionTitle theme={theme}>Advice</SectionTitle>
+            <View style={{ marginTop: 14 }}>
+              <SectionTitle theme={theme}>{i18n.adviceTitle}</SectionTitle>
               {adviceLines.map((line, i) => (
                 <Text
                   key={i}
                   style={{
-                    fontSize: 9.5,
+                    fontSize: 9,
                     color: colors.ink,
-                    marginBottom: 3,
+                    marginBottom: 2.5,
                     marginLeft: 4,
                   }}
                 >
@@ -852,58 +1138,62 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
             </View>
           ) : null}
 
+          {/* Follow-up / Review */}
           {props.followUp?.trim() ? (
-            <View style={{ marginTop: 14 }}>
-              <SectionTitle theme={theme}>Follow-up</SectionTitle>
-              <Text style={{ fontSize: 9.5, color: colors.ink }}>
+            <View style={{ marginTop: 12 }}>
+              <SectionTitle theme={theme}>{i18n.followUpTitle}</SectionTitle>
+              <Text style={{ fontSize: 9, color: colors.ink, fontFamily: theme.bold }}>
                 {props.followUp.trim()}
               </Text>
             </View>
           ) : null}
         </View>
 
+        {/* Doctor Signature Block */}
         <View
           fixed
           style={{
             position: "absolute",
-            bottom: 52,
+            bottom: 48,
             right: contentRight,
             minWidth: 150,
             alignItems: "center",
             borderTop: `0.75px solid ${colors.muted}`,
-            paddingTop: 6,
+            paddingTop: 5,
           }}
         >
           <Text style={{ fontSize: 9.5, fontFamily: theme.bold }}>
-            Dr. {displayDoctorName}
+            {lang === "hi" ? "डॉ. " : "Dr. "}
+            {displayDoctorName}
           </Text>
-          <Text style={{ fontSize: 7.5, color: colors.muted, marginTop: 2 }}>
-            Digital signature
+          <Text style={{ fontSize: 7, color: colors.muted, marginTop: 2 }}>
+            {i18n.doctorSignature}
           </Text>
         </View>
 
+        {/* Running Footer */}
         <View
           fixed
           style={{
             position: "absolute",
-            bottom: 22,
+            bottom: 18,
             left: contentLeft,
             right: contentRight,
             borderTop: `0.75px solid ${colors.rule}`,
-            paddingTop: 6,
+            paddingTop: 5,
             flexDirection: "row",
             justifyContent: "space-between",
           }}
         >
-          <Text style={{ fontSize: 7, color: colors.muted }}>
+          <Text style={{ fontSize: 6.5, color: colors.muted }}>
             {[props.clinicName, props.clinicPhone, props.clinicEmail]
               .filter(Boolean)
               .join(" · ")}
           </Text>
           <Text
-            style={{ fontSize: 7, color: colors.muted }}
+            style={{ fontSize: 6.5, color: colors.muted }}
             render={({ pageNumber, totalPages }) =>
-              `Page ${pageNumber} of ${totalPages}`
+              `${pageNumber} / ${totalPages}`
             }
           />
         </View>

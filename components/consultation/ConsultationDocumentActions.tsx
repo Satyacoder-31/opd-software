@@ -22,18 +22,21 @@ export function ConsultationDocumentActions({
   showBillingLink = true,
 }: ConsultationDocumentActionsProps) {
   const [error, setError] = useState<string | null>(null);
-  const { isPending, run } = usePendingAction<"prescription" | "certificate">();
+  const { isPending, run } = usePendingAction<
+    "prescription" | "prescription-hi" | "certificate"
+  >();
 
-  function handlePrescriptionDownload() {
+  function handlePrescriptionDownload(lang: "en" | "hi" = "en") {
     setError(null);
+    const key = lang === "hi" ? "prescription-hi" : "prescription";
     void run(async () => {
-      const result = await generatePrescriptionPdf(consultationId);
+      const result = await generatePrescriptionPdf(consultationId, lang);
       if (!result.success) {
         setError(result.error);
         return;
       }
       downloadBase64Pdf(result.data.pdfBase64, result.data.filename);
-    }, "prescription");
+    }, key);
   }
 
   function handleCertificateDownload() {
@@ -54,16 +57,29 @@ export function ConsultationDocumentActions({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-2.5">
         {hasPrescription && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handlePrescriptionDownload}
-            loading={isPending("prescription")}
-          >
-            Download prescription
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handlePrescriptionDownload("en")}
+              loading={isPending("prescription")}
+              title="Download Prescription PDF (English)"
+            >
+              Download prescription
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => handlePrescriptionDownload("hi")}
+              loading={isPending("prescription-hi")}
+              className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
+              title="पर्चा डाउनलोड करें (Hindi Prescription PDF)"
+            >
+              पर्चा डाउनलोड (Hindi)
+            </Button>
+          </>
         )}
         {hasMedicalCertificate && (
           <Button

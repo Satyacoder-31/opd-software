@@ -100,16 +100,16 @@ export function BillingHubClient({
     });
   }
 
-  function handleReprint(consultationId: string) {
+  function handleReprint(consultationId: string, lang: "en" | "hi" = "en") {
     setError(null);
     void run(async () => {
-      const result = await generateReceiptPdf(consultationId);
+      const result = await generateReceiptPdf(consultationId, lang);
       if (!result.success) {
         setError(result.error);
         return;
       }
       downloadBase64Pdf(result.data.pdfBase64, result.data.filename);
-    }, `receipt-${consultationId}`);
+    }, `receipt-${consultationId}-${lang}`);
   }
 
   const isToday = date === todayStr;
@@ -473,17 +473,30 @@ export function BillingHubClient({
                           </Button>
 
                           {row.invoiceStatus === "paid" && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              loading={isPending(`receipt-${row.consultationId}`)}
-                              onClick={() => handleReprint(row.consultationId)}
-                              title="Download PDF Receipt with Vitals"
-                            >
-                              <Icon icon={faDownload} data-icon="inline-start" />
-                              Receipt
-                            </Button>
+                            <div className="inline-flex items-center gap-1.5">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                loading={isPending(`receipt-${row.consultationId}-en`)}
+                                onClick={() => handleReprint(row.consultationId, "en")}
+                                title="Download PDF Receipt (English)"
+                              >
+                                <Icon icon={faDownload} data-icon="inline-start" />
+                                Receipt (EN)
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                loading={isPending(`receipt-${row.consultationId}-hi`)}
+                                onClick={() => handleReprint(row.consultationId, "hi")}
+                                className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
+                                title="रसीद डाउनलोड करें (Hindi Receipt PDF)"
+                              >
+                                रसीद (HI)
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </td>

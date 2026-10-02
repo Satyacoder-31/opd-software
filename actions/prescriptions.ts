@@ -210,7 +210,8 @@ export async function savePrescription(
 }
 
 export async function generatePrescriptionPdf(
-  consultationId: string
+  consultationId: string,
+  language: "en" | "hi" = "en"
 ): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   const session = await requireSessionUser();
   if (!can(session, "prescriptions.write")) return permissionDenied();
@@ -221,6 +222,12 @@ export async function generatePrescriptionPdf(
       patient: true,
       doctor: true,
       prescription: true,
+      appointment: {
+        select: {
+          tokenNumber: true,
+          queueDate: true,
+        },
+      },
     },
   });
 
@@ -234,6 +241,7 @@ export async function generatePrescriptionPdf(
 
   const medicines = consultation.prescription.medicines as Medicine[];
   const consultationDate = consultation.createdAt;
+  const vitals = (consultation.vitals as any) ?? null;
 
   const pdfBytes = await renderPrescriptionPdf({
     clinicName: clinic.name,
@@ -250,11 +258,20 @@ export async function generatePrescriptionPdf(
     patientGender: formatGender(consultation.patient.gender),
     patientMrn: consultation.patient.mrn,
     patientPhone: consultation.patient.phone,
+    patientAddress: consultation.patient.address ?? undefined,
+    patientAllergies: consultation.patient.allergies ?? undefined,
+    patientChronicConditions: consultation.patient.chronicConditions ?? undefined,
+    vitals,
+    chiefComplaint: consultation.chiefComplaint ?? undefined,
+    tokenNumber: consultation.appointment?.tokenNumber ?? undefined,
+    abhaNumber: consultation.patient.abhaNumber ?? undefined,
+    abhaAddress: consultation.patient.abhaAddress ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
     medicines,
     advice: consultation.prescription.advice ?? undefined,
     followUp: consultation.prescription.followUp ?? undefined,
     layout: clinic.prescriptionLayout,
+    language,
   });
 
   await logAudit({
@@ -266,7 +283,7 @@ export async function generatePrescriptionPdf(
   });
 
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
-  const filename = `prescription-${consultation.patient.mrn}.pdf`;
+  const filename = `prescription-${consultation.patient.mrn}-${language}.pdf`;
 
   return { success: true, data: { pdfBase64, filename } };
 }

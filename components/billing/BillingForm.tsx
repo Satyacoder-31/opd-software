@@ -209,7 +209,7 @@ export function BillingForm({
   }, [prescription?.medicines]);
 
   const { isPending, run } = usePendingAction<
-    "save" | "pay" | "receipt" | "void" | "vitals"
+    "save" | "pay" | "receipt" | "receipt-hi" | "void" | "vitals"
   >();
 
   useEffect(() => {
@@ -393,10 +393,11 @@ export function BillingForm({
     }, "pay");
   }
 
-  function handleDownloadReceipt() {
+  function handleDownloadReceipt(lang: "en" | "hi" = "en") {
     setError(null);
+    const key = lang === "hi" ? "receipt-hi" : "receipt";
     void run(async () => {
-      const result = await generateReceiptPdf(consultationId);
+      const result = await generateReceiptPdf(consultationId, lang);
       if (!result.success) {
         setError(result.error);
         return;
@@ -404,7 +405,7 @@ export function BillingForm({
       if (result.success && result.data) {
         downloadBase64Pdf(result.data.pdfBase64, result.data.filename);
       }
-    }, "receipt");
+    }, key);
   }
 
   function handlePrintBrowser() {
@@ -1102,11 +1103,24 @@ export function BillingForm({
               <Button
                 type="button"
                 variant="secondary"
-                onClick={handleDownloadReceipt}
+                onClick={() => handleDownloadReceipt("en")}
                 loading={isPending("receipt")}
+                title="Download Tax Invoice PDF (English)"
               >
                 <Icon icon={faDownload} data-icon="inline-start" />
-                Download Tax Invoice (PDF)
+                Download Invoice (EN)
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleDownloadReceipt("hi")}
+                loading={isPending("receipt-hi")}
+                className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
+                title="कर चालान एवं रसीद डाउनलोड करें (Hindi Tax Invoice PDF)"
+              >
+                <Icon icon={faDownload} data-icon="inline-start" />
+                रसीद डाउनलोड (Hindi)
               </Button>
 
               <Button

@@ -575,7 +575,8 @@ export async function voidInvoice(
 }
 
 export async function generateReceiptPdf(
-  consultationId: string
+  consultationId: string,
+  language: "en" | "hi" = "en"
 ): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   const session = await requireSessionUser();
   if (!can(session, "billing.write")) return permissionDenied();
@@ -642,6 +643,7 @@ export async function generateReceiptPdf(
       ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
       : null,
     patientPhone: patient.phone,
+    patientAddress: patient.address ?? undefined,
     doctorName: doctor.name,
     doctorSpecialty: doctor.specialty ?? undefined,
     doctorRegNo: doctor.registrationNo ?? undefined,
@@ -661,6 +663,7 @@ export async function generateReceiptPdf(
     date: new Date().toLocaleDateString("en-IN"),
     invoiceId: invoice.id,
     invoiceNumber: invoice.invoiceNumber ?? invoice.id.slice(0, 8).toUpperCase(),
+    language,
   });
 
   await logAudit({
@@ -672,7 +675,7 @@ export async function generateReceiptPdf(
   });
 
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
-  const filename = `receipt-${(invoice.invoiceNumber ?? invoice.id).slice(0, 12)}.pdf`;
+  const filename = `receipt-${(invoice.invoiceNumber ?? invoice.id).slice(0, 12)}-${language}.pdf`;
 
   return { success: true, data: { pdfBase64, filename } };
 }

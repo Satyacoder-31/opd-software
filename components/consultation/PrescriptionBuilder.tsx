@@ -165,7 +165,7 @@ export function PrescriptionBuilder({
   const [error, setError] = useState<string | null>(null);
   const [footerHost, setFooterHost] = useState<HTMLElement | null>(null);
   const { isPending, run } = usePendingAction<
-    "save" | "download" | "template" | "delete-template"
+    "save" | "download" | "download-hi" | "template" | "delete-template"
   >();
 
   const medicines = isControlled
@@ -455,7 +455,7 @@ export function PrescriptionBuilder({
     }, "save");
   }
 
-  function handleDownload() {
+  function handleDownload(lang: "en" | "hi" = "en") {
     setError(null);
     const validated = validatePrescriptionDraft(medicines, { advice, followUp });
     if (!validated.ok) {
@@ -466,6 +466,7 @@ export function PrescriptionBuilder({
       setError("Add at least one complete medicine before downloading the PDF.");
       return;
     }
+    const actionKey = lang === "hi" ? "download-hi" : "download";
     void run(async () => {
       if (!isAmendMode) {
         const saveResult = await persistPrescription();
@@ -474,13 +475,13 @@ export function PrescriptionBuilder({
           return;
         }
       }
-      const pdfResult = await generatePrescriptionPdf(consultationId);
+      const pdfResult = await generatePrescriptionPdf(consultationId, lang);
       if (!pdfResult.success) {
         setError(pdfResult.error);
         return;
       }
       downloadBase64Pdf(pdfResult.data.pdfBase64, pdfResult.data.filename);
-    }, "download");
+    }, actionKey);
   }
 
   function handleSaveTemplate() {
@@ -791,7 +792,7 @@ export function PrescriptionBuilder({
       )}
 
       {!hideSaveActions && (
-        <div className="flex flex-wrap gap-3 border-b border-border px-3 py-3 md:px-4">
+        <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-3 py-3 md:px-4">
           <Button
             type="button"
             onClick={handleSave}
@@ -802,24 +803,47 @@ export function PrescriptionBuilder({
           <Button
             type="button"
             variant="secondary"
-            onClick={handleDownload}
+            onClick={() => handleDownload("en")}
             loading={isPending("download")}
+            title="Download Prescription PDF (English)"
           >
-            Download PDF
+            Download PDF (EN)
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => handleDownload("hi")}
+            loading={isPending("download-hi")}
+            className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
+            title="पर्चा डाउनलोड करें (Hindi Prescription PDF)"
+          >
+            पर्चा डाउनलोड (Hindi)
           </Button>
         </div>
       )}
 
       {hideSaveActions && (
-        <div className="flex flex-wrap gap-2 px-3 py-2.5 md:px-4">
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 md:px-4">
           <Button
             type="button"
             variant="secondary"
             size="sm"
-            onClick={handleDownload}
+            onClick={() => handleDownload("en")}
             loading={isPending("download")}
+            title="Preview Prescription (English)"
           >
-            Preview / download PDF
+            Preview PDF (EN)
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => handleDownload("hi")}
+            loading={isPending("download-hi")}
+            className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
+            title="पर्चा देखें (Hindi)"
+          >
+            पर्चा देखें (Hindi)
           </Button>
         </div>
       )}

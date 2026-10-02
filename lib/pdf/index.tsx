@@ -12,9 +12,12 @@ import { ReceiptDocument, type ReceiptPdfProps } from "@/lib/pdf/receipt";
 import type { LineItem } from "@/lib/types";
 import { ReferralDocument, type ReferralPdfProps } from "@/lib/pdf/referral";
 
+import { registerPdfFonts } from "@/lib/pdf/fonts";
+
 export async function renderPrescriptionPdf(
   props: PrescriptionPdfProps
 ): Promise<Uint8Array> {
+  registerPdfFonts();
   const buffer = await renderToBuffer(<PrescriptionDocument {...props} />);
   return new Uint8Array(buffer);
 }
@@ -36,6 +39,7 @@ export async function renderReferralPdf(
 export async function renderReceiptPdf(
   props: ReceiptPdfProps
 ): Promise<Uint8Array> {
+  registerPdfFonts();
   const buffer = await renderToBuffer(<ReceiptDocument {...props} />);
   return new Uint8Array(buffer);
 }

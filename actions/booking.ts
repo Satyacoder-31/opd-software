@@ -893,6 +893,7 @@ export async function previewSlotsForBooking(args: {
 
 export async function downloadPortalPrescription(
   consultationId: string,
+  language: "en" | "hi" = "en"
 ): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   const session = await readPortalSession();
   if (!session) return { success: false, error: "Sign in to continue." };
@@ -946,18 +947,25 @@ export async function downloadPortalPrescription(
       : undefined,
     patientMrn: consultation.patient.mrn,
     patientPhone: consultation.patient.phone,
+    patientAddress: consultation.patient.address ?? undefined,
+    patientAllergies: consultation.patient.allergies ?? undefined,
+    patientChronicConditions: consultation.patient.chronicConditions ?? undefined,
+    vitals: (consultation.vitals as any) ?? null,
+    chiefComplaint: consultation.chiefComplaint ?? undefined,
+    abhaNumber: consultation.patient.abhaNumber ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
     medicines,
     advice: consultation.prescription.advice ?? undefined,
     followUp: consultation.prescription.followUp ?? undefined,
     layout: consultation.clinic.prescriptionLayout,
+    language,
   });
 
   return {
     success: true,
     data: {
       pdfBase64: Buffer.from(pdfBytes).toString("base64"),
-      filename: `prescription-${consultation.patient.mrn}.pdf`,
+      filename: `prescription-${consultation.patient.mrn}-${language}.pdf`,
     },
   };
 }

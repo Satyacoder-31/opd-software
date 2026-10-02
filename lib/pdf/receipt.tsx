@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Document,
   Page,
@@ -7,6 +8,12 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { LineItem, Vitals } from "@/lib/types";
+import {
+  type PdfLanguage,
+  RECEIPT_I18N,
+  translatePaymentMode,
+  translateGender,
+} from "@/lib/pdf/translations";
 
 const styles = StyleSheet.create({
   page: {
@@ -50,12 +57,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   receiptTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Helvetica-Bold",
     color: "#0284c7",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 3,
+    textAlign: "right",
   },
   receiptMetaRow: {
     flexDirection: "row",
@@ -98,7 +106,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   infoLabel: {
-    width: 60,
+    width: 70,
     fontSize: 8,
     color: "#64748b",
   },
@@ -270,7 +278,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     backgroundColor: "#dcfce7",
     color: "#15803d",
-    fontSize: 8,
+    fontSize: 7.5,
     fontFamily: "Helvetica-Bold",
     paddingVertical: 2,
     paddingHorizontal: 6,
@@ -291,7 +299,7 @@ const styles = StyleSheet.create({
   },
   taxValue: {
     fontSize: 8,
-    fontFamily: "Helvetica",
+    fontFamily: "Helvetica-Bold",
     color: "#1e293b",
   },
   grandTotalRow: {
@@ -317,8 +325,8 @@ const styles = StyleSheet.create({
 
   // Footer & Signatures
   footerContainer: {
-    marginTop: 20,
-    paddingTop: 12,
+    marginTop: 18,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
     flexDirection: "row",
@@ -364,6 +372,7 @@ export type ReceiptPdfProps = {
   patientAge?: string | null;
   patientGender?: string | null;
   patientPhone?: string;
+  patientAddress?: string | null;
   doctorName?: string;
   doctorSpecialty?: string;
   doctorRegNo?: string;
@@ -381,6 +390,8 @@ export type ReceiptPdfProps = {
   date: string;
   invoiceId: string;
   invoiceNumber?: string;
+  /** Language for receipt: "en" | "hi". Defaults to "en". */
+  language?: PdfLanguage;
 };
 
 export function ReceiptDocument({
@@ -395,6 +406,7 @@ export function ReceiptDocument({
   patientAge,
   patientGender,
   patientPhone,
+  patientAddress,
   doctorName,
   doctorSpecialty,
   doctorRegNo,
@@ -412,7 +424,13 @@ export function ReceiptDocument({
   date,
   invoiceId,
   invoiceNumber,
+  language = "en",
 }: ReceiptPdfProps) {
+  const isHindi = language === "hi";
+  const i18n = RECEIPT_I18N[language];
+  const baseFont = isHindi ? "NotoSansDevanagari" : "Helvetica";
+  const boldFont = isHindi ? "NotoSansDevanagari" : "Helvetica-Bold";
+
   const showTax = (taxRate ?? 0) > 0 && (taxAmount ?? 0) > 0;
   const receiptNo = invoiceNumber ?? invoiceId.slice(0, 8).toUpperCase();
   const baseAmount = taxableAmount ?? amount;
@@ -433,7 +451,7 @@ export function ReceiptDocument({
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={[styles.page, { fontFamily: baseFont }]}>
         {/* Header with Clinic Branding & Invoice Title */}
         <View style={styles.headerContainer}>
           <View style={styles.clinicBrandRow}>
@@ -441,10 +459,13 @@ export function ReceiptDocument({
               <Image src={clinicLogoUrl} style={styles.logo} />
             ) : null}
             <View>
-              <Text style={styles.clinicName}>{clinicName}</Text>
+              <Text style={[styles.clinicName, { fontFamily: boldFont }]}>
+                {clinicName}
+              </Text>
               <Text style={styles.clinicAddress}>{clinicAddress}</Text>
               <Text style={styles.clinicAddress}>
-                Phone: {clinicPhone}
+                {isHindi ? "दूरभाष: " : "Phone: "}
+                {clinicPhone}
                 {clinicEmail ? ` | Email: ${clinicEmail}` : ""}
               </Text>
               {clinicGstin ? (
@@ -454,19 +475,27 @@ export function ReceiptDocument({
           </View>
 
           <View style={styles.receiptBadgeContainer}>
-            <Text style={styles.receiptTitle}>TAX INVOICE & RECEIPT</Text>
+            <Text style={[styles.receiptTitle, { fontFamily: boldFont }]}>
+              {i18n.documentTitle}
+            </Text>
             <View style={styles.receiptMetaRow}>
-              <Text style={styles.metaLabel}>Invoice No:</Text>
-              <Text style={styles.metaValue}>{receiptNo}</Text>
+              <Text style={styles.metaLabel}>{i18n.invoiceNo}</Text>
+              <Text style={[styles.metaValue, { fontFamily: boldFont }]}>
+                {receiptNo}
+              </Text>
             </View>
             <View style={styles.receiptMetaRow}>
-              <Text style={styles.metaLabel}>Date:</Text>
-              <Text style={styles.metaValue}>{date}</Text>
+              <Text style={styles.metaLabel}>{i18n.date}</Text>
+              <Text style={[styles.metaValue, { fontFamily: boldFont }]}>
+                {date}
+              </Text>
             </View>
             {tokenNumber ? (
               <View style={styles.receiptMetaRow}>
-                <Text style={styles.metaLabel}>Token #:</Text>
-                <Text style={styles.metaValue}>{tokenNumber}</Text>
+                <Text style={styles.metaLabel}>{i18n.token}</Text>
+                <Text style={[styles.metaValue, { fontFamily: boldFont }]}>
+                  {tokenNumber}
+                </Text>
               </View>
             ) : null}
           </View>
@@ -475,54 +504,81 @@ export function ReceiptDocument({
         {/* Patient & Doctor Two-Column Grid */}
         <View style={styles.gridSection}>
           <View style={styles.gridColumn}>
-            <Text style={styles.columnTitle}>Patient Information</Text>
+            <Text style={[styles.columnTitle, { fontFamily: boldFont }]}>
+              {i18n.patientInfoTitle}
+            </Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Name:</Text>
-              <Text style={styles.infoValue}>{patientName}</Text>
+              <Text style={styles.infoLabel}>{i18n.patientName}</Text>
+              <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                {patientName}
+              </Text>
             </View>
             {patientMrn ? (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>UHID / MRN:</Text>
-                <Text style={styles.infoValue}>{patientMrn}</Text>
+                <Text style={styles.infoLabel}>{i18n.mrn}</Text>
+                <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                  {patientMrn}
+                </Text>
               </View>
             ) : null}
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Age / Sex:</Text>
-              <Text style={styles.infoValue}>
-                {patientAge ?? "—"} {patientGender ? `· ${patientGender}` : ""}
+              <Text style={styles.infoLabel}>{i18n.ageGender}</Text>
+              <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                {patientAge ?? "—"}{" "}
+                {patientGender ? `· ${translateGender(patientGender, language)}` : ""}
               </Text>
             </View>
             {patientPhone ? (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Contact:</Text>
-                <Text style={styles.infoValue}>{patientPhone}</Text>
+                <Text style={styles.infoLabel}>{i18n.contact}</Text>
+                <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                  {patientPhone}
+                </Text>
+              </View>
+            ) : null}
+            {patientAddress?.trim() ? (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{i18n.address}</Text>
+                <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                  {patientAddress.trim()}
+                </Text>
               </View>
             ) : null}
           </View>
 
           <View style={styles.gridColumn}>
-            <Text style={styles.columnTitle}>Consultation Details</Text>
+            <Text style={[styles.columnTitle, { fontFamily: boldFont }]}>
+              {i18n.doctorInfoTitle}
+            </Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Doctor:</Text>
-              <Text style={styles.infoValue}>
-                {doctorName ? `Dr. ${doctorName}` : "Consultant Specialist"}
+              <Text style={styles.infoLabel}>{i18n.doctorName}</Text>
+              <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                {doctorName
+                  ? `${isHindi ? "डॉ. " : "Dr. "}${doctorName.replace(/^Dr\.?\s+/i, "")}`
+                  : "Consultant Specialist"}
               </Text>
             </View>
             {doctorSpecialty ? (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Specialty:</Text>
-                <Text style={styles.infoValue}>{doctorSpecialty}</Text>
+                <Text style={styles.infoLabel}>{i18n.specialty}</Text>
+                <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                  {doctorSpecialty}
+                </Text>
               </View>
             ) : null}
             {doctorRegNo ? (
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Reg. No:</Text>
-                <Text style={styles.infoValue}>{doctorRegNo}</Text>
+                <Text style={styles.infoLabel}>{i18n.regNo}</Text>
+                <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                  {doctorRegNo}
+                </Text>
               </View>
             ) : null}
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Visit Date:</Text>
-              <Text style={styles.infoValue}>{queueDate ?? date}</Text>
+              <Text style={styles.infoLabel}>{i18n.date}</Text>
+              <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                {queueDate ?? date}
+              </Text>
             </View>
           </View>
         </View>
@@ -530,38 +586,38 @@ export function ReceiptDocument({
         {/* Clinical Vitals Bar — temperature, weight, bp, pulse, spo2, bmi */}
         <View style={styles.vitalsContainer}>
           <View style={styles.vitalsHeader}>
-            <Text style={styles.vitalsTitle}>
-              Clinical Vitals & Recorded Metrics
+            <Text style={[styles.vitalsTitle, { fontFamily: boldFont }]}>
+              {i18n.vitalsTitle}
             </Text>
             <Text style={styles.vitalsSubtitle}>
-              Recorded at triage / consultation
+              {isHindi ? "परामर्श के समय दर्ज माप" : "Recorded at triage / consultation"}
             </Text>
           </View>
           <View style={styles.vitalsGrid}>
             <View style={styles.vitalTile}>
-              <Text style={styles.vitalLabel}>Blood Pressure</Text>
-              <Text style={styles.vitalValue}>{bp}</Text>
+              <Text style={styles.vitalLabel}>{i18n.bp}</Text>
+              <Text style={[styles.vitalValue, { fontFamily: boldFont }]}>{bp}</Text>
               <Text style={styles.vitalUnit}>mmHg</Text>
             </View>
             <View style={styles.vitalTile}>
-              <Text style={styles.vitalLabel}>Heart / Pulse</Text>
-              <Text style={styles.vitalValue}>{pulse}</Text>
+              <Text style={styles.vitalLabel}>{i18n.pulse}</Text>
+              <Text style={[styles.vitalValue, { fontFamily: boldFont }]}>{pulse}</Text>
             </View>
             <View style={styles.vitalTile}>
-              <Text style={styles.vitalLabel}>Body Temp</Text>
-              <Text style={styles.vitalValue}>{temp}</Text>
+              <Text style={styles.vitalLabel}>{i18n.temp}</Text>
+              <Text style={[styles.vitalValue, { fontFamily: boldFont }]}>{temp}</Text>
             </View>
             <View style={styles.vitalTile}>
-              <Text style={styles.vitalLabel}>Weight</Text>
-              <Text style={styles.vitalValue}>{weight}</Text>
+              <Text style={styles.vitalLabel}>{i18n.weight}</Text>
+              <Text style={[styles.vitalValue, { fontFamily: boldFont }]}>{weight}</Text>
             </View>
             <View style={styles.vitalTile}>
-              <Text style={styles.vitalLabel}>Oxygen SpO₂</Text>
-              <Text style={styles.vitalValue}>{spo2}</Text>
+              <Text style={styles.vitalLabel}>{i18n.spo2}</Text>
+              <Text style={[styles.vitalValue, { fontFamily: boldFont }]}>{spo2}</Text>
             </View>
             <View style={styles.vitalTile}>
-              <Text style={styles.vitalLabel}>Height / BMI</Text>
-              <Text style={styles.vitalValue}>{heightBmi}</Text>
+              <Text style={styles.vitalLabel}>{i18n.heightBmi}</Text>
+              <Text style={[styles.vitalValue, { fontFamily: boldFont }]}>{heightBmi}</Text>
             </View>
           </View>
         </View>
@@ -571,14 +627,20 @@ export function ReceiptDocument({
           <View style={styles.clinicalBox}>
             {chiefComplaint ? (
               <View style={styles.clinicalItem}>
-                <Text style={styles.clinicalItemLabel}>Chief Complaint</Text>
+                <Text style={[styles.clinicalItemLabel, { fontFamily: boldFont }]}>
+                  {i18n.chiefComplaint}
+                </Text>
                 <Text style={styles.clinicalItemValue}>{chiefComplaint}</Text>
               </View>
             ) : null}
             {diagnosis ? (
               <View style={styles.clinicalItem}>
-                <Text style={styles.clinicalItemLabel}>Diagnosis / Impression</Text>
-                <Text style={styles.clinicalItemValue}>{diagnosis}</Text>
+                <Text style={[styles.clinicalItemLabel, { fontFamily: boldFont }]}>
+                  {i18n.diagnosis}
+                </Text>
+                <Text style={[styles.clinicalItemValue, { fontFamily: boldFont }]}>
+                  {diagnosis}
+                </Text>
               </View>
             ) : null}
           </View>
@@ -587,12 +649,14 @@ export function ReceiptDocument({
         {/* Itemized Table of Services / Fees */}
         <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderCell, styles.colDesc]}>
-              Description of Service / Item
+            <Text style={[styles.tableHeaderCell, styles.colDesc, { fontFamily: boldFont }]}>
+              {i18n.tableDesc}
             </Text>
-            <Text style={[styles.tableHeaderCell, styles.colSac]}>SAC / Code</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>
-              Amount (INR)
+            <Text style={[styles.tableHeaderCell, styles.colSac, { fontFamily: boldFont }]}>
+              {i18n.tableSac}
+            </Text>
+            <Text style={[styles.tableHeaderCell, styles.colAmount, { fontFamily: boldFont }]}>
+              {i18n.tableAmount}
             </Text>
           </View>
 
@@ -604,16 +668,22 @@ export function ReceiptDocument({
               >
                 <Text style={styles.colDesc}>{item.description}</Text>
                 <Text style={styles.colSac}>999312</Text>
-                <Text style={styles.colAmount}>₹{item.amount.toFixed(2)}</Text>
+                <Text style={[styles.colAmount, { fontFamily: boldFont }]}>
+                  ₹{item.amount.toFixed(2)}
+                </Text>
               </View>
             ))
           ) : (
             <View style={styles.tableRow}>
               <Text style={styles.colDesc}>
-                Outpatient Consultation & Clinical Examination
+                {isHindi
+                  ? "ओपीडी चिकित्सीय परामर्श एवं परीक्षण शुल्क"
+                  : "Outpatient Consultation & Clinical Examination"}
               </Text>
               <Text style={styles.colSac}>999312</Text>
-              <Text style={styles.colAmount}>₹{baseAmount.toFixed(2)}</Text>
+              <Text style={[styles.colAmount, { fontFamily: boldFont }]}>
+                ₹{baseAmount.toFixed(2)}
+              </Text>
             </View>
           )}
         </View>
@@ -621,56 +691,72 @@ export function ReceiptDocument({
         {/* Totals & Tax Breakdown & Payment Info */}
         <View style={styles.totalsContainer}>
           <View style={styles.paymentModeCard}>
-            <Text style={styles.paymentModeTitle}>Payment Settlement</Text>
-            <Text style={styles.paidBadge}>
-              PAID IN FULL · {paymentMode.toUpperCase()}
+            <Text style={[styles.paymentModeTitle, { fontFamily: boldFont }]}>
+              {i18n.paymentTitle}
+            </Text>
+            <Text style={[styles.paidBadge, { fontFamily: boldFont }]}>
+              {i18n.statusPaid} · {translatePaymentMode(paymentMode, language)}
             </Text>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Status:</Text>
-              <Text style={styles.infoValue}>Settled & Reconciled</Text>
+              <Text style={styles.infoLabel}>{i18n.paymentMode}</Text>
+              <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                {translatePaymentMode(paymentMode, language)}
+              </Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Ref ID:</Text>
-              <Text style={styles.infoValue}>{receiptNo}</Text>
+              <Text style={styles.infoLabel}>{i18n.invoiceNo}</Text>
+              <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
+                {receiptNo}
+              </Text>
             </View>
           </View>
 
           <View style={styles.taxBreakdownCard}>
             <View style={styles.taxRow}>
-              <Text style={styles.taxLabel}>Subtotal / Taxable:</Text>
-              <Text style={styles.taxValue}>₹{baseAmount.toFixed(2)}</Text>
+              <Text style={styles.taxLabel}>{i18n.subtotal}</Text>
+              <Text style={[styles.taxValue, { fontFamily: boldFont }]}>
+                ₹{baseAmount.toFixed(2)}
+              </Text>
             </View>
 
             {showTax ? (
               <View style={styles.taxRow}>
-                <Text style={styles.taxLabel}>GST / Tax ({taxRate}%):</Text>
-                <Text style={styles.taxValue}>₹{(taxAmount ?? 0).toFixed(2)}</Text>
+                <Text style={styles.taxLabel}>
+                  {i18n.taxAmount} ({taxRate}%):
+                </Text>
+                <Text style={[styles.taxValue, { fontFamily: boldFont }]}>
+                  ₹{(taxAmount ?? 0).toFixed(2)}
+                </Text>
               </View>
             ) : (
               <View style={styles.taxRow}>
-                <Text style={styles.taxLabel}>Taxes (Healthcare Exempt):</Text>
-                <Text style={styles.taxValue}>₹0.00</Text>
+                <Text style={styles.taxLabel}>
+                  {isHindi ? "कर (स्वास्थ्य सेवा छूट):" : "Taxes (Healthcare Exempt):"}
+                </Text>
+                <Text style={[styles.taxValue, { fontFamily: boldFont }]}>₹0.00</Text>
               </View>
             )}
 
             <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>Total Paid:</Text>
-              <Text style={styles.grandTotalValue}>₹{amount.toFixed(2)}</Text>
+              <Text style={[styles.grandTotalLabel, { fontFamily: boldFont }]}>
+                {i18n.totalPaid}
+              </Text>
+              <Text style={[styles.grandTotalValue, { fontFamily: boldFont }]}>
+                ₹{amount.toFixed(2)}
+              </Text>
             </View>
           </View>
         </View>
 
         {/* Footer, Terms, and Authorized Signatory */}
         <View style={styles.footerContainer}>
-          <Text style={styles.termsText}>
-            This is a computer-generated tax invoice and clinical OPD receipt
-            issued by {clinicName}. It incorporates recorded vitals and
-            diagnostic notes for medical reimbursement and tax records.
-          </Text>
+          <Text style={styles.termsText}>{i18n.terms}</Text>
 
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
-            <Text style={styles.signatureTitle}>Authorized Signatory</Text>
+            <Text style={[styles.signatureTitle, { fontFamily: boldFont }]}>
+              {i18n.authorizedSignatory}
+            </Text>
             <Text style={styles.signatureClinic}>{clinicName}</Text>
           </View>
         </View>
