@@ -3,6 +3,7 @@ import {
   consultationClinicalSchema,
   formatVitalValue,
   hasMedicalCertificateContent,
+  sectionCompletion,
 } from "@/lib/consultation-clinical";
 
 describe("consultationClinicalSchema", () => {
@@ -19,9 +20,29 @@ describe("consultationClinicalSchema", () => {
     const result = consultationClinicalSchema.safeParse({
       vitals: { bp: "120/80", pulse: "72" },
       patientHistory: { allergies: "Penicillin" },
+      examination: {
+        general: "Normal",
+        jointsAndParts: "Right knee medial tenderness, ROM 0-110",
+      },
+      advice: "Avoid squatting, take rest",
+      adviceDetails: {
+        generalAdvice: "Avoid squatting and cross-legged sitting",
+        physiotherapyExercises: "Isometric quadriceps strengthening",
+      },
+      treatmentPlan: {
+        treatmentType: "Elective Surgical Management",
+        proposedProcedure: "Total Knee Arthroplasty (TKA)",
+        laterality: "Right",
+        anesthesiaPlanned: "Spinal Anesthesia",
+      },
     });
 
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.examination?.jointsAndParts).toContain("Right knee");
+      expect(result.data.treatmentPlan?.proposedProcedure).toBe("Total Knee Arthroplasty (TKA)");
+      expect(result.data.adviceDetails?.generalAdvice).toContain("squatting");
+    }
   });
 });
 
@@ -47,5 +68,25 @@ describe("hasMedicalCertificateContent", () => {
     expect(
       hasMedicalCertificateContent({ fitnessStatus: "Fit for duty" })
     ).toBe(true);
+  });
+});
+
+describe("sectionCompletion", () => {
+  it("tracks advice and treatmentPlan completion correctly", () => {
+    const emptyResult = sectionCompletion({});
+    expect(emptyResult.advice.filled).toBe(false);
+    expect(emptyResult.treatmentPlan.filled).toBe(false);
+
+    const filledResult = sectionCompletion({
+      advice: "Rest and warm fomentation",
+      treatmentPlan: {
+        treatmentType: "Elective Surgery",
+        proposedProcedure: "Arthroscopic ACL Reconstruction",
+      },
+    });
+
+    expect(filledResult.advice.filled).toBe(true);
+    expect(filledResult.treatmentPlan.filled).toBe(true);
+    expect(filledResult.treatmentPlan.count).toBe(2);
   });
 });

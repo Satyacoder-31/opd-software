@@ -5,13 +5,15 @@ import {
   vitalFieldLabel,
   VITAL_FIELDS,
 } from "@/lib/consultation-clinical";
-import type { ConsultationClinicalData, Vitals } from "@/lib/types";
+import type { ConsultationClinicalData, Examination, Vitals } from "@/lib/types";
 
 type ProfileSectionKey =
   | "vitals"
   | "clinicalPresentation"
   | "patientHistory"
   | "examination"
+  | "advice"
+  | "treatmentPlan"
   | "investigationResults"
   | "diagnosis"
   | "notes"
@@ -72,7 +74,9 @@ export function ConsultationProfile({
   const v = (data.vitals as Vitals) ?? {};
   const clinicalPresentation = data.clinicalPresentation ?? {};
   const patientHistory = data.patientHistory ?? {};
-  const examination = data.examination ?? {};
+  const examination = (data.examination as Examination) ?? {};
+  const adviceDetails = data.adviceDetails ?? {};
+  const treatmentPlan = data.treatmentPlan ?? {};
   const investigationResults = data.investigationResults ?? {};
   const medicalCertificate = data.medicalCertificate ?? {};
   const completion = sectionCompletion(data);
@@ -146,7 +150,101 @@ export function ConsultationProfile({
             { label: "Respiratory", value: examination.respiratory },
             { label: "Abdomen", value: examination.abdomen },
             { label: "Neurological", value: examination.neurological },
-            { label: "Other findings", value: examination.other },
+            {
+              label: "Joints & body parts examination",
+              value: examination.jointsAndParts ?? examination.other,
+            },
+          ]}
+        />
+      ),
+    },
+    {
+      key: "advice",
+      title: "Advice",
+      filled: completion.advice.filled,
+      content: (
+        <RecordRows
+          fields={[
+            { label: "Prescription advice", value: data.advice },
+            {
+              label: "General advice & precautions",
+              value: adviceDetails.generalAdvice,
+            },
+            {
+              label: "Physiotherapy & exercises",
+              value: adviceDetails.physiotherapyExercises,
+            },
+            {
+              label: "Activity restrictions (Do's & Don'ts)",
+              value: adviceDetails.dosAndDonts,
+            },
+            {
+              label: "Diet, nutrition & bone health",
+              value: adviceDetails.dietAndLifestyle,
+            },
+            {
+              label: "Warning signs & emergency red flags",
+              value: adviceDetails.warningSignsEmergency,
+            },
+            {
+              label: "Follow-up instructions",
+              value: adviceDetails.followUpInstructions,
+            },
+          ]}
+        />
+      ),
+    },
+    {
+      key: "treatmentPlan",
+      title: "Plan of treatment - surgery",
+      filled: completion.treatmentPlan.filled,
+      content: (
+        <RecordRows
+          fields={[
+            {
+              label: "Treatment approach",
+              value: treatmentPlan.treatmentType,
+            },
+            {
+              label: "Proposed procedure / surgery",
+              value: treatmentPlan.proposedProcedure,
+            },
+            {
+              label: "Laterality / Site",
+              value: treatmentPlan.laterality,
+            },
+            {
+              label: "Anesthesia planned",
+              value: treatmentPlan.anesthesiaPlanned,
+            },
+            {
+              label: "Surgery timing & scheduling",
+              value: treatmentPlan.timingOrDate,
+            },
+            {
+              label: "Pre-operative PAC workup",
+              value: treatmentPlan.preOpClearance,
+            },
+            {
+              label: "Implants & hardware required",
+              value: treatmentPlan.implantsAndHardware,
+            },
+            {
+              label: "Post-operative rehab protocol",
+              value: treatmentPlan.postOpRehabPlan,
+            },
+            {
+              label: "Surgical counseling & consent",
+              value: treatmentPlan.counselingAndConsent,
+            },
+            {
+              label: "Conservative treatment protocol",
+              value: treatmentPlan.conservativePlan,
+            },
+            {
+              label: "Treatment plan notes",
+              value: treatmentPlan.notes,
+            },
           ]}
         />
       ),

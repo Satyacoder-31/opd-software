@@ -12,9 +12,10 @@ export type WorkspaceSectionId =
   | "ws-essentials"
   | "ws-history"
   | "ws-examination"
+  | "ws-advice"
+  | "ws-treatment-plan"
   | "ws-notes"
   | "ws-prescription"
-  | "ws-advice"
   | "ws-investigations"
   | "ws-documents";
 
@@ -63,10 +64,11 @@ export function tabForWorkspaceSection(
     case "ws-essentials":
     case "ws-history":
     case "ws-examination":
+    case "ws-advice":
+    case "ws-treatment-plan":
     case "ws-notes":
       return "consultation";
     case "ws-prescription":
-    case "ws-advice":
       return "prescription";
     case "ws-investigations":
       return "investigations";

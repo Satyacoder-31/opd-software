@@ -18,21 +18,25 @@ import {
   faShieldHalved,
   faStethoscope,
   faTemperatureHalf,
+  faTriangleExclamation,
   faUser,
   faUserCheck,
   faUsers,
   faXRay,
 } from "@fortawesome/free-solid-svg-icons";
+import { Icon } from "@/components/ui/Icon";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { Input } from "@/components/ui/Input";
 import { ClinicalDropdownInput } from "@/components/consultation/ClinicalDropdownInput";
 import { ClinicalDropdownTextarea } from "@/components/consultation/ClinicalDropdownTextarea";
 import {
+  emptyAdviceData,
   emptyClinicalPresentation,
   emptyExamination,
   emptyInvestigationResults,
   emptyMedicalCertificate,
   emptyPatientHistory,
+  emptyTreatmentPlan,
   sectionCompletion,
   sectionSummary,
   vitalFieldLabel,
@@ -55,8 +59,24 @@ import {
   RESP_EXAM_RECOMMENDATIONS,
   ABDOMEN_EXAM_RECOMMENDATIONS,
   NEURO_EXAM_RECOMMENDATIONS,
-  OTHER_EXAM_RECOMMENDATIONS,
+  JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS,
   ADDITIONAL_NOTES_RECOMMENDATIONS,
+  ADVICE_RECOMMENDATIONS,
+  ADVICE_GENERAL_PRECAUTIONS,
+  ADVICE_PHYSIOTHERAPY_RECOMMENDATIONS,
+  ADVICE_ACTIVITY_RESTRICTIONS,
+  ADVICE_DIET_LIFESTYLE_RECOMMENDATIONS,
+  ADVICE_WARNING_SIGNS_RECOMMENDATIONS,
+  TREATMENT_PLAN_TYPE_RECOMMENDATIONS,
+  TREATMENT_PLAN_PROCEDURE_RECOMMENDATIONS,
+  TREATMENT_PLAN_LATERALITY_RECOMMENDATIONS,
+  TREATMENT_PLAN_ANESTHESIA_RECOMMENDATIONS,
+  TREATMENT_PLAN_PREOP_RECOMMENDATIONS,
+  TREATMENT_PLAN_IMPLANTS_RECOMMENDATIONS,
+  TREATMENT_PLAN_TIMING_RECOMMENDATIONS,
+  TREATMENT_PLAN_REHAB_RECOMMENDATIONS,
+  TREATMENT_PLAN_COUNSELING_RECOMMENDATIONS,
+  TREATMENT_PLAN_CONSERVATIVE_RECOMMENDATIONS,
   LAB_RESULTS_RECOMMENDATIONS,
   IMAGING_RESULTS_RECOMMENDATIONS,
   OTHER_INVESTIGATION_RECOMMENDATIONS,
@@ -65,12 +85,14 @@ import {
   MED_CERT_REMARKS_RECOMMENDATIONS,
 } from "@/lib/clinical-recommendations";
 import type {
+  AdviceData,
   ClinicalPresentation,
   ConsultationClinicalData,
   Examination,
   InvestigationResults,
   MedicalCertificate,
   PatientHistory,
+  TreatmentPlan,
   Vitals,
 } from "@/lib/types";
 import { DiagnosisCodesField } from "@/components/consultation/DiagnosisCodesField";
@@ -107,6 +129,10 @@ export function ConsultationClinicalSections({
   const patientHistory =
     (value.patientHistory as PatientHistory) ?? emptyPatientHistory();
   const examination = (value.examination as Examination) ?? emptyExamination();
+  const treatmentPlan =
+    (value.treatmentPlan as TreatmentPlan) ?? emptyTreatmentPlan();
+  const adviceDetails =
+    (value.adviceDetails as AdviceData) ?? emptyAdviceData();
   const completion = sectionCompletion(value);
 
   function setVitals(next: SetStateAction<Vitals>) {
@@ -128,6 +154,16 @@ export function ConsultationClinicalSections({
   function setExamination(next: SetStateAction<Examination>) {
     const resolved = typeof next === "function" ? next(examination) : next;
     patchClinical(value, onChange, { examination: resolved });
+  }
+
+  function setTreatmentPlan(next: SetStateAction<TreatmentPlan>) {
+    const resolved = typeof next === "function" ? next(treatmentPlan) : next;
+    patchClinical(value, onChange, { treatmentPlan: resolved });
+  }
+
+  function setAdviceDetails(next: SetStateAction<AdviceData>) {
+    const resolved = typeof next === "function" ? next(adviceDetails) : next;
+    patchClinical(value, onChange, { adviceDetails: resolved });
   }
 
   return (
@@ -431,18 +467,382 @@ export function ConsultationClinicalSections({
                 rows={2}
               />
             </div>
+            {/* Comprehensive Joints & Body Parts Examination (OPD / Orthopedic) */}
+            <div className="rounded-lg border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-900/50 dark:bg-violet-950/20">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5">
+                <span className="text-xs font-semibold text-violet-950 dark:text-violet-200 flex items-center gap-1.5">
+                  <Icon icon={faBone} className="size-3.5 text-violet-600" />
+                  Joints &amp; Body Parts Examination (Local OPD Exam)
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  Includes all joints, spine, deformities &amp; gait
+                </span>
+              </div>
+
+              {/* Quick joint template buttons */}
+              <div className="mb-2 flex flex-wrap items-center gap-1">
+                <span className="text-[11px] font-medium text-muted-foreground mr-1">Quick insert:</span>
+                {[
+                  { label: "Normal Joint Screening", search: "Full Joint" },
+                  { label: "Knee", search: "Right knee: Medial" },
+                  { label: "Shoulder", search: "Right shoulder: Painful" },
+                  { label: "Lumbar Spine", search: "Lumbar spine: Tenderness" },
+                  { label: "Cervical Spine", search: "Cervical spine: Tenderness" },
+                  { label: "Hip & Pelvis", search: "Right hip: Groin" },
+                  { label: "Elbow", search: "Tennis elbow" },
+                  { label: "Wrist & Hand", search: "Carpal tunnel" },
+                  { label: "Ankle & Foot", search: "ATFL sprain" },
+                  { label: "Gait & Alignment", search: "Gait & Posture" },
+                ].map((chip) => (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => {
+                      const match = JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS.find((rec) =>
+                        rec.toLowerCase().includes(chip.search.toLowerCase())
+                      );
+                      if (match) {
+                        const current = (examination.jointsAndParts ?? examination.other ?? "").trim();
+                        const next = current ? `${current}\n${match}` : match;
+                        setExamination((prev) => ({
+                          ...prev,
+                          jointsAndParts: next,
+                          other: next,
+                        }));
+                      }
+                    }}
+                    className="inline-flex items-center rounded-md border border-violet-300/70 bg-white px-2 py-0.5 text-[11px] font-medium text-violet-800 shadow-2xs hover:bg-violet-100/80 transition-colors dark:border-violet-800 dark:bg-violet-900/40 dark:text-violet-200 dark:hover:bg-violet-800/60"
+                  >
+                    + {chip.label}
+                  </button>
+                ))}
+              </div>
+
+              <ClinicalDropdownTextarea
+                icon={faBone}
+                label="Joints & body parts examination"
+                name="jointsAndParts"
+                value={examination.jointsAndParts ?? examination.other ?? ""}
+                onChange={(text) => {
+                  setExamination((prev) => ({
+                    ...prev,
+                    jointsAndParts: text,
+                    other: text,
+                  }));
+                }}
+                options={JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS}
+                placeholder="Examine all joints and parts: Knee, Shoulder, Spine, Hip, Elbow, Wrist/Hand, Ankle/Foot, TMJ, Gait, Posture, ROM, Stability tests…"
+                rows={4}
+              />
+            </div>
+          </div>
+        </CollapsibleSection>
+      </div>
+
+      {/* COLUMN 1: ADVICE */}
+      <div id="ws-advice" className="scroll-mt-2" tabIndex={-1}>
+        <CollapsibleSection
+          flush
+          density="compact"
+          contentClassName="px-3 py-3 md:px-4"
+          title="Advice"
+          icon={faClipboardList}
+          iconColor="bg-emerald-500/15 text-emerald-600"
+          summary={sectionSummary(completion.advice)}
+          filled={completion.advice.filled}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/40 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-emerald-950 dark:text-emerald-200 flex items-center gap-1.5">
+                  <Icon icon={faClipboardList} className="size-3.5 text-emerald-600" />
+                  Prescription Advice &amp; Patient Instructions (Printed on Rx)
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  Synchronized with prescription advice
+                </span>
+              </div>
+              <ClinicalDropdownTextarea
+                icon={faClipboardList}
+                label="Complete advice summary"
+                name="advice"
+                value={value.advice ?? ""}
+                onChange={(text) =>
+                  patchClinical(value, onChange, { advice: text })
+                }
+                options={ADVICE_RECOMMENDATIONS}
+                placeholder="Advice, home precautions, exercises, follow-up timeline…"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <ClinicalDropdownTextarea
+                icon={faShieldHalved}
+                label="General advice & daily precautions"
+                name="generalAdvice"
+                value={adviceDetails.generalAdvice ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setAdviceDetails, "generalAdvice", text)
+                }
+                options={ADVICE_GENERAL_PRECAUTIONS}
+                placeholder="Avoid squatting/cross-legged, ergonomics, western commode, footwear, lumbar belt…"
+                rows={2}
+              />
+              <ClinicalDropdownTextarea
+                icon={faHeartPulse}
+                label="Physiotherapy & home exercises"
+                name="physiotherapyExercises"
+                value={adviceDetails.physiotherapyExercises ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setAdviceDetails, "physiotherapyExercises", text)
+                }
+                options={ADVICE_PHYSIOTHERAPY_RECOMMENDATIONS}
+                placeholder="Quadriceps isometrics, core stability, cervical exercises, rotator cuff rehab…"
+                rows={2}
+              />
+              <ClinicalDropdownTextarea
+                icon={faClockRotateLeft}
+                label="Activity restrictions (Do's & Don'ts)"
+                name="dosAndDonts"
+                value={adviceDetails.dosAndDonts ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setAdviceDetails, "dosAndDonts", text)
+                }
+                options={ADVICE_ACTIVITY_RESTRICTIONS}
+                placeholder="No heavy weights, no forward bending, limit bumpy travel, posture breaks…"
+                rows={2}
+              />
+              <ClinicalDropdownTextarea
+                icon={faFileMedical}
+                label="Diet, nutrition & bone health"
+                name="dietAndLifestyle"
+                value={adviceDetails.dietAndLifestyle ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setAdviceDetails, "dietAndLifestyle", text)
+                }
+                options={ADVICE_DIET_LIFESTYLE_RECOMMENDATIONS}
+                placeholder="Calcium/Vit D3 rich diet, morning sunlight, weight reduction target, hydration…"
+                rows={2}
+              />
+            </div>
+
             <ClinicalDropdownTextarea
-              icon={faNotesMedical}
-              label="Other findings"
-              name="other"
-              value={examination.other ?? ""}
+              icon={faTriangleExclamation}
+              label="Warning signs & emergency red flags"
+              name="warningSignsEmergency"
+              value={adviceDetails.warningSignsEmergency ?? ""}
               onChange={(text) =>
-                updateRecordField(setExamination, "other", text)
+                updateRecordField(setAdviceDetails, "warningSignsEmergency", text)
               }
-              options={OTHER_EXAM_RECOMMENDATIONS}
-              placeholder="Local joint examination: tenderness, crepitus, range of motion, tests…"
+              options={ADVICE_WARNING_SIGNS_RECOMMENDATIONS}
+              placeholder="Cauda equina alert (loss of bladder control / foot drop), hot swollen septic joint alert, DVT warning…"
               rows={2}
             />
+          </div>
+        </CollapsibleSection>
+      </div>
+
+      {/* COLUMN 2: PLAN OF TREATMENT - SURGERY */}
+      <div id="ws-treatment-plan" className="scroll-mt-2" tabIndex={-1}>
+        <CollapsibleSection
+          flush
+          density="compact"
+          contentClassName="px-3 py-3 md:px-4"
+          title="Plan of treatment - surgery"
+          icon={faBone}
+          iconColor="bg-indigo-500/15 text-indigo-600"
+          summary={sectionSummary(completion.treatmentPlan)}
+          filled={completion.treatmentPlan.filled}
+        >
+          <div className="flex flex-col gap-3">
+            {/* Treatment approach selector */}
+            <div className="rounded-lg border border-indigo-200/80 bg-indigo-50/40 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+              <div className="mb-2.5">
+                <ClinicalDropdownInput
+                  label="Treatment approach / clinical pathway"
+                  name="treatmentType"
+                  value={treatmentPlan.treatmentType ?? ""}
+                  onChange={(text) =>
+                    updateRecordField(setTreatmentPlan, "treatmentType", text)
+                  }
+                  options={TREATMENT_PLAN_TYPE_RECOMMENDATIONS}
+                  placeholder="Select or enter pathway (e.g. Conservative, Elective Surgery, Urgent Surgery)…"
+                />
+              </div>
+              <label className="block text-xs font-semibold text-indigo-950 dark:text-indigo-200 mb-2">
+                Quick pathway selector
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {[
+                  {
+                    id: "conservative",
+                    label: "Conservative Management",
+                    desc: "Medications + Physiotherapy",
+                  },
+                  {
+                    id: "interventional",
+                    label: "Interventions / Injections",
+                    desc: "PRP / Hyaluronic Acid / Block",
+                  },
+                  {
+                    id: "elective-surgery",
+                    label: "Elective Surgery",
+                    desc: "Planned Surgical Procedure",
+                  },
+                  {
+                    id: "urgent-surgery",
+                    label: "Urgent / Emergency Surgery",
+                    desc: "Within 24-48h or Immediate",
+                  },
+                ].map((item) => {
+                  const isSelected =
+                    treatmentPlan.treatmentType?.toLowerCase().includes(item.id.replace("-", " ")) ||
+                    treatmentPlan.treatmentType === item.label;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        updateRecordField(
+                          setTreatmentPlan,
+                          "treatmentType",
+                          item.label
+                        )
+                      }
+                      className={`text-left rounded-lg border p-2.5 transition-all text-xs ${
+                        isSelected
+                          ? "border-indigo-600 bg-indigo-600 text-white shadow-xs font-semibold"
+                          : "border-border bg-white hover:border-indigo-300 dark:bg-card text-ink"
+                      }`}
+                    >
+                      <div className="font-semibold">{item.label}</div>
+                      <div
+                        className={`text-[11px] ${
+                          isSelected ? "text-indigo-100" : "text-muted-foreground"
+                        }`}
+                      >
+                        {item.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <ClinicalDropdownInput
+                label="Proposed surgery / procedure"
+                name="proposedProcedure"
+                value={treatmentPlan.proposedProcedure ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "proposedProcedure", text)
+                }
+                options={TREATMENT_PLAN_PROCEDURE_RECOMMENDATIONS}
+                placeholder="e.g. Total Knee Arthroplasty (TKA), ACL Reconstruction, MED Discectomy…"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <ClinicalDropdownInput
+                  label="Laterality / Site"
+                  name="laterality"
+                  value={treatmentPlan.laterality ?? ""}
+                  onChange={(text) =>
+                    updateRecordField(setTreatmentPlan, "laterality", text)
+                  }
+                  options={TREATMENT_PLAN_LATERALITY_RECOMMENDATIONS}
+                  placeholder="Right, Left, Bilateral, Spine…"
+                />
+                <ClinicalDropdownInput
+                  label="Anesthesia planned"
+                  name="anesthesiaPlanned"
+                  value={treatmentPlan.anesthesiaPlanned ?? ""}
+                  onChange={(text) =>
+                    updateRecordField(setTreatmentPlan, "anesthesiaPlanned", text)
+                  }
+                  options={TREATMENT_PLAN_ANESTHESIA_RECOMMENDATIONS}
+                  placeholder="Spinal, GA, Block, Local…"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <ClinicalDropdownInput
+                label="Surgery timing & scheduling"
+                name="timingOrDate"
+                value={treatmentPlan.timingOrDate ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "timingOrDate", text)
+                }
+                options={TREATMENT_PLAN_TIMING_RECOMMENDATIONS}
+                placeholder="e.g. Elective within 1-2 weeks, Urgent within 48h…"
+              />
+              <ClinicalDropdownTextarea
+                icon={faShieldHalved}
+                label="Pre-operative clearance & PAC workup"
+                name="preOpClearance"
+                value={treatmentPlan.preOpClearance ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "preOpClearance", text)
+                }
+                options={TREATMENT_PLAN_PREOP_RECOMMENDATIONS}
+                placeholder="PAC clearance, CBC, Sugar, PT/INR, Echo, Chest X-ray, PRBC cross-matching…"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <ClinicalDropdownTextarea
+                icon={faBone}
+                label="Implants, prostheses & hardware required"
+                name="implantsAndHardware"
+                value={treatmentPlan.implantsAndHardware ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "implantsAndHardware", text)
+                }
+                options={TREATMENT_PLAN_IMPLANTS_RECOMMENDATIONS}
+                placeholder="High-flexion knee prosthesis, titanium locking plate, suture anchors, TLIF cage…"
+                rows={2}
+              />
+              <ClinicalDropdownTextarea
+                icon={faHeartPulse}
+                label="Post-operative rehabilitation & recovery protocol"
+                name="postOpRehabPlan"
+                value={treatmentPlan.postOpRehabPlan ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "postOpRehabPlan", text)
+                }
+                options={TREATMENT_PLAN_REHAB_RECOMMENDATIONS}
+                placeholder="Weight-bearing protocol, walker/crutches ambulation, brace, DVT prophylaxis, suture removal…"
+                rows={2}
+              />
+            </div>
+
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <ClinicalDropdownTextarea
+                icon={faClipboard}
+                label="Surgical counseling & informed consent notes"
+                name="counselingAndConsent"
+                value={treatmentPlan.counselingAndConsent ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "counselingAndConsent", text)
+                }
+                options={TREATMENT_PLAN_COUNSELING_RECOMMENDATIONS}
+                placeholder="Risks, benefits, complications explained; informed consent obtained…"
+                rows={2}
+              />
+              <ClinicalDropdownTextarea
+                icon={faFileMedical}
+                label="Conservative / Non-surgical treatment plan"
+                name="conservativePlan"
+                value={treatmentPlan.conservativePlan ?? ""}
+                onChange={(text) =>
+                  updateRecordField(setTreatmentPlan, "conservativePlan", text)
+                }
+                options={TREATMENT_PLAN_CONSERVATIVE_RECOMMENDATIONS}
+                placeholder="Medical management, supervised physical therapy, bracing, follow-up schedule…"
+                rows={2}
+              />
+            </div>
           </div>
         </CollapsibleSection>
       </div>

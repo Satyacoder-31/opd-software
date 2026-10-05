@@ -128,6 +128,8 @@ describe("workspace shortcuts", () => {
 
   it("maps section anchors to tabs", () => {
     expect(tabForWorkspaceSection("ws-vitals")).toBe("consultation");
+    expect(tabForWorkspaceSection("ws-advice")).toBe("consultation");
+    expect(tabForWorkspaceSection("ws-treatment-plan")).toBe("consultation");
     expect(tabForWorkspaceSection("ws-prescription")).toBe("prescription");
     expect(tabForWorkspaceSection("ws-investigations")).toBe("investigations");
     expect(tabForWorkspaceSection("ws-documents")).toBe("documents");

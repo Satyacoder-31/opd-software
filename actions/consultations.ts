@@ -54,6 +54,8 @@ function clinicalUpdateData(
     examination: parsed.examination ?? undefined,
     investigationResults: parsed.investigationResults ?? undefined,
     medicalCertificate: parsed.medicalCertificate ?? undefined,
+    advice: parsed.advice ?? (parsed.adviceDetails as any) ?? undefined,
+    treatmentPlan: (parsed.treatmentPlan as any) ?? undefined,
     updatedById: userId,
   };
 }
@@ -76,8 +78,11 @@ function validateVisitDraft(input: VisitDraftInput):
     };
   }
 
+  const effectiveAdvice =
+    input.advice?.trim() || input.clinical?.advice?.trim() || undefined;
+
   const prescription = validatePrescriptionDraft(input.medicines, {
-    advice: input.advice,
+    advice: effectiveAdvice,
     followUp: input.followUp,
   });
   if (!prescription.ok) {

@@ -417,6 +417,8 @@ model Consultation {
   referral             Json?
   notes                String?
   medicalCertificate   Json?
+  advice               Json?
+  treatmentPlan        Json?
   amendmentReason      String?
   amendedAt            DateTime?
   amendedById          String?

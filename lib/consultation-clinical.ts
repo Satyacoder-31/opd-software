@@ -1,11 +1,13 @@
 import { z } from "zod";
 import type {
+  AdviceData,
   ClinicalPresentation,
   Examination,
   InvestigationResults,
   MedicalCertificate,
   PatientHistory,
   ReferralLetter,
+  TreatmentPlan,
   Vitals,
 } from "@/lib/types";
 import { formatDiagnosisCodesSummary } from "@/lib/icd-catalog";
@@ -102,6 +104,30 @@ export const examinationSchema = z.object({
   abdomen: z.string().optional(),
   neurological: z.string().optional(),
   other: z.string().optional(),
+  jointsAndParts: z.string().optional(),
+});
+
+export const adviceDataSchema = z.object({
+  generalAdvice: z.string().optional(),
+  physiotherapyExercises: z.string().optional(),
+  dosAndDonts: z.string().optional(),
+  dietAndLifestyle: z.string().optional(),
+  warningSignsEmergency: z.string().optional(),
+  followUpInstructions: z.string().optional(),
+});
+
+export const treatmentPlanSchema = z.object({
+  treatmentType: z.string().optional(),
+  proposedProcedure: z.string().optional(),
+  laterality: z.string().optional(),
+  anesthesiaPlanned: z.string().optional(),
+  preOpClearance: z.string().optional(),
+  implantsAndHardware: z.string().optional(),
+  timingOrDate: z.string().optional(),
+  postOpRehabPlan: z.string().optional(),
+  counselingAndConsent: z.string().optional(),
+  conservativePlan: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export const investigationResultsSchema = z.object({
@@ -143,6 +169,9 @@ export const consultationClinicalSchema = z.object({
   examination: examinationSchema.optional(),
   investigationResults: investigationResultsSchema.optional(),
   medicalCertificate: medicalCertificateSchema.optional(),
+  advice: z.string().optional(),
+  adviceDetails: adviceDataSchema.optional(),
+  treatmentPlan: treatmentPlanSchema.optional(),
 });
 
 export type ConsultationClinicalInput = z.infer<typeof consultationClinicalSchema>;
@@ -168,6 +197,9 @@ export function sectionCompletion(data: {
   investigationResults?: InvestigationResults;
   medicalCertificate?: MedicalCertificate;
   referral?: ReferralLetter;
+  advice?: string;
+  adviceDetails?: AdviceData;
+  treatmentPlan?: TreatmentPlan;
 }) {
   const vitals = data.vitals ?? {};
   const clinicalPresentation = data.clinicalPresentation ?? {};
@@ -176,8 +208,14 @@ export function sectionCompletion(data: {
   const investigationResults = data.investigationResults ?? {};
   const medicalCertificate = data.medicalCertificate ?? {};
   const referral = data.referral ?? {};
+  const adviceDetails = data.adviceDetails ?? {};
+  const treatmentPlan = data.treatmentPlan ?? {};
   const hasIcd = (data.diagnosisCodes?.length ?? 0) > 0;
   const diagnosisFilled = !!data.diagnosis?.trim() || hasIcd;
+  const adviceFilled =
+    !!data.advice?.trim() || countFilledRecord(adviceDetails as Record<string, string | undefined>) > 0;
+  const treatmentPlanFilled =
+    countFilledRecord(treatmentPlan as Record<string, string | undefined>) > 0;
 
   return {
     vitals: {
@@ -202,7 +240,19 @@ export function sectionCompletion(data: {
     examination: {
       filled: countFilledRecord(examination) > 0,
       count: countFilledRecord(examination),
+      total: 7,
+    },
+    advice: {
+      filled: adviceFilled,
+      count:
+        (data.advice?.trim() ? 1 : 0) +
+        countFilledRecord(adviceDetails as Record<string, string | undefined>),
       total: 6,
+    },
+    treatmentPlan: {
+      filled: treatmentPlanFilled,
+      count: countFilledRecord(treatmentPlan as Record<string, string | undefined>),
+      total: 10,
     },
     investigationResults: {
       filled: countFilledRecord(investigationResults) > 0,
@@ -258,6 +308,8 @@ export const emptyExamination = (): Examination => ({});
 export const emptyInvestigationResults = (): InvestigationResults => ({});
 export const emptyMedicalCertificate = (): MedicalCertificate => ({});
 export const emptyReferral = (): ReferralLetter => ({});
+export const emptyTreatmentPlan = (): TreatmentPlan => ({});
+export const emptyAdviceData = (): AdviceData => ({});
 
 export function hasMedicalCertificateContent(
   certificate?: MedicalCertificate | null

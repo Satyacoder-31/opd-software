@@ -93,13 +93,30 @@ export function ConsultationWorkspace({
 }: ConsultationWorkspaceProps) {
   const router = useRouter();
   const [tab, setTab] = useState<WorkspaceTabId>("consultation");
-  const [clinical, setClinical] =
-    useState<ConsultationClinicalData>(initialClinical);
+  const resolvedInitialAdvice = initialAdvice ?? initialClinical.advice ?? "";
+  const [clinical, setClinical] = useState<ConsultationClinicalData>({
+    ...initialClinical,
+    advice: resolvedInitialAdvice,
+  });
   const [medicines, setMedicines] = useState<Medicine[]>(
     initialMedicines.length > 0 ? initialMedicines : [emptyMedicine()],
   );
-  const [advice, setAdvice] = useState(initialAdvice ?? "");
+  const [advice, setAdvice] = useState(resolvedInitialAdvice);
   const [followUp, setFollowUp] = useState(initialFollowUp ?? "");
+
+  const handleClinicalChange = useCallback((next: ConsultationClinicalData) => {
+    setClinical(next);
+    if (next.advice !== undefined) {
+      setAdvice(next.advice);
+    }
+  }, []);
+
+  const handleAdviceChange = useCallback((nextAdvice: string) => {
+    setAdvice(nextAdvice);
+    setClinical((prev) =>
+      prev.advice === nextAdvice ? prev : { ...prev, advice: nextAdvice },
+    );
+  }, []);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error">(
     "success",
@@ -499,7 +516,7 @@ export function ConsultationWorkspace({
 
             <ConsultationClinicalSections
               value={clinical}
-              onChange={setClinical}
+              onChange={handleClinicalChange}
             />
           </TabsContent>
 
@@ -511,7 +528,7 @@ export function ConsultationWorkspace({
               advice={advice}
               followUp={followUp}
               onMedicinesChange={setMedicines}
-              onAdviceChange={setAdvice}
+              onAdviceChange={handleAdviceChange}
               onFollowUpChange={setFollowUp}
               patientAllergies={patientAllergies}
               hideSaveActions

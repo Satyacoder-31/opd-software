@@ -42,6 +42,31 @@ export type Examination = {
   abdomen?: string;
   neurological?: string;
   other?: string;
+  /** Examination of all joints, spine, and musculoskeletal body parts under OPD */
+  jointsAndParts?: string;
+};
+
+export type AdviceData = {
+  generalAdvice?: string;
+  physiotherapyExercises?: string;
+  dosAndDonts?: string;
+  dietAndLifestyle?: string;
+  warningSignsEmergency?: string;
+  followUpInstructions?: string;
+};
+
+export type TreatmentPlan = {
+  treatmentType?: string;
+  proposedProcedure?: string;
+  laterality?: string;
+  anesthesiaPlanned?: string;
+  preOpClearance?: string;
+  implantsAndHardware?: string;
+  timingOrDate?: string;
+  postOpRehabPlan?: string;
+  counselingAndConsent?: string;
+  conservativePlan?: string;
+  notes?: string;
 };
 
 export type InvestigationResults = {
@@ -79,6 +104,9 @@ export type ConsultationClinicalData = {
   examination?: Examination;
   investigationResults?: InvestigationResults;
   medicalCertificate?: MedicalCertificate;
+  advice?: string;
+  adviceDetails?: AdviceData;
+  treatmentPlan?: TreatmentPlan;
 };
 
 export type Medicine = {

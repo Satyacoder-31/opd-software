@@ -2,6 +2,7 @@ import { AppointmentStatus, type Consultation } from "@prisma/client";
 import { normalizeDrugName } from "@/lib/drug-catalog";
 import type { DiagnosisCodeEntry } from "@/lib/icd-catalog";
 import type {
+  AdviceData,
   ClinicalPresentation,
   ConsultationClinicalData,
   Examination,
@@ -9,6 +10,7 @@ import type {
   MedicalCertificate,
   PatientHistory,
   ReferralLetter,
+  TreatmentPlan,
   Vitals,
 } from "@/lib/types";
 
@@ -54,7 +56,10 @@ type ConsultationRecord = Pick<
   | "examination"
   | "investigationResults"
   | "medicalCertificate"
->;
+> & {
+  advice?: unknown;
+  treatmentPlan?: unknown;
+};
 
 export function toConsultationClinicalData(
   consultation: ConsultationRecord
@@ -80,6 +85,16 @@ export function toConsultationClinicalData(
     medicalCertificate:
       (consultation.medicalCertificate as MedicalCertificate | null) ??
       undefined,
+    advice:
+      typeof consultation.advice === "string"
+        ? consultation.advice
+        : undefined,
+    adviceDetails:
+      consultation.advice && typeof consultation.advice === "object"
+        ? (consultation.advice as unknown as AdviceData)
+        : undefined,
+    treatmentPlan:
+      (consultation.treatmentPlan as unknown as TreatmentPlan) ?? undefined,
   };
 }
 
