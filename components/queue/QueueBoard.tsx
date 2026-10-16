@@ -107,8 +107,8 @@ export function QueueBoard({
         return;
       }
       if (result.data.consultationId) {
-        router.push(`/consultations/${result.data.consultationId}`);
-        return;
+        window.location.assign(`/consultations/${result.data.consultationId}`);
+        return new Promise(() => {}); // keep loading state active while navigating
       }
       await refreshQueue();
     }, id);
@@ -491,6 +491,7 @@ function QueueCard({
           <div className="flex items-start justify-between gap-2">
             <Link
               href={`/patients/${item.patient.id}`}
+              prefetch={false}
               className="block truncate font-bold text-[15px] text-ink hover:text-primary transition-colors leading-snug"
             >
               {item.patient.name}
@@ -556,13 +557,13 @@ function QueueCard({
             loading={loading}
           >
             <Icon icon={faStethoscope} className="size-3" />
-            Start Consultation
+            {loading ? "Starting..." : "Start Consultation"}
           </Button>
         )}
         {isWaiting && !canStart && (
           <Button
             nativeButton={false}
-            render={<Link href={`/patients/${item.patient.id}`} />}
+            render={<Link href={`/patients/${item.patient.id}`} prefetch={false} />}
             size="sm"
             variant="secondary"
             className="h-8 text-xs"
@@ -573,7 +574,7 @@ function QueueCard({
         {isInProgress && item.consultation && canOpenConsultation && (
           <Button
             nativeButton={false}
-            render={<Link href={`/consultations/${item.consultation.id}`} />}
+            render={<Link href={`/consultations/${item.consultation.id}`} prefetch={false} />}
             size="sm"
             className="h-8 text-xs gap-1.5 shadow-sm"
           >
@@ -631,6 +632,7 @@ function CompletedCard({
           <div className="flex items-start justify-between gap-2">
             <Link
               href={`/patients/${item.patient.id}`}
+              prefetch={false}
               className="block truncate font-bold text-[15px] text-ink hover:text-primary transition-colors leading-snug"
             >
               {item.patient.name}

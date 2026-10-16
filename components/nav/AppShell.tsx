@@ -95,6 +95,7 @@ function SidebarNavLink({
   return (
     <Link
       href={item.href}
+      prefetch={false}
       title={collapsed ? item.label : undefined}
       aria-label={collapsed ? item.label : undefined}
       aria-current={active ? "page" : undefined}
@@ -225,6 +226,7 @@ function NavLink({
   return (
     <Link
       href={item.href}
+      prefetch={false}
       aria-current={active ? "page" : undefined}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}

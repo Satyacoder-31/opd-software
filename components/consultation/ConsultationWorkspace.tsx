@@ -310,15 +310,22 @@ export function ConsultationWorkspace({
       if (result.success) {
         isDirty.current = false;
         setAutosaveStatus("idle");
-        router.refresh();
-        return;
+        setMessage("Visit completed successfully! Loading summary...");
+        setMessageType("success");
+        window.location.assign(`/consultations/${consultationId}`);
+        return new Promise(() => {}); // keep pending/spinner active until page unloads
       }
       setMessageType("error");
-      setMessage(
-        result.fieldErrors
-          ? (firstFieldError(result.fieldErrors) ?? result.error)
-          : result.error,
-      );
+      const err = result.fieldErrors
+        ? (firstFieldError(result.fieldErrors) ?? result.error)
+        : result.error;
+      setMessage(err);
+      if (
+        err?.toLowerCase().includes("medicine") ||
+        err?.toLowerCase().includes("prescription")
+      ) {
+        setTab("prescription");
+      }
     }, "complete");
   }
 
@@ -584,6 +591,25 @@ export function ConsultationWorkspace({
 
       {/* Sticky footer actions */}
       <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur">
+        {message && messageType === "error" && (
+          <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-xs font-semibold text-destructive flex items-center justify-between gap-2 animate-in fade-in">
+            <span>{message}</span>
+            <button
+              type="button"
+              onClick={() => setMessage(null)}
+              className="text-destructive/80 hover:text-destructive font-bold text-sm"
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {message && messageType === "success" && (
+          <div className="border-b border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700 flex items-center gap-2 animate-in fade-in">
+            <Icon icon={faCheckCircle} className="size-3.5 shrink-0" />
+            <span>{message}</span>
+          </div>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 md:px-4">
           <div className="hidden text-xs text-muted-foreground sm:block">
             <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+S</kbd>{" "}
@@ -599,6 +625,7 @@ export function ConsultationWorkspace({
               className="min-h-10 gap-1.5"
               onClick={handleSaveDraft}
               loading={isPending("save")}
+              disabled={isPending("complete")}
             >
               <Icon icon={faCloudArrowUp} className="size-3.5" />
               Save draft
@@ -609,9 +636,10 @@ export function ConsultationWorkspace({
               className="min-h-10 gap-1.5 bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-shadow"
               onClick={handleCompleteVisit}
               loading={isPending("complete")}
+              disabled={isPending("complete")}
             >
               <Icon icon={faCheckCircle} className="size-3.5" />
-              Complete visit
+              {isPending("complete") ? "Completing visit..." : "Complete visit"}
             </Button>
           </div>
         </div>

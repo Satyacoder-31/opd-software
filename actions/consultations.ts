@@ -221,6 +221,9 @@ export async function submitConsultation(
   }
 
   if (!isConsultationEditable(consultation.appointment.status)) {
+    if (consultation.appointment.status === "done") {
+      return { success: true };
+    }
     return { success: false, error: "This consultation is already finalized." };
   }
 
@@ -233,7 +236,8 @@ export async function submitConsultation(
     };
   }
 
-  const finalized = await prisma.$transaction(async (tx) => {
+  const finalized = await prisma.$transaction(
+    async (tx) => {
     const statusUpdate = await tx.appointment.updateMany({
       where: {
         id: consultation.appointmentId,
@@ -268,7 +272,9 @@ export async function submitConsultation(
     }
 
     return true;
-  });
+  },
+  { timeout: 15000, maxWait: 5000 }
+  );
 
   if (!finalized) {
     return { success: false, error: "This consultation is already finalized." };
@@ -385,6 +391,9 @@ export async function completeVisit(
   }
 
   if (!isConsultationEditable(consultation.appointment.status)) {
+    if (consultation.appointment.status === "done") {
+      return { success: true };
+    }
     return { success: false, error: "This consultation is already finalized." };
   }
 
@@ -397,7 +406,8 @@ export async function completeVisit(
     };
   }
 
-  const finalized = await prisma.$transaction(async (tx) => {
+  const finalized = await prisma.$transaction(
+    async (tx) => {
     const statusUpdate = await tx.appointment.updateMany({
       where: {
         id: consultation.appointmentId,
@@ -448,7 +458,9 @@ export async function completeVisit(
     });
 
     return true;
-  });
+  },
+  { timeout: 15000, maxWait: 5000 }
+  );
 
   if (!finalized) {
     return { success: false, error: "This consultation is already finalized." };

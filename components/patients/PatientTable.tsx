@@ -182,6 +182,7 @@ export function PatientTable({
                       <div>
                         <Link
                           href={`/patients/${patient.id}`}
+                          prefetch={false}
                           className="font-bold text-ink text-sm hover:text-primary transition-colors block"
                         >
                           {patient.name}
@@ -249,7 +250,7 @@ export function PatientTable({
                         </Button>
                       ) : null}
 
-                      <Link href={`/patients/${patient.id}`}>
+                      <Link href={`/patients/${patient.id}`} prefetch={false}>
                         <Button size="sm" variant="ghost">
                           <span>View Profile</span>
                           <Icon icon={faArrowRight} data-icon="inline-end" />

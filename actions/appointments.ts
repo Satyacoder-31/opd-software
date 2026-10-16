@@ -404,6 +404,18 @@ export async function updateAppointmentStatus(
     return { success: false, error: "Appointment not found." };
   }
 
+  // Idempotency: if already in_progress and consultation exists, return success with consultationId
+  if (
+    status === AppointmentStatus.in_progress &&
+    appointment.status === AppointmentStatus.in_progress &&
+    appointment.consultation
+  ) {
+    return {
+      success: true,
+      data: { consultationId: appointment.consultation.id },
+    };
+  }
+
   if (!canTransitionAppointment(appointment.status, status)) {
     return {
       success: false,
