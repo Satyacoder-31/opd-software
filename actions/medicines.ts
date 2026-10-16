@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
@@ -200,6 +200,65 @@ export async function listMedicines(options?: {
   return formatted;
 }
 
+const getCachedMedicineStats = unstable_cache(
+  async (clinicId: string): Promise<MedicineStats> => {
+    const items = await prisma.drugCatalogItem.findMany({
+      where: { clinicId, isActive: true },
+      select: {
+        stockQuantity: true,
+        reorderLevel: true,
+        unitPrice: true,
+        expiryDate: true,
+      },
+    });
+
+    const now = new Date();
+    const sixtyDaysFromNow = new Date();
+    sixtyDaysFromNow.setDate(now.getDate() + 60);
+
+    let totalStockUnits = 0;
+    let inventoryValuation = 0;
+    let inStockCount = 0;
+    let lowStockCount = 0;
+    let outOfStockCount = 0;
+    let expiringSoonCount = 0;
+
+    for (const item of items) {
+      totalStockUnits += item.stockQuantity;
+      if (item.unitPrice) {
+        inventoryValuation += item.stockQuantity * Number(item.unitPrice);
+      }
+
+      if (item.stockQuantity <= 0) {
+        outOfStockCount++;
+      } else if (item.stockQuantity <= item.reorderLevel) {
+        lowStockCount++;
+      } else {
+        inStockCount++;
+      }
+
+      if (item.expiryDate) {
+        const exp = new Date(item.expiryDate);
+        if (exp <= sixtyDaysFromNow) {
+          expiringSoonCount++;
+        }
+      }
+    }
+
+    return {
+      totalMedicines: items.length,
+      inStockCount,
+      lowStockCount,
+      outOfStockCount,
+      expiringSoonCount,
+      totalStockUnits,
+      inventoryValuation: Math.round(inventoryValuation),
+    };
+  },
+  ["medicines-stats-cache"],
+  { revalidate: 30, tags: ["medicines-stats"] }
+);
+
 export async function getMedicineStats(): Promise<MedicineStats> {
   const session = await requireSessionUser();
   if (!can(session, "drugs.search")) {
@@ -214,58 +273,7 @@ export async function getMedicineStats(): Promise<MedicineStats> {
     };
   }
 
-  const items = await prisma.drugCatalogItem.findMany({
-    where: { clinicId: session.clinicId, isActive: true },
-    select: {
-      stockQuantity: true,
-      reorderLevel: true,
-      unitPrice: true,
-      expiryDate: true,
-    },
-  });
-
-  const now = new Date();
-  const sixtyDaysFromNow = new Date();
-  sixtyDaysFromNow.setDate(now.getDate() + 60);
-
-  let totalStockUnits = 0;
-  let inventoryValuation = 0;
-  let inStockCount = 0;
-  let lowStockCount = 0;
-  let outOfStockCount = 0;
-  let expiringSoonCount = 0;
-
-  for (const item of items) {
-    totalStockUnits += item.stockQuantity;
-    if (item.unitPrice) {
-      inventoryValuation += item.stockQuantity * Number(item.unitPrice);
-    }
-
-    if (item.stockQuantity <= 0) {
-      outOfStockCount++;
-    } else if (item.stockQuantity <= item.reorderLevel) {
-      lowStockCount++;
-    } else {
-      inStockCount++;
-    }
-
-    if (item.expiryDate) {
-      const exp = new Date(item.expiryDate);
-      if (exp <= sixtyDaysFromNow) {
-        expiringSoonCount++;
-      }
-    }
-  }
-
-  return {
-    totalMedicines: items.length,
-    inStockCount,
-    lowStockCount,
-    outOfStockCount,
-    expiringSoonCount,
-    totalStockUnits,
-    inventoryValuation: Math.round(inventoryValuation),
-  };
+  return getCachedMedicineStats(session.clinicId);
 }
 
 export async function createMedicine(

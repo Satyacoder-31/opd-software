@@ -37,13 +37,7 @@ export function NavigationProgress() {
       const targetPath = href.split(/[?#]/)[0];
       if (targetPath && targetPath !== pathname) {
         setActive(true);
-        if (showTimeoutRef.current != null) {
-          window.clearTimeout(showTimeoutRef.current);
-        }
-        showTimeoutRef.current = window.setTimeout(() => {
-          setVisible(true);
-          showTimeoutRef.current = null;
-        }, 120);
+        setVisible(true);
       }
     };
 
@@ -61,14 +55,14 @@ export function NavigationProgress() {
   return (
     <div
       className={cn(
-        "pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-primary/15 transition-opacity duration-150",
+        "pointer-events-none fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-primary/20 transition-opacity duration-100",
         visible ? "opacity-100" : "opacity-0"
       )}
       role="progressbar"
       aria-label="Loading page"
       aria-busy="true"
     >
-      <div className="navigation-progress-bar h-full w-1/3 bg-primary" />
+      <div className="navigation-progress-bar h-full w-1/3 bg-gradient-to-r from-sky-500 via-primary to-indigo-600 shadow-[0_0_10px_rgba(2,132,199,0.6)]" />
     </div>
   );
 }

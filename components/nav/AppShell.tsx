@@ -78,7 +78,7 @@ function getAlertsForItem(href: string, alerts: ClinicAlert[]) {
 function SidebarNavLink({
   item,
   active,
-  disabled,
+  disabled: _disabled,
   onNavigate,
   collapsed = false,
   alertCount,
@@ -86,7 +86,7 @@ function SidebarNavLink({
 }: {
   item: PrimaryNavItem;
   active: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   onNavigate: () => void;
   collapsed?: boolean;
   alertCount?: number;
@@ -95,23 +95,15 @@ function SidebarNavLink({
   return (
     <Link
       href={item.href}
-      prefetch={false}
       title={collapsed ? item.label : undefined}
       aria-label={collapsed ? item.label : undefined}
       aria-current={active ? "page" : undefined}
-      aria-disabled={disabled || undefined}
-      tabIndex={disabled ? -1 : undefined}
-      onClick={(event) => {
-        if (disabled) {
-          event.preventDefault();
-          return;
-        }
+      onClick={() => {
         if (!active) onNavigate();
       }}
       className={cn(
         "group relative flex items-center rounded-xl text-xs font-semibold transition-all duration-150 select-none",
         "active:scale-[0.98]",
-        disabled && "pointer-events-none opacity-60",
         collapsed
           ? "justify-center p-2 mx-auto w-11 h-11"
           : "gap-2.5 px-3 py-2.5 mx-2",
@@ -131,13 +123,14 @@ function SidebarNavLink({
       {/* Icon with container */}
       <div
         className={cn(
-          "flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
+          "relative flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
           active
             ? "bg-sky-600 text-white shadow-xs shadow-sky-500/25"
             : "bg-slate-100/90 text-slate-500 group-hover:bg-white group-hover:text-slate-800 group-hover:shadow-2xs"
         )}
       >
         <Icon icon={item.icon} aria-hidden className="size-3.5" />
+        <NavPendingSpinner className="inset-1 size-5 border-sky-600 border-t-transparent" />
       </div>
 
       {/* Label */}
@@ -213,34 +206,26 @@ function SidebarNavLink({
 function NavLink({
   item,
   active,
-  disabled,
+  disabled: _disabled,
   onNavigate,
   variant,
 }: {
   item: PrimaryNavItem;
   active: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   onNavigate: () => void;
   variant: "mobile" | "sheet";
 }) {
   return (
     <Link
       href={item.href}
-      prefetch={false}
       aria-current={active ? "page" : undefined}
-      aria-disabled={disabled || undefined}
-      tabIndex={disabled ? -1 : undefined}
-      onClick={(event) => {
-        if (disabled) {
-          event.preventDefault();
-          return;
-        }
+      onClick={() => {
         if (!active) onNavigate();
       }}
       className={cn(
         "relative transition-[color,background-color,opacity,transform] duration-150",
         "active:scale-[0.98] active:opacity-80",
-        disabled && "pointer-events-none opacity-60",
         variant === "mobile" &&
           cn(
             "flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[0.6875rem] font-medium",

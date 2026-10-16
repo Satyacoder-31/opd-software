@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  clearSessionCache,
   ensureUserFromAuth,
   PENDING_AUTH_PREFIX,
   requireSessionUser,
@@ -442,6 +443,7 @@ export async function updatePassword(
 }
 
 export async function logout(): Promise<void> {
+  clearSessionCache();
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");

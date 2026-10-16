@@ -112,7 +112,7 @@ async function resolveSessionFromUser(user: User): Promise<SessionUser | null> {
       user.app_metadata?.isActive === false;
 
     if (metadataStale) {
-      await syncAuthMetadata(user.id, { ...session, isActive: true });
+      void syncAuthMetadata(user.id, { ...session, isActive: true });
     }
 
     return session;
@@ -122,22 +122,61 @@ async function resolveSessionFromUser(user: User): Promise<SessionUser | null> {
   return sessionFromAuthUser(user);
 }
 
+interface CachedSessionEntry {
+  session: SessionUser | null;
+  expiresAt: number;
+}
+
+const sessionCache = new Map<string, CachedSessionEntry>();
+const SESSION_CACHE_TTL_MS = 45_000;
+
+export function clearSessionCache(): void {
+  sessionCache.clear();
+}
+
 async function loadSessionFromSupabase(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
-  const hasAuthCookie = cookieStore
-    .getAll()
-    .some((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
+  const allCookies = cookieStore.getAll();
+  const authCookies = allCookies.filter(
+    (c) => c.name.startsWith("sb-") && c.name.includes("-auth-token")
+  );
 
-  if (!hasAuthCookie) return null;
+  if (authCookies.length === 0) return null;
+
+  const cacheKey = authCookies
+    .map((c) => `${c.name}:${c.value}`)
+    .sort()
+    .join(";");
+
+  const now = Date.now();
+  const cached = sessionCache.get(cacheKey);
+  if (cached && now < cached.expiresAt) {
+    return cached.session;
+  }
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  if (!user) {
+    sessionCache.set(cacheKey, { session: null, expiresAt: now + 5_000 });
+    return null;
+  }
 
-  return resolveSessionFromUser(user);
+  const session = await resolveSessionFromUser(user);
+  sessionCache.set(cacheKey, {
+    session,
+    expiresAt: now + SESSION_CACHE_TTL_MS,
+  });
+
+  if (sessionCache.size > 200) {
+    for (const [k, v] of sessionCache.entries()) {
+      if (v.expiresAt < now) sessionCache.delete(k);
+    }
+  }
+
+  return session;
 }
 
 /**

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { AppointmentStatus, AppointmentType, BookingSource, Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { permissionDenied, requireSessionUser } from "@/lib/auth";
@@ -345,19 +345,26 @@ export async function getCompletedQueue() {
   });
 }
 
+const getCachedClinicDoctors = unstable_cache(
+  async (clinicId: string) => {
+    return prisma.user.findMany({
+      where: {
+        clinicId,
+        role: { in: [Role.doctor, Role.owner, Role.admin] },
+        isActive: true,
+      },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    });
+  },
+  ["clinic-doctors-cache"],
+  { revalidate: 60, tags: ["clinic-doctors"] }
+);
+
 export async function listClinicDoctors() {
   const session = await requireSessionUser();
   if (!can(session, "queue.read")) return [];
-
-  return prisma.user.findMany({
-    where: {
-      clinicId: session.clinicId,
-      role: { in: [Role.doctor, Role.owner, Role.admin] },
-      isActive: true,
-    },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  return getCachedClinicDoctors(session.clinicId);
 }
 
 export async function updateAppointmentStatus(
