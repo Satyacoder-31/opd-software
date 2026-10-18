@@ -147,39 +147,194 @@ export async function getConsultation(id: string) {
     resourceId: id,
   });
 
-  // Query most recent previous consultation for this patient (for returning patient options)
+  // Query all previous consultations for this patient to find the most meaningful past visit records
   let previousVisit: PreviousVisitData | null = null;
-  const prev = await prisma.consultation.findFirst({
+  const pastConsultations = await prisma.consultation.findMany({
     where: {
-      clinicId: session.clinicId,
       patientId: consultation.patientId,
       id: { not: id },
     },
     orderBy: { createdAt: "desc" },
     include: {
       prescription: true,
+      appointment: true,
     },
   });
 
-  if (prev) {
+  const bestConsultation =
+    pastConsultations.find((c) => {
+      const hasDiag = Boolean(c.diagnosis?.trim());
+      const hasComplaint = Boolean(c.chiefComplaint?.trim());
+      const hasMeds = Boolean(
+        c.prescription?.medicines &&
+          Array.isArray(c.prescription.medicines) &&
+          c.prescription.medicines.length > 0
+      );
+      const hasNotes = Boolean(c.notes?.trim());
+      const hasExam = Boolean(
+        c.examination &&
+          typeof c.examination === "object" &&
+          Object.values(c.examination).some(
+            (v) => typeof v === "string" && v.trim().length > 0
+          )
+      );
+      const hasApptReason = Boolean(
+        c.appointment?.reasonForVisit &&
+          c.appointment.reasonForVisit.trim().length > 0 &&
+          c.appointment.reasonForVisit !== "null"
+      );
+      return (
+        hasDiag ||
+        hasComplaint ||
+        hasMeds ||
+        hasNotes ||
+        hasExam ||
+        hasApptReason
+      );
+    }) ?? pastConsultations[0];
+
+  if (bestConsultation) {
+    const chiefComplaint =
+      bestConsultation.chiefComplaint?.trim() ||
+      bestConsultation.appointment?.reasonForVisit?.trim() ||
+      pastConsultations.find((c) => c.chiefComplaint?.trim())?.chiefComplaint?.trim() ||
+      pastConsultations
+        .find(
+          (c) =>
+            c.appointment?.reasonForVisit?.trim() &&
+            c.appointment.reasonForVisit !== "null"
+        )
+        ?.appointment?.reasonForVisit?.trim() ||
+      null;
+
+    const diagnosis =
+      bestConsultation.diagnosis?.trim() ||
+      pastConsultations.find((c) => c.diagnosis?.trim())?.diagnosis?.trim() ||
+      null;
+
+    const diagnosisCodes =
+      (bestConsultation.diagnosisCodes &&
+      (bestConsultation.diagnosisCodes as any).length > 0)
+        ? (bestConsultation.diagnosisCodes as any)
+        : pastConsultations.find(
+            (c) => c.diagnosisCodes && (c.diagnosisCodes as any).length > 0
+          )?.diagnosisCodes || null;
+
+    const examination =
+      (bestConsultation.examination &&
+      typeof bestConsultation.examination === "object" &&
+      Object.keys(bestConsultation.examination).length > 0)
+        ? (bestConsultation.examination as any)
+        : pastConsultations.find(
+            (c) =>
+              c.examination &&
+              typeof c.examination === "object" &&
+              Object.keys(c.examination).length > 0
+          )?.examination || null;
+
+    const treatmentPlan =
+      (bestConsultation.treatmentPlan &&
+      typeof bestConsultation.treatmentPlan === "object" &&
+      Object.keys(bestConsultation.treatmentPlan).length > 0)
+        ? (bestConsultation.treatmentPlan as any)
+        : pastConsultations.find(
+            (c) =>
+              c.treatmentPlan &&
+              typeof c.treatmentPlan === "object" &&
+              Object.keys(c.treatmentPlan).length > 0
+          )?.treatmentPlan || null;
+
+    const clinicalPresentation =
+      bestConsultation.clinicalPresentation ||
+      pastConsultations.find((c) => c.clinicalPresentation)?.clinicalPresentation ||
+      null;
+
+    const patientHistory =
+      bestConsultation.patientHistory ||
+      pastConsultations.find((c) => c.patientHistory)?.patientHistory ||
+      null;
+
+    const investigationResults =
+      bestConsultation.investigationResults ||
+      pastConsultations.find((c) => c.investigationResults)?.investigationResults ||
+      null;
+
+    const notes =
+      bestConsultation.notes?.trim() ||
+      pastConsultations.find((c) => c.notes?.trim())?.notes?.trim() ||
+      null;
+
+    const advice =
+      bestConsultation.prescription?.advice?.trim() ||
+      (typeof bestConsultation.advice === "string"
+        ? bestConsultation.advice.trim()
+        : null) ||
+      pastConsultations.find((c) => c.prescription?.advice?.trim())?.prescription
+        ?.advice?.trim() ||
+      null;
+
+    const followUp =
+      bestConsultation.prescription?.followUp?.trim() ||
+      pastConsultations.find((c) => c.prescription?.followUp?.trim())
+        ?.prescription?.followUp?.trim() ||
+      null;
+
+    const medicines =
+      (bestConsultation.prescription?.medicines &&
+      Array.isArray(bestConsultation.prescription.medicines) &&
+      bestConsultation.prescription.medicines.length > 0)
+        ? (bestConsultation.prescription.medicines as Medicine[])
+        : (pastConsultations.find(
+            (c) =>
+              c.prescription?.medicines &&
+              Array.isArray(c.prescription.medicines) &&
+              c.prescription.medicines.length > 0
+          )?.prescription?.medicines as Medicine[]) || [];
+
     previousVisit = {
-      id: prev.id,
-      createdAt: prev.createdAt.toISOString(),
-      chiefComplaint: prev.chiefComplaint ?? null,
-      diagnosis: prev.diagnosis ?? null,
-      diagnosisCodes: (prev.diagnosisCodes as any) ?? null,
-      examination: (prev.examination as any) ?? null,
-      treatmentPlan: (prev.treatmentPlan as any) ?? null,
-      clinicalPresentation: (prev.clinicalPresentation as any) ?? null,
-      patientHistory: (prev.patientHistory as any) ?? null,
-      investigationResults: (prev.investigationResults as any) ?? null,
-      notes: prev.notes ?? null,
-      advice:
-        (prev.prescription?.advice ||
-          (typeof prev.advice === "string" ? prev.advice : null)) ?? null,
-      followUp: prev.prescription?.followUp ?? null,
-      medicines: (prev.prescription?.medicines as Medicine[]) ?? [],
+      id: bestConsultation.id,
+      createdAt: bestConsultation.createdAt.toISOString(),
+      chiefComplaint,
+      diagnosis,
+      diagnosisCodes: (diagnosisCodes as any) ?? null,
+      examination: (examination as any) ?? null,
+      treatmentPlan: (treatmentPlan as any) ?? null,
+      clinicalPresentation: (clinicalPresentation as any) ?? null,
+      patientHistory: (patientHistory as any) ?? null,
+      investigationResults: (investigationResults as any) ?? null,
+      notes,
+      advice,
+      followUp,
+      medicines,
     };
+  } else {
+    // Check if patient has any previous appointment with reasonForVisit
+    const prevAppt = await prisma.appointment.findFirst({
+      where: {
+        patientId: consultation.patientId,
+        id: { not: consultation.appointmentId },
+        reasonForVisit: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (prevAppt?.reasonForVisit && prevAppt.reasonForVisit !== "null") {
+      previousVisit = {
+        id: prevAppt.id,
+        createdAt: prevAppt.createdAt.toISOString(),
+        chiefComplaint: prevAppt.reasonForVisit,
+        diagnosis: null,
+        diagnosisCodes: null,
+        examination: null,
+        treatmentPlan: null,
+        clinicalPresentation: null,
+        patientHistory: null,
+        investigationResults: null,
+        notes: null,
+        advice: null,
+        followUp: null,
+        medicines: [],
+      };
+    }
   }
 
   return {

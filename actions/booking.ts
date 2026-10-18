@@ -1211,11 +1211,11 @@ export async function lookupReturningPatientByPhone(
       include: {
         appointments: {
           orderBy: { createdAt: "desc" },
-          take: 1,
+          take: 10,
         },
         consultations: {
           orderBy: { createdAt: "desc" },
-          take: 1,
+          take: 10,
           include: {
             prescription: true,
           },
@@ -1225,21 +1225,45 @@ export async function lookupReturningPatientByPhone(
 
     if (!patient) return null;
 
-    const latestConsultation = patient.consultations[0];
-    const latestAppt = patient.appointments[0];
+    const consultationWithDiag = patient.consultations.find(
+      (c) => c.diagnosis && c.diagnosis.trim().length > 0 && c.diagnosis !== "null"
+    );
+    const consultationWithComplaint = patient.consultations.find(
+      (c) =>
+        c.chiefComplaint &&
+        c.chiefComplaint.trim().length > 0 &&
+        c.chiefComplaint !== "null"
+    );
+    const apptWithReason = patient.appointments.find(
+      (a) =>
+        a.reasonForVisit &&
+        a.reasonForVisit.trim().length > 0 &&
+        a.reasonForVisit !== "null"
+    );
 
     let pastSpecialty = "";
-    let pastSymptoms = "";
-
-    if (latestAppt?.reasonForVisit) {
-      const specMatch = latestAppt.reasonForVisit.match(/Specialty:\s*([^·]+)/i);
+    if (apptWithReason?.reasonForVisit) {
+      const specMatch = apptWithReason.reasonForVisit.match(/Specialty:\s*([^·]+)/i);
       if (specMatch) pastSpecialty = specMatch[1].trim();
-      const symMatch = latestAppt.reasonForVisit.match(/Symptoms:\s*(.+)/i);
-      if (symMatch) pastSymptoms = symMatch[1].trim();
     }
 
-    if (!pastSymptoms && latestConsultation?.chiefComplaint) {
-      pastSymptoms = latestConsultation.chiefComplaint;
+    const pastDiagnosis = consultationWithDiag?.diagnosis?.trim() || "";
+    let pastSymptoms =
+      consultationWithComplaint?.chiefComplaint?.trim() || "";
+
+    if (!pastSymptoms && apptWithReason?.reasonForVisit) {
+      const cleanReason = apptWithReason.reasonForVisit
+        .replace(/^Specialty:\s*[^·]+·\s*Symptoms:\s*/i, "")
+        .replace(/^Specialty:\s*[^·]+/i, "")
+        .replace(/^Symptoms:\s*/i, "")
+        .trim();
+      if (cleanReason && cleanReason !== "null") {
+        pastSymptoms = cleanReason;
+      }
+    }
+
+    if (!pastSymptoms && pastDiagnosis) {
+      pastSymptoms = pastDiagnosis;
     }
 
     return {
@@ -1251,7 +1275,7 @@ export async function lookupReturningPatientByPhone(
       mrn: patient.mrn,
       pastSpecialty: pastSpecialty || undefined,
       pastSymptoms: pastSymptoms || undefined,
-      pastDiagnosis: latestConsultation?.diagnosis || undefined,
+      pastDiagnosis: pastDiagnosis || undefined,
     };
   } catch (err) {
     logger.error("lookup_returning_patient_failed", {

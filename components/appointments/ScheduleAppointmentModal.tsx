@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { AppointmentType } from "@prisma/client";
 import { createAppointment } from "@/actions/appointments";
 import { createPatient, searchPatients } from "@/actions/patients";
+import {
+  lookupReturningPatientByPhone,
+  type ReturningPatientLookupResult,
+} from "@/actions/booking";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import {
@@ -65,7 +69,32 @@ export function ScheduleAppointmentModal({
     phone: string;
     mrn: string;
   } | null>(null);
+  const [pastPatientInfo, setPastPatientInfo] =
+    useState<ReturningPatientLookupResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+
+  const handleSelectExistingPatient = async (pt: {
+    id: string;
+    name: string;
+    phone: string;
+    mrn: string;
+  }) => {
+    setSelectedPatient(pt);
+    setSearchResults([]);
+    setSearchQuery("");
+    try {
+      const info = await lookupReturningPatientByPhone(pt.phone);
+      setPastPatientInfo(info);
+      if (info?.pastSymptoms || info?.pastDiagnosis) {
+        setReason(`Follow-up: ${info.pastSymptoms || info.pastDiagnosis}`);
+      } else {
+        setReason("Follow-up / Revisit for ongoing complaint");
+      }
+    } catch {
+      setPastPatientInfo(null);
+      setReason("Follow-up / Revisit for ongoing complaint");
+    }
+  };
 
   // New patient state
   const [newName, setNewName] = useState("");
@@ -294,7 +323,11 @@ export function ScheduleAppointmentModal({
                           </div>
                           <button
                             type="button"
-                            onClick={() => setSelectedPatient(null)}
+                            onClick={() => {
+                              setSelectedPatient(null);
+                              setPastPatientInfo(null);
+                              setReason("");
+                            }}
                             className="text-xs font-semibold text-sky-700 hover:text-sky-950 underline"
                           >
                             Change
@@ -306,7 +339,14 @@ export function ScheduleAppointmentModal({
                           <button
                             type="button"
                             onClick={() => {
-                              setReason("Follow-up / Revisit for ongoing complaint");
+                              const problem =
+                                pastPatientInfo?.pastSymptoms ||
+                                pastPatientInfo?.pastDiagnosis;
+                              setReason(
+                                problem
+                                  ? `Follow-up: ${problem}`
+                                  : "Follow-up / Revisit for ongoing complaint"
+                              );
                             }}
                             className="flex-1 rounded-lg border border-sky-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-sky-900 shadow-2xs hover:bg-sky-100/60 transition-colors text-center"
                           >
@@ -344,9 +384,7 @@ export function ScheduleAppointmentModal({
                                 key={pt.id}
                                 type="button"
                                 onClick={() => {
-                                  setSelectedPatient(pt);
-                                  setSearchResults([]);
-                                  setSearchQuery("");
+                                  void handleSelectExistingPatient(pt);
                                 }}
                                 className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-muted/80 transition-colors flex items-center justify-between"
                               >

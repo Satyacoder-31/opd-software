@@ -99,9 +99,10 @@ export function ConsultationWorkspace({
   const [tab, setTab] = useState<WorkspaceTabId>("consultation");
 
   const isFreshConsultation =
-    !initialClinical.diagnosis?.trim() &&
-    !initialClinical.chiefComplaint?.trim() &&
-    initialMedicines.length === 0;
+    (!initialClinical.diagnosis?.trim() || initialClinical.diagnosis === "null") &&
+    (!initialClinical.chiefComplaint?.trim() || initialClinical.chiefComplaint === "null") &&
+    (initialMedicines.length === 0 ||
+      (initialMedicines.length === 1 && !initialMedicines[0]?.name?.trim()));
 
   const resolvedInitialAdvice =
     isFreshConsultation && previousVisit?.advice
@@ -112,17 +113,19 @@ export function ConsultationWorkspace({
     if (isFreshConsultation && previousVisit) {
       return {
         ...initialClinical,
-        chiefComplaint: previousVisit.chiefComplaint ?? initialClinical.chiefComplaint,
-        diagnosis: previousVisit.diagnosis ?? initialClinical.diagnosis,
-        diagnosisCodes: previousVisit.diagnosisCodes ?? initialClinical.diagnosisCodes,
-        examination: previousVisit.examination ?? initialClinical.examination,
-        treatmentPlan: previousVisit.treatmentPlan ?? initialClinical.treatmentPlan,
+        chiefComplaint: previousVisit.chiefComplaint || initialClinical.chiefComplaint || "",
+        diagnosis: previousVisit.diagnosis || initialClinical.diagnosis || "",
+        diagnosisCodes: (previousVisit.diagnosisCodes && previousVisit.diagnosisCodes.length > 0)
+          ? previousVisit.diagnosisCodes
+          : initialClinical.diagnosisCodes || [],
+        examination: previousVisit.examination || initialClinical.examination,
+        treatmentPlan: previousVisit.treatmentPlan || initialClinical.treatmentPlan,
         clinicalPresentation:
-          previousVisit.clinicalPresentation ?? initialClinical.clinicalPresentation,
-        patientHistory: previousVisit.patientHistory ?? initialClinical.patientHistory,
+          previousVisit.clinicalPresentation || initialClinical.clinicalPresentation,
+        patientHistory: previousVisit.patientHistory || initialClinical.patientHistory,
         investigationResults:
-          previousVisit.investigationResults ?? initialClinical.investigationResults,
-        notes: previousVisit.notes ?? initialClinical.notes,
+          previousVisit.investigationResults || initialClinical.investigationResults,
+        notes: previousVisit.notes || initialClinical.notes || "",
         advice: resolvedInitialAdvice,
       };
     }
@@ -158,34 +161,39 @@ export function ConsultationWorkspace({
   const handleSelectSameProblem = useCallback(() => {
     if (!previousVisit) return;
     setVisitMode("same_problem");
-    setClinical((prev) => ({
-      ...prev,
-      chiefComplaint: previousVisit.chiefComplaint ?? prev.chiefComplaint ?? "",
-      diagnosis: previousVisit.diagnosis ?? prev.diagnosis ?? "",
-      diagnosisCodes: previousVisit.diagnosisCodes ?? prev.diagnosisCodes ?? [],
-      examination: previousVisit.examination ?? prev.examination,
-      treatmentPlan: previousVisit.treatmentPlan ?? prev.treatmentPlan,
+    isDirty.current = true;
+    const nextClinical: ConsultationClinicalData = {
+      ...clinical,
+      chiefComplaint: previousVisit.chiefComplaint || clinical.chiefComplaint || "",
+      diagnosis: previousVisit.diagnosis || clinical.diagnosis || "",
+      diagnosisCodes: (previousVisit.diagnosisCodes && previousVisit.diagnosisCodes.length > 0)
+        ? previousVisit.diagnosisCodes
+        : clinical.diagnosisCodes || [],
+      examination: previousVisit.examination || clinical.examination,
+      treatmentPlan: previousVisit.treatmentPlan || clinical.treatmentPlan,
       clinicalPresentation:
-        previousVisit.clinicalPresentation ?? prev.clinicalPresentation,
-      patientHistory: previousVisit.patientHistory ?? prev.patientHistory,
+        previousVisit.clinicalPresentation || clinical.clinicalPresentation,
+      patientHistory: previousVisit.patientHistory || clinical.patientHistory,
       investigationResults:
-        previousVisit.investigationResults ?? prev.investigationResults,
-      notes: previousVisit.notes ?? prev.notes,
-      advice: previousVisit.advice ?? prev.advice ?? "",
-    }));
+        previousVisit.investigationResults || clinical.investigationResults,
+      notes: previousVisit.notes || clinical.notes || "",
+      advice: previousVisit.advice || advice || clinical.advice || "",
+    };
+    setClinical(nextClinical);
     if (previousVisit.advice) setAdvice(previousVisit.advice);
     if (previousVisit.followUp) setFollowUp(previousVisit.followUp);
     if (previousVisit.medicines && previousVisit.medicines.length > 0) {
       setMedicines(previousVisit.medicines);
     }
     setMessage(
-      "Option 1 applied: Pre-filled complaints, diagnosis, exam, advice & medicines from previous visit for the same problem."
+      `Option 1 applied: Pre-filled complaints, diagnosis, exam, advice & ${previousVisit.medicines?.length || 0} medicines from previous visit.`
     );
     setMessageType("success");
-  }, [previousVisit]);
+  }, [previousVisit, clinical, advice]);
 
   const handleSelectNewProblem = useCallback(() => {
     setVisitMode("new_problem");
+    isDirty.current = true;
     setClinical((prev) => ({
       ...prev,
       chiefComplaint: "",
