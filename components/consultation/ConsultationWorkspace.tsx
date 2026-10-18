@@ -10,6 +10,8 @@ import {
   faFlaskVial,
   faPaperclip,
   faPills,
+  faPlus,
+  faRotate,
   faStethoscope,
 } from "@fortawesome/free-solid-svg-icons";
 import { completeVisit, saveVisitDraft } from "@/actions/consultations";
@@ -41,7 +43,7 @@ import {
   type WorkspaceTabId,
 } from "@/lib/consultation-workspace";
 import { hasPatientSafetyAlerts } from "@/lib/consultation-utils";
-import type { ConsultationClinicalData, Medicine } from "@/lib/types";
+import type { ConsultationClinicalData, Medicine, PreviousVisitData } from "@/lib/types";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import {
   LabOrdersPanel,
@@ -72,6 +74,7 @@ type ConsultationWorkspaceProps = {
   followUp?: string | null;
   patientAllergies?: string | null;
   patientChronicConditions?: string | null;
+  previousVisit?: PreviousVisitData | null;
 };
 
 export function ConsultationWorkspace({
@@ -90,19 +93,118 @@ export function ConsultationWorkspace({
   followUp: initialFollowUp,
   patientAllergies,
   patientChronicConditions,
+  previousVisit,
 }: ConsultationWorkspaceProps) {
   const router = useRouter();
   const [tab, setTab] = useState<WorkspaceTabId>("consultation");
-  const resolvedInitialAdvice = initialAdvice ?? initialClinical.advice ?? "";
-  const [clinical, setClinical] = useState<ConsultationClinicalData>({
-    ...initialClinical,
-    advice: resolvedInitialAdvice,
+
+  const isFreshConsultation =
+    !initialClinical.diagnosis?.trim() &&
+    !initialClinical.chiefComplaint?.trim() &&
+    initialMedicines.length === 0;
+
+  const resolvedInitialAdvice =
+    isFreshConsultation && previousVisit?.advice
+      ? previousVisit.advice
+      : (initialAdvice ?? initialClinical.advice ?? "");
+
+  const [clinical, setClinical] = useState<ConsultationClinicalData>(() => {
+    if (isFreshConsultation && previousVisit) {
+      return {
+        ...initialClinical,
+        chiefComplaint: previousVisit.chiefComplaint ?? initialClinical.chiefComplaint,
+        diagnosis: previousVisit.diagnosis ?? initialClinical.diagnosis,
+        diagnosisCodes: previousVisit.diagnosisCodes ?? initialClinical.diagnosisCodes,
+        examination: previousVisit.examination ?? initialClinical.examination,
+        treatmentPlan: previousVisit.treatmentPlan ?? initialClinical.treatmentPlan,
+        clinicalPresentation:
+          previousVisit.clinicalPresentation ?? initialClinical.clinicalPresentation,
+        patientHistory: previousVisit.patientHistory ?? initialClinical.patientHistory,
+        investigationResults:
+          previousVisit.investigationResults ?? initialClinical.investigationResults,
+        notes: previousVisit.notes ?? initialClinical.notes,
+        advice: resolvedInitialAdvice,
+      };
+    }
+    return {
+      ...initialClinical,
+      advice: resolvedInitialAdvice,
+    };
   });
-  const [medicines, setMedicines] = useState<Medicine[]>(
-    initialMedicines.length > 0 ? initialMedicines : [emptyMedicine()],
-  );
+
+  const [medicines, setMedicines] = useState<Medicine[]>(() => {
+    if (
+      isFreshConsultation &&
+      previousVisit?.medicines &&
+      previousVisit.medicines.length > 0
+    ) {
+      return previousVisit.medicines;
+    }
+    return initialMedicines.length > 0 ? initialMedicines : [emptyMedicine()];
+  });
+
   const [advice, setAdvice] = useState(resolvedInitialAdvice);
-  const [followUp, setFollowUp] = useState(initialFollowUp ?? "");
+  const [followUp, setFollowUp] = useState<string>(() => {
+    if (isFreshConsultation && previousVisit?.followUp) {
+      return previousVisit.followUp;
+    }
+    return initialFollowUp ?? "";
+  });
+
+  const [visitMode, setVisitMode] = useState<"same_problem" | "new_problem">(
+    previousVisit ? "same_problem" : "new_problem"
+  );
+
+  const handleSelectSameProblem = useCallback(() => {
+    if (!previousVisit) return;
+    setVisitMode("same_problem");
+    setClinical((prev) => ({
+      ...prev,
+      chiefComplaint: previousVisit.chiefComplaint ?? prev.chiefComplaint ?? "",
+      diagnosis: previousVisit.diagnosis ?? prev.diagnosis ?? "",
+      diagnosisCodes: previousVisit.diagnosisCodes ?? prev.diagnosisCodes ?? [],
+      examination: previousVisit.examination ?? prev.examination,
+      treatmentPlan: previousVisit.treatmentPlan ?? prev.treatmentPlan,
+      clinicalPresentation:
+        previousVisit.clinicalPresentation ?? prev.clinicalPresentation,
+      patientHistory: previousVisit.patientHistory ?? prev.patientHistory,
+      investigationResults:
+        previousVisit.investigationResults ?? prev.investigationResults,
+      notes: previousVisit.notes ?? prev.notes,
+      advice: previousVisit.advice ?? prev.advice ?? "",
+    }));
+    if (previousVisit.advice) setAdvice(previousVisit.advice);
+    if (previousVisit.followUp) setFollowUp(previousVisit.followUp);
+    if (previousVisit.medicines && previousVisit.medicines.length > 0) {
+      setMedicines(previousVisit.medicines);
+    }
+    setMessage(
+      "Option 1 applied: Pre-filled complaints, diagnosis, exam, advice & medicines from previous visit for the same problem."
+    );
+    setMessageType("success");
+  }, [previousVisit]);
+
+  const handleSelectNewProblem = useCallback(() => {
+    setVisitMode("new_problem");
+    setClinical((prev) => ({
+      ...prev,
+      chiefComplaint: "",
+      diagnosis: "",
+      diagnosisCodes: [],
+      examination: undefined,
+      treatmentPlan: undefined,
+      clinicalPresentation: undefined,
+      notes: "",
+      advice: "",
+    }));
+    setAdvice("");
+    setFollowUp("");
+    setMedicines([emptyMedicine()]);
+    setMessage(
+      "Option 2 applied: Cleared fields so you can input new details for a new problem."
+    );
+    setMessageType("success");
+  }, []);
 
   const handleClinicalChange = useCallback((next: ConsultationClinicalData) => {
     setClinical(next);
@@ -518,6 +620,122 @@ export function ConsultationWorkspace({
                 >
                   View investigations ➔
                 </Button>
+              </div>
+            ) : null}
+
+            {previousVisit ? (
+              <div className="border-b border-indigo-200/70 bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-indigo-50/60 p-3.5 dark:border-indigo-900/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/30 md:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+                      <Icon icon={faRotate} className="size-3.5" />
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
+                          Returning Patient Visit (फ़ॉलो-अप मरीज)
+                        </span>
+                        <span className="rounded-full border border-indigo-300/60 bg-white/80 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 shadow-2xs">
+                          Previous Visit: {new Date(previousVisit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Previous Diagnosis: <span className="font-semibold text-foreground">{previousVisit.diagnosis || "Under evaluation"}</span>
+                        {previousVisit.chiefComplaint ? ` · Symptoms: ${previousVisit.chiefComplaint}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-[11px] font-medium text-muted-foreground">
+                    Select visit option below:
+                  </div>
+                </div>
+
+                {/* Option 1 vs Option 2 Selectable Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                  {/* Option 1: Same Problem (Details already filled) */}
+                  <button
+                    type="button"
+                    onClick={handleSelectSameProblem}
+                    className={`group relative flex flex-col text-left p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                      visitMode === "same_problem"
+                        ? "border-indigo-600 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-indigo-500/20"
+                        : "border-indigo-200/70 dark:border-indigo-900/40 bg-white/60 dark:bg-slate-900/40 hover:border-indigo-400"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`size-4 rounded-full flex items-center justify-center border transition-colors ${
+                            visitMode === "same_problem"
+                              ? "border-indigo-600 bg-indigo-600 text-white"
+                              : "border-slate-300 group-hover:border-indigo-400"
+                          }`}
+                        >
+                          {visitMode === "same_problem" && (
+                            <span className="size-1.5 rounded-full bg-white" />
+                          )}
+                        </span>
+                        <span className="text-xs font-bold text-foreground">
+                          Option 1: Same Problem / Revisit (वही समस्या)
+                        </span>
+                      </div>
+                      <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+                        Details Pre-filled
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1.5 pl-6">
+                      Pre-fills previous complaints, joint examination, diagnosis, advice, and medicines since patient is revisiting for the same condition.
+                    </p>
+                    {visitMode === "same_problem" && (
+                      <div className="mt-2 pl-6 flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                        <Icon icon={faCheckCircle} className="size-3 text-indigo-600" />
+                        <span>Active · Previous consultation records loaded</span>
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Option 2: New Problem (Input new details) */}
+                  <button
+                    type="button"
+                    onClick={handleSelectNewProblem}
+                    className={`group relative flex flex-col text-left p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                      visitMode === "new_problem"
+                        ? "border-sky-600 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-sky-500/20"
+                        : "border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40 hover:border-sky-400"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`size-4 rounded-full flex items-center justify-center border transition-colors ${
+                            visitMode === "new_problem"
+                              ? "border-sky-600 bg-sky-600 text-white"
+                              : "border-slate-300 group-hover:border-sky-400"
+                          }`}
+                        >
+                          {visitMode === "new_problem" && (
+                            <span className="size-1.5 rounded-full bg-white" />
+                          )}
+                        </span>
+                        <span className="text-xs font-bold text-foreground">
+                          Option 2: New Problem / Fresh Details (नई समस्या)
+                        </span>
+                      </div>
+                      <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        Blank Slate
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1.5 pl-6">
+                      Patient has presented with a new orthopedic complaint. Clears previous clinical details and medicines so new details can be entered.
+                    </p>
+                    {visitMode === "new_problem" && (
+                      <div className="mt-2 pl-6 flex items-center gap-1.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                        <Icon icon={faCheckCircle} className="size-3 text-sky-600" />
+                        <span>Active · Ready for fresh examination & prescription</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
             ) : null}
 

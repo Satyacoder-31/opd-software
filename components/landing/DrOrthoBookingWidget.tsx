@@ -37,7 +37,11 @@ const availableTimeSlots = [
   "07:30 PM",
 ];
 
-import { bookHomepageAppointment } from "@/actions/booking";
+import {
+  bookHomepageAppointment,
+  lookupReturningPatientByPhone,
+  type ReturningPatientLookupResult,
+} from "@/actions/booking";
 
 export function DrOrthoBookingWidget() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -54,6 +58,12 @@ export function DrOrthoBookingWidget() {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("male");
   const [symptoms, setSymptoms] = useState("");
+  const [returningPatient, setReturningPatient] =
+    useState<ReturningPatientLookupResult | null>(null);
+  const [visitType, setVisitType] = useState<"same_problem" | "new_problem">(
+    "same_problem"
+  );
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [confirmedData, setConfirmedData] = useState<{
     tokenNumber: number;
@@ -66,6 +76,35 @@ export function DrOrthoBookingWidget() {
   } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState("");
+
+  const handlePhoneChange = async (val: string) => {
+    const clean = val.replace(/\D/g, "");
+    setPhone(clean);
+    if (clean.length === 10) {
+      setIsLookingUp(true);
+      try {
+        const found = await lookupReturningPatientByPhone(clean);
+        if (found) {
+          setReturningPatient(found);
+          setPatientName(found.name);
+          if (found.age) setAge(found.age);
+          if (found.gender) setGender(found.gender);
+          if (found.pastSymptoms || found.pastDiagnosis) {
+            setSymptoms(found.pastSymptoms || found.pastDiagnosis || "");
+          }
+          setVisitType("same_problem");
+        } else {
+          setReturningPatient(null);
+        }
+      } catch {
+        setReturningPatient(null);
+      } finally {
+        setIsLookingUp(false);
+      }
+    } else {
+      if (returningPatient) setReturningPatient(null);
+    }
+  };
 
   const handleConfirmBooking = (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,6 +330,91 @@ export function DrOrthoBookingWidget() {
               </div>
             )}
 
+            {returningPatient && (
+              <div className="rounded-2xl border-2 border-sky-400/40 bg-gradient-to-r from-sky-950/70 via-slate-900 to-sky-950/70 p-4 mb-5 shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5 border-b border-slate-700/60">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-sky-500 text-white font-bold text-xs">
+                      MRN
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-sky-300">
+                        Welcome back, {returningPatient.name}!
+                      </span>
+                      <span className="ml-2 text-[10px] text-slate-400 font-mono">
+                        ({returningPatient.mrn})
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] text-slate-400">
+                    Returning Visit Options:
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVisitType("same_problem");
+                      setPatientName(returningPatient.name);
+                      if (returningPatient.age) setAge(returningPatient.age);
+                      if (returningPatient.gender) setGender(returningPatient.gender);
+                      setSymptoms(
+                        returningPatient.pastSymptoms ||
+                          returningPatient.pastDiagnosis ||
+                          ""
+                      );
+                    }}
+                    className={`flex flex-col text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                      visitType === "same_problem"
+                        ? "border-sky-400 bg-sky-500/20 text-white shadow-sm ring-1 ring-sky-400/30"
+                        : "border-slate-700/80 bg-slate-800/40 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-white">
+                        Option 1: Same Problem / Revisit (वही समस्या)
+                      </span>
+                      <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                        Details Pre-filled
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Auto-fills details & previous symptoms as most patients return for the same condition.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVisitType("new_problem");
+                      setPatientName(returningPatient.name);
+                      if (returningPatient.age) setAge(returningPatient.age);
+                      if (returningPatient.gender) setGender(returningPatient.gender);
+                      setSymptoms("");
+                    }}
+                    className={`flex flex-col text-left p-3 rounded-xl border transition-all cursor-pointer ${
+                      visitType === "new_problem"
+                        ? "border-sky-400 bg-sky-500/20 text-white shadow-sm ring-1 ring-sky-400/30"
+                        : "border-slate-700/80 bg-slate-800/40 text-slate-300 hover:border-slate-500"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-white">
+                        Option 2: New Problem (नई समस्या)
+                      </span>
+                      <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+                        Input New Details
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Visiting for a new/different problem. Input new symptoms & details.
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="patient-name" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
@@ -313,6 +437,7 @@ export function DrOrthoBookingWidget() {
               <div>
                 <label htmlFor="patient-phone" className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
                   Mobile Number (for Token SMS) *
+                  {isLookingUp && <span className="ml-2 text-sky-400 text-[10px] animate-pulse">Checking records...</span>}
                 </label>
                 <div className="relative mt-1.5">
                   <Icon icon={faPhone} className="absolute left-3.5 top-3.5 size-3.5 text-slate-400" />
@@ -323,7 +448,7 @@ export function DrOrthoBookingWidget() {
                     placeholder="10-digit mobile number"
                     maxLength={10}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => void handlePhoneChange(e.target.value)}
                     className="w-full rounded-xl border border-slate-700 bg-slate-800/80 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-400"
                   />
                 </div>

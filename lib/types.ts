@@ -109,6 +109,23 @@ export type ConsultationClinicalData = {
   treatmentPlan?: TreatmentPlan;
 };
 
+export type PreviousVisitData = {
+  id: string;
+  createdAt: string;
+  chiefComplaint?: string | null;
+  diagnosis?: string | null;
+  diagnosisCodes?: DiagnosisCodeEntry[] | null;
+  examination?: Examination | null;
+  treatmentPlan?: TreatmentPlan | null;
+  clinicalPresentation?: ClinicalPresentation | null;
+  patientHistory?: PatientHistory | null;
+  investigationResults?: InvestigationResults | null;
+  notes?: string | null;
+  advice?: string | null;
+  followUp?: string | null;
+  medicines?: Medicine[];
+};
+
 export type Medicine = {
   name: string;
   dosage: string;

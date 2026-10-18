@@ -60,6 +60,7 @@ export default async function ConsultationPage({ params }: Props) {
           followUp={consultation.prescription?.followUp}
           patientAllergies={consultation.patient.allergies}
           patientChronicConditions={consultation.patient.chronicConditions}
+          previousVisit={consultation.previousVisit}
         />
       </div>
     );

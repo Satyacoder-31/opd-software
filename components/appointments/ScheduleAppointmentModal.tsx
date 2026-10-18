@@ -280,24 +280,48 @@ export function ScheduleAppointmentModal({
                 {patientMode === "search" ? (
                   <div className="space-y-2">
                     {selectedPatient ? (
-                      <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50/70 p-3">
-                        <div>
-                          <div className="font-bold text-sm text-sky-950">
-                            {selectedPatient.name}
+                      <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-sm text-sky-950">
+                              {selectedPatient.name}
+                            </div>
+                            <div className="text-xs text-sky-700 flex items-center gap-2 mt-0.5">
+                              <span className="font-mono">{selectedPatient.mrn}</span>
+                              <span>·</span>
+                              <span>{selectedPatient.phone}</span>
+                            </div>
                           </div>
-                          <div className="text-xs text-sky-700 flex items-center gap-2 mt-0.5">
-                            <span className="font-mono">{selectedPatient.mrn}</span>
-                            <span>·</span>
-                            <span>{selectedPatient.phone}</span>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPatient(null)}
+                            className="text-xs font-semibold text-sky-700 hover:text-sky-950 underline"
+                          >
+                            Change
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPatient(null)}
-                          className="text-xs font-semibold text-sky-700 hover:text-sky-950 underline"
-                        >
-                          Change
-                        </button>
+
+                        {/* Returning Visit Options for Selected Patient */}
+                        <div className="pt-2 border-t border-sky-200/60 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReason("Follow-up / Revisit for ongoing complaint");
+                            }}
+                            className="flex-1 rounded-lg border border-sky-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-sky-900 shadow-2xs hover:bg-sky-100/60 transition-colors text-center"
+                          >
+                            Option 1: Same Problem (Pre-fill Follow-up)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReason("");
+                            }}
+                            className="flex-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 shadow-2xs hover:bg-slate-100 transition-colors text-center"
+                          >
+                            Option 2: New Problem (Input New Details)
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="relative">

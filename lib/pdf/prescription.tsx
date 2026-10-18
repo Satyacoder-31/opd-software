@@ -11,6 +11,15 @@ import {
   PRESCRIPTION_I18N,
   translateFrequency,
   translateGender,
+  translateAge,
+  translateRoute,
+  translateDuration,
+  translateDosage,
+  translateInstructions,
+  translateDiagnosis,
+  translateChiefComplaint,
+  translateFollowUp,
+  translateAdviceLine,
 } from "@/lib/pdf/translations";
 
 export type PrescriptionPdfProps = {
@@ -440,7 +449,12 @@ function patientFields(props: PrescriptionPdfProps, lang: PdfLanguage): PatientF
   const fields: PatientField[] = [
     { label: i18n.patient, value: props.patientName },
   ];
-  if (props.patientAge) fields.push({ label: i18n.age, value: props.patientAge });
+  if (props.patientAge) {
+    fields.push({
+      label: i18n.age,
+      value: translateAge(props.patientAge, lang),
+    });
+  }
   if (props.patientGender) {
     fields.push({
       label: i18n.gender,
@@ -677,7 +691,7 @@ function PatientSafetyAndVitals({
                 {i18n.chiefComplaint}:
               </Text>
               <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
-                {props.chiefComplaint}
+                {translateChiefComplaint(props.chiefComplaint, theme.lang)}
               </Text>
             </View>
           )}
@@ -694,7 +708,7 @@ function PatientSafetyAndVitals({
                 {i18n.chronicConditions}:
               </Text>
               <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
-                {props.patientChronicConditions}
+                {translateDiagnosis(props.patientChronicConditions, theme.lang)}
               </Text>
             </View>
           )}
@@ -732,13 +746,13 @@ function PatientSafetyAndVitals({
           {hasBp && (
             <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
               <Text style={{ color: "#64748b" }}>{i18n.bp}: </Text>
-              <Text style={{ fontFamily: theme.bold }}>{vitals?.bp}</Text> mmHg
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.bp}</Text> {theme.lang === "hi" ? "मि.मी. एचजी" : "mmHg"}
             </Text>
           )}
           {hasPulse && (
             <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
               <Text style={{ color: "#64748b" }}>{i18n.pulse}: </Text>
-              <Text style={{ fontFamily: theme.bold }}>{vitals?.pulse}</Text> bpm
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.pulse}</Text> {theme.lang === "hi" ? "प्रति मिनट" : "bpm"}
             </Text>
           )}
           {hasTemp && (
@@ -750,14 +764,14 @@ function PatientSafetyAndVitals({
           {hasWeight && (
             <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
               <Text style={{ color: "#64748b" }}>{i18n.weight}: </Text>
-              <Text style={{ fontFamily: theme.bold }}>{vitals?.weight}</Text> kg
+              <Text style={{ fontFamily: theme.bold }}>{vitals?.weight}</Text> {theme.lang === "hi" ? "कि.ग्रा." : "kg"}
             </Text>
           )}
           {(hasHeight || hasBmi) && (
             <Text style={{ fontSize: 8, color: "#0f172a", marginRight: 8 }}>
               <Text style={{ color: "#64748b" }}>{i18n.height}/{i18n.bmi}: </Text>
               <Text style={{ fontFamily: theme.bold }}>
-                {vitals?.height ? `${vitals.height} cm` : ""}
+                {vitals?.height ? `${vitals.height} ${theme.lang === "hi" ? "से.मी." : "cm"}` : ""}
                 {vitals?.bmi ? ` (${vitals.bmi})` : ""}
               </Text>
             </Text>
@@ -873,12 +887,18 @@ function MedicinesTable({
             <Text style={[cell, { flex: 2.6, fontFamily: theme.bold }]}>
               {med.name}
             </Text>
-            <Text style={[cell, { flex: 1.2 }]}>{med.dosage || "—"}</Text>
-            <Text style={[cell, { flex: 1.0 }]}>{med.route || "—"}</Text>
+            <Text style={[cell, { flex: 1.2 }]}>
+              {translateDosage(med.dosage, lang) || "—"}
+            </Text>
+            <Text style={[cell, { flex: 1.0 }]}>
+              {translateRoute(med.route, lang) || "—"}
+            </Text>
             <Text style={[cell, { flex: 1.6 }]}>
               {translateFrequency(med.frequency, lang)}
             </Text>
-            <Text style={[cell, { flex: 1.1 }]}>{med.duration || "—"}</Text>
+            <Text style={[cell, { flex: 1.1 }]}>
+              {translateDuration(med.duration, lang) || "—"}
+            </Text>
           </View>
           {med.instructions ? (
             <Text
@@ -889,7 +909,7 @@ function MedicinesTable({
                 marginTop: 2,
               }}
             >
-              {med.instructions}
+              {translateInstructions(med.instructions, lang)}
             </Text>
           ) : null}
         </View>
@@ -912,10 +932,10 @@ function MedicinesList({
     <View>
       {medicines.map((med, i) => {
         const details = [
-          med.dosage,
-          med.route,
+          translateDosage(med.dosage, lang),
+          translateRoute(med.route, lang),
           translateFrequency(med.frequency, lang),
-          med.duration,
+          translateDuration(med.duration, lang),
         ]
           .filter(Boolean)
           .join("  ·  ");
@@ -951,7 +971,7 @@ function MedicinesList({
                   marginTop: 2,
                 }}
               >
-                {med.instructions}
+                {translateInstructions(med.instructions, lang)}
               </Text>
             ) : null}
           </View>
@@ -975,8 +995,8 @@ function MedicinesCards({
     <View>
       {medicines.map((med, i) => {
         const details = [
-          med.dosage,
-          med.route,
+          translateDosage(med.dosage, lang),
+          translateRoute(med.route, lang),
           translateFrequency(med.frequency, lang),
         ]
           .filter(Boolean)
@@ -1002,7 +1022,7 @@ function MedicinesCards({
               </Text>
               {med.duration ? (
                 <Text style={{ fontSize: 8.5, color: colors.muted }}>
-                  {med.duration}
+                  {translateDuration(med.duration, lang)}
                 </Text>
               ) : null}
             </View>
@@ -1013,7 +1033,7 @@ function MedicinesCards({
             ) : null}
             {med.instructions ? (
               <Text style={{ fontSize: 8, color: colors.muted, marginTop: 2 }}>
-                {med.instructions}
+                {translateInstructions(med.instructions, lang)}
               </Text>
             ) : null}
           </View>
@@ -1108,7 +1128,7 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
           <View style={{ marginTop: 10 }}>
             <SectionTitle theme={theme}>{i18n.diagnosis}</SectionTitle>
             <Text style={{ fontSize: 9.5, color: colors.ink, fontFamily: theme.bold }}>
-              {props.diagnosis || "—"}
+              {translateDiagnosis(props.diagnosis, lang) || "—"}
             </Text>
           </View>
 
@@ -1132,7 +1152,7 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
                     marginLeft: 4,
                   }}
                 >
-                  •  {line}
+                  •  {translateAdviceLine(line, lang)}
                 </Text>
               ))}
             </View>
@@ -1143,7 +1163,7 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
             <View style={{ marginTop: 12 }}>
               <SectionTitle theme={theme}>{i18n.followUpTitle}</SectionTitle>
               <Text style={{ fontSize: 9, color: colors.ink, fontFamily: theme.bold }}>
-                {props.followUp.trim()}
+                {translateFollowUp(props.followUp.trim(), lang)}
               </Text>
             </View>
           ) : null}

@@ -20,6 +20,7 @@ import type {
   ConsultationClinicalData,
   MedicalCertificate,
   Medicine,
+  PreviousVisitData,
   ReferralLetter,
   VoidActionResult,
 } from "@/lib/types";
@@ -136,17 +137,55 @@ export async function getConsultation(id: string) {
     },
   });
 
-  if (consultation) {
-    await logAudit({
+  if (!consultation) return null;
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "read",
+    resourceType: "consultation",
+    resourceId: id,
+  });
+
+  // Query most recent previous consultation for this patient (for returning patient options)
+  let previousVisit: PreviousVisitData | null = null;
+  const prev = await prisma.consultation.findFirst({
+    where: {
       clinicId: session.clinicId,
-      actorId: session.userId,
-      action: "read",
-      resourceType: "consultation",
-      resourceId: id,
-    });
+      patientId: consultation.patientId,
+      id: { not: id },
+    },
+    orderBy: { createdAt: "desc" },
+    include: {
+      prescription: true,
+    },
+  });
+
+  if (prev) {
+    previousVisit = {
+      id: prev.id,
+      createdAt: prev.createdAt.toISOString(),
+      chiefComplaint: prev.chiefComplaint ?? null,
+      diagnosis: prev.diagnosis ?? null,
+      diagnosisCodes: (prev.diagnosisCodes as any) ?? null,
+      examination: (prev.examination as any) ?? null,
+      treatmentPlan: (prev.treatmentPlan as any) ?? null,
+      clinicalPresentation: (prev.clinicalPresentation as any) ?? null,
+      patientHistory: (prev.patientHistory as any) ?? null,
+      investigationResults: (prev.investigationResults as any) ?? null,
+      notes: prev.notes ?? null,
+      advice:
+        (prev.prescription?.advice ||
+          (typeof prev.advice === "string" ? prev.advice : null)) ?? null,
+      followUp: prev.prescription?.followUp ?? null,
+      medicines: (prev.prescription?.medicines as Medicine[]) ?? [],
+    };
   }
 
-  return consultation;
+  return {
+    ...consultation,
+    previousVisit,
+  };
 }
 
 export async function saveConsultation(

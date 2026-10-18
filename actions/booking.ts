@@ -1184,3 +1184,80 @@ export async function bookHomepageAppointment(
   }
 }
 
+export type ReturningPatientLookupResult = {
+  found: boolean;
+  name: string;
+  phone: string;
+  age: string;
+  gender: string;
+  mrn: string;
+  pastSpecialty?: string;
+  pastSymptoms?: string;
+  pastDiagnosis?: string;
+};
+
+export async function lookupReturningPatientByPhone(
+  rawPhone: string
+): Promise<ReturningPatientLookupResult | null> {
+  try {
+    const digits = rawPhone.replace(/\D/g, "");
+    if (digits.length < 10) return null;
+    const last10 = digits.slice(-10);
+
+    const patient = await prisma.patient.findFirst({
+      where: {
+        phone: { contains: last10 },
+      },
+      include: {
+        appointments: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        consultations: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: {
+            prescription: true,
+          },
+        },
+      },
+    });
+
+    if (!patient) return null;
+
+    const latestConsultation = patient.consultations[0];
+    const latestAppt = patient.appointments[0];
+
+    let pastSpecialty = "";
+    let pastSymptoms = "";
+
+    if (latestAppt?.reasonForVisit) {
+      const specMatch = latestAppt.reasonForVisit.match(/Specialty:\s*([^·]+)/i);
+      if (specMatch) pastSpecialty = specMatch[1].trim();
+      const symMatch = latestAppt.reasonForVisit.match(/Symptoms:\s*(.+)/i);
+      if (symMatch) pastSymptoms = symMatch[1].trim();
+    }
+
+    if (!pastSymptoms && latestConsultation?.chiefComplaint) {
+      pastSymptoms = latestConsultation.chiefComplaint;
+    }
+
+    return {
+      found: true,
+      name: patient.name,
+      phone: patient.phone,
+      age: patient.age ? String(patient.age) : "",
+      gender: patient.gender || "male",
+      mrn: patient.mrn,
+      pastSpecialty: pastSpecialty || undefined,
+      pastSymptoms: pastSymptoms || undefined,
+      pastDiagnosis: latestConsultation?.diagnosis || undefined,
+    };
+  } catch (err) {
+    logger.error("lookup_returning_patient_failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
