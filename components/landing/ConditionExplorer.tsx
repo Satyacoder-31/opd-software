@@ -97,7 +97,7 @@ export function ConditionExplorer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         {/* Section Heading */}
         <div className="mx-auto max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3.5 py-1 text-xs font-semibold text-sky-800">
+          <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3.5 py-1 text-xs sm:text-sm font-semibold text-sky-800">
             <Icon icon={faBone} className="size-3 text-sky-600" />
             Patient Health Guide
           </div>
@@ -118,7 +118,7 @@ export function ConditionExplorer() {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveId(item.id)}
-                className={`rounded-full px-5 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                className={`rounded-full px-5 py-2.5 text-sm sm:text-base font-semibold transition-all ${
                   isActive
                     ? "bg-[#0F2E4A] text-white shadow-md shadow-slate-900/15 ring-2 ring-sky-500"
                     : "border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -134,23 +134,23 @@ export function ConditionExplorer() {
         <div className="mx-auto mt-10 max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-10 shadow-xl shadow-slate-200/50">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6">
             <div>
-              <span className="rounded-md bg-sky-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-sky-800">
+              <span className="rounded-md bg-sky-100 px-3 py-1 text-xs sm:text-sm font-bold uppercase tracking-wider text-sky-800">
                 {activeCondition.badge}
               </span>
               <h3 className="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
                 {activeCondition.title}
               </h3>
-              <p className="mt-0.5 text-sm font-medium text-slate-500">
+              <p className="mt-0.5 text-sm sm:text-base font-medium text-slate-500">
                 {activeCondition.subtitle}
               </p>
             </div>
 
             <a
               href="#book"
-              className="inline-flex items-center gap-2 self-start sm:self-auto rounded-xl bg-sky-600 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-sky-600/20 hover:bg-sky-500 transition-all"
+              className="inline-flex items-center gap-2 self-start sm:self-auto rounded-xl bg-sky-600 px-5 py-2.5 text-sm sm:text-base font-semibold text-white shadow-md shadow-sky-600/20 hover:bg-sky-500 transition-all"
             >
               <span>Consult for this Condition</span>
-              <Icon icon={faArrowRight} className="size-3.5" />
+              <Icon icon={faArrowRight} className="size-4" />
             </a>
           </div>
 
@@ -158,14 +158,14 @@ export function ConditionExplorer() {
             {/* Left: Symptoms & Diagnostics */}
             <div className="space-y-6">
               <div>
-                <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800">
+                <h4 className="flex items-center gap-2 text-sm sm:text-base font-bold uppercase tracking-wider text-slate-800">
                   <Icon icon={faTriangleExclamation} className="size-4 text-amber-500" />
                   Common Clinical Symptoms
                 </h4>
                 <ul className="mt-3 space-y-2.5">
                   {activeCondition.symptoms.map((symptom, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5 text-sm text-slate-600">
-                      <span className="mt-1 size-1.5 rounded-full bg-sky-500 shrink-0" />
+                    <li key={idx} className="flex items-start gap-2.5 text-sm sm:text-base text-slate-600 leading-relaxed">
+                      <span className="mt-1.5 size-2 rounded-full bg-sky-500 shrink-0" />
                       <span>{symptom}</span>
                     </li>
                   ))}
@@ -173,11 +173,11 @@ export function ConditionExplorer() {
               </div>
 
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <h5 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
-                  <Icon icon={faNotesMedical} className="size-3.5 text-sky-600" />
+                <h5 className="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
+                  <Icon icon={faNotesMedical} className="size-4 text-sky-600" />
                   Diagnostic Protocol
                 </h5>
-                <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
                   {activeCondition.diagnostics}
                 </p>
               </div>
@@ -187,33 +187,33 @@ export function ConditionExplorer() {
             <div className="space-y-6">
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5">
                 <div className="flex items-center gap-2">
-                  <span className="flex size-6 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-emerald-600 text-white text-xs sm:text-sm font-bold">
                     1
                   </span>
-                  <h4 className="text-sm font-bold text-emerald-950">
+                  <h4 className="text-sm sm:text-base font-bold text-emerald-950">
                     Step 1: Conservative &amp; Non-Surgical Care (First Line)
                   </h4>
                 </div>
-                <p className="mt-2 text-xs sm:text-sm text-emerald-900 leading-relaxed">
+                <p className="mt-2 text-sm sm:text-base text-emerald-900 leading-relaxed">
                   {activeCondition.treatmentConservative}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5">
                 <div className="flex items-center gap-2">
-                  <span className="flex size-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs font-bold">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-sky-600 text-white text-xs sm:text-sm font-bold">
                     2
                   </span>
-                  <h4 className="text-sm font-bold text-sky-950">
+                  <h4 className="text-sm sm:text-base font-bold text-sky-950">
                     Step 2: Precision Surgical Intervention (When Indicated)
                   </h4>
                 </div>
-                <p className="mt-2 text-xs sm:text-sm text-sky-900 leading-relaxed">
+                <p className="mt-2 text-sm sm:text-base text-sky-900 leading-relaxed">
                   {activeCondition.treatmentSurgical}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-slate-500 italic">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 italic">
                 <Icon icon={faCircleCheck} className="size-3.5 text-slate-400" />
                 Individual treatment pathways are customized following clinical examination and imaging review.
               </div>

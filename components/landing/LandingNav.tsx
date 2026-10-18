@@ -20,7 +20,7 @@ export function LandingNav() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-[#0A192F]/95 backdrop-blur-md transition-all shadow-sm shadow-black/20">
       {/* Top Clinical Utility Bar */}
-      <div className="border-b border-white/5 bg-[#071322] px-4 py-1.5 text-xs text-slate-300">
+      <div className="border-b border-white/5 bg-[#071322] px-4 py-1.5 text-xs sm:text-[13px] text-slate-300">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-4 sm:gap-6">
             <span className="flex items-center gap-1.5 text-sky-400 font-medium">
@@ -54,7 +54,7 @@ export function LandingNav() {
               <a
                 key={link.href}
                 href={link.href}
-                className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-150 py-1 border-b-2 border-transparent hover:border-sky-400"
+                className="text-[15px] sm:text-base font-medium text-slate-300 hover:text-white transition-colors duration-150 py-1 border-b-2 border-transparent hover:border-sky-400"
               >
                 {link.label}
               </a>
@@ -64,21 +64,22 @@ export function LandingNav() {
 
         {/* Right Action Area */}
         <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all shadow-sm"
-          >
-            <Icon icon={faUserDoctor} className="size-3.5 text-sky-400" />
-            Staff Sign In
-          </Link>
-
           <a
             href="#book"
-            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-sky-600 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-sky-600/30 hover:from-sky-400 hover:to-sky-500 transition-all active:scale-[0.98]"
+            className="hidden md:inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-500 to-sky-600 px-4 py-2 text-sm sm:text-base font-semibold text-white shadow-md shadow-sky-600/30 hover:from-sky-400 hover:to-sky-500 transition-all active:scale-[0.98]"
           >
             <Icon icon={faCalendarCheck} className="size-4" />
             <span>Book Appointment</span>
           </a>
+
+          {/* Outlined Prominent Login Button at Top Right Corner */}
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center rounded-lg border-2 border-white/90 px-4 py-2 text-base font-bold text-white hover:bg-white hover:text-slate-950 transition-all shadow-md active:scale-95"
+            title="Doctor & Staff Login"
+          >
+            Login
+          </Link>
 
           {/* Mobile hamburger button */}
           <button
@@ -110,7 +111,7 @@ export function LandingNav() {
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className="block rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800/80 hover:text-sky-400"
+                  className="block rounded-lg px-3.5 py-2.5 text-base font-medium text-slate-200 hover:bg-slate-800/80 hover:text-sky-400"
                   onClick={() => setOpen(false)}
                 >
                   {link.label}
@@ -120,7 +121,7 @@ export function LandingNav() {
             <li className="mt-2 pt-2 border-t border-slate-800">
               <Link
                 href="/login"
-                className="flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-base font-semibold text-white bg-white/10 hover:bg-white hover:text-slate-900 transition-colors"
                 onClick={() => setOpen(false)}
               >
                 <Icon icon={faUserDoctor} className="size-4 text-sky-400" />
