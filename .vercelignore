@@ -1,0 +1,5 @@
+dist-electron
+scratch
+.next
+node_modules
+*.exe

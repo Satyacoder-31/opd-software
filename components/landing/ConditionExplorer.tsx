@@ -158,26 +158,26 @@ export function ConditionExplorer() {
             {/* Left: Symptoms & Diagnostics */}
             <div className="space-y-6">
               <div>
-                <h4 className="flex items-center gap-2 text-sm sm:text-base font-bold uppercase tracking-wider text-slate-800">
-                  <Icon icon={faTriangleExclamation} className="size-4 text-amber-500" />
+                <h4 className="flex items-center gap-2 text-lg sm:text-xl font-bold uppercase tracking-wider text-slate-900">
+                  <Icon icon={faTriangleExclamation} className="size-5 text-amber-500" />
                   Common Clinical Symptoms
                 </h4>
-                <ul className="mt-3 space-y-2.5">
+                <ul className="mt-4 space-y-3.5">
                   {activeCondition.symptoms.map((symptom, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5 text-sm sm:text-base text-slate-600 leading-relaxed">
-                      <span className="mt-1.5 size-2 rounded-full bg-sky-500 shrink-0" />
+                    <li key={idx} className="flex items-start gap-3 text-[17px] sm:text-[19px] text-slate-800 leading-relaxed font-semibold">
+                      <span className="mt-2.5 size-2.5 rounded-full bg-sky-500 shrink-0" />
                       <span>{symptom}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                <h5 className="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700">
-                  <Icon icon={faNotesMedical} className="size-4 text-sky-600" />
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                <h5 className="flex items-center gap-2 text-base sm:text-lg font-bold uppercase tracking-wider text-slate-900">
+                  <Icon icon={faNotesMedical} className="size-5 text-sky-600" />
                   Diagnostic Protocol
                 </h5>
-                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p className="mt-3 text-[15px] sm:text-[17px] text-slate-700 leading-relaxed font-medium">
                   {activeCondition.diagnostics}
                 </p>
               </div>

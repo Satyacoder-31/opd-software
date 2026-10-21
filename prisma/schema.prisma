@@ -205,6 +205,7 @@ model Clinic {
   doctorAvailabilities    DoctorAvailability[]
   doctorLeaves            DoctorLeave[]
   stockMovements          StockMovement[]
+  syncQueueItems          SyncQueue[]
 }
 
 model User {
@@ -720,3 +721,44 @@ model PortalOtp {
   @@index([phone])
   @@index([expiresAt])
 }
+
+enum SyncStatus {
+  pending
+  in_progress
+  synced
+  failed
+}
+
+enum SyncAction {
+  create
+  update
+  delete
+}
+
+model SyncQueue {
+  id         String     @id @default(uuid())
+  clinicId   String
+  entityType String
+  recordId   String
+  action     SyncAction
+  payload    Json
+  status     SyncStatus @default(pending)
+  attempts   Int        @default(0)
+  lastError  String?
+  syncedAt   DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  clinic     Clinic     @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+
+  @@index([clinicId, status])
+  @@index([status, createdAt])
+  @@index([entityType, recordId])
+}
+
+model SyncMetadata {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/popover";
 import { GlobalPatientSearch } from "@/components/nav/GlobalPatientSearch";
 import { ClinicAlertsBell } from "@/components/nav/ClinicAlertsBell";
+import { SyncStatusBadge } from "@/components/nav/SyncStatusBadge";
 import {
   PRIMARY_NAV_GROUPS,
   SETTINGS_NAV_ITEM,
@@ -650,6 +651,7 @@ export function AppShell({
                 className="max-w-none md:hidden"
               />
 
+              <SyncStatusBadge clinicId={session.clinicId} />
               <ClinicAlertsBell alerts={alerts} />
             </div>
           </div>

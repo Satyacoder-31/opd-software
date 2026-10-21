@@ -1,9 +1,16 @@
 {
   "name": "dr-orthos",
   "version": "0.1.0",
+  "description": "Dr. Orthos - Hospital and Clinic OPD Software",
+  "author": "Dr. Orthos Team",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
+    "desktop:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:127.0.0.1:3000 && electron .\"",
+    "desktop:dist": "electron-builder --win",
+    "desktop:pack": "electron-builder --dir",
+    "electron:start": "electron .",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
@@ -15,6 +22,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:setup:local": "tsx scripts/setup-local-db.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {
@@ -50,12 +58,39 @@
     "@types/node": "^22.15.32",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "concurrently": "^10.0.6",
+    "electron": "^44.9.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.29.0",
     "eslint-config-next": "^15.3.3",
     "prisma": "^6.9.0",
     "tailwindcss": "^4.1.10",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wait-on": "^9.5.1"
+  },
+  "build": {
+    "appId": "in.drorthos.clinic",
+    "productName": "Dr Orthos OPD",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "public/app-icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Dr. Orthos Clinic OPD"
+    }
   }
 }
