@@ -1,5 +1,11 @@
 dist-electron
+dist-electron/**
+dist
+release
+*.exe
 scratch
+scratch/**
 .next
 node_modules
-*.exe
+.git
+.agents
