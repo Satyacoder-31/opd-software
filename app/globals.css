@@ -79,6 +79,17 @@
     @apply antialiased bg-background text-foreground;
   }
 
+  ::selection {
+    background-color: #0284c7;
+    color: #ffffff;
+  }
+
+  input::selection,
+  textarea::selection {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+  }
+
   /* Form controls font inherit */
   input,
   textarea,

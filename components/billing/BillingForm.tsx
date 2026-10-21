@@ -168,9 +168,13 @@ export function BillingForm({
   const taxableInitial =
     initial.taxableAmount != null && initial.taxableAmount > 0
       ? initial.taxableAmount
-      : initial.amount;
-  const [flatAmount, setFlatAmount] = useState(
-    taxableInitial > 0 ? String(taxableInitial) : ""
+      : initial.amount > 0
+      ? initial.amount
+      : 500;
+  const [flatAmount, setFlatAmount] = useState(String(taxableInitial));
+  const [selectedFeePreset, setSelectedFeePreset] = useState<string>("");
+  const [activePresetName, setActivePresetName] = useState<string>(
+    taxableInitial === 500 ? "OPD Consultation Fee" : ""
   );
   const [lineItems, setLineItems] = useState<LineItem[]>(
     initial.lineItems ?? [{ description: "OPD Consultation & Clinical Assessment", amount: 500 }]
@@ -275,8 +279,10 @@ export function BillingForm({
   }
 
   function applyFeePreset(feeId: string) {
+    setSelectedFeePreset(feeId);
     const fee = feeItems.find((f) => f.id === feeId);
     if (!fee) return;
+    setActivePresetName(fee.name);
     if (mode === "flat") {
       setFlatAmount(String(fee.amount));
       return;
@@ -288,11 +294,33 @@ export function BillingForm({
   }
 
   function addQuickPreset(name: string, amount: number) {
+    setActivePresetName(name);
+    setSelectedFeePreset("");
     if (mode === "flat") {
       setFlatAmount(String(amount));
       return;
     }
     setLineItems((prev) => [...prev, { description: name, amount }]);
+  }
+
+  function switchToFlat() {
+    setMode("flat");
+    if (!flatAmount || flatAmount === "0") {
+      const firstItem = lineItems[0];
+      if (firstItem && firstItem.amount > 0) {
+        setFlatAmount(String(firstItem.amount));
+      } else {
+        setFlatAmount("500");
+      }
+    }
+  }
+
+  function switchToItemized() {
+    setMode("itemized");
+    const num = parseFloat(flatAmount) || 500;
+    if (lineItems.length === 0 || (lineItems.length === 1 && !lineItems[0].description)) {
+      setLineItems([{ description: activePresetName || "OPD Consultation Fee", amount: num }]);
+    }
   }
 
   function handleSaveVitals() {
@@ -815,7 +843,7 @@ export function BillingForm({
           <div className="flex items-center gap-1 rounded-lg bg-surface-muted p-1 border border-border">
             <button
               type="button"
-              onClick={() => setMode("flat")}
+              onClick={switchToFlat}
               disabled={!isEditable}
               className={cn(
                 "rounded-md px-3 py-1 text-xs font-semibold transition-all",
@@ -828,7 +856,7 @@ export function BillingForm({
             </button>
             <button
               type="button"
-              onClick={() => setMode("itemized")}
+              onClick={switchToItemized}
               disabled={!isEditable}
               className={cn(
                 "rounded-md px-3 py-1 text-xs font-semibold transition-all",
@@ -851,51 +879,51 @@ export function BillingForm({
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant={mode === "flat" && flatAmount === "500" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => addQuickPreset("OPD Consultation Fee", 500)}
               >
-                + Consultation (₹500)
+                {mode === "flat" && flatAmount === "500" ? "✓ " : "+ "}Consultation (₹500)
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant={mode === "flat" && flatAmount === "300" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => addQuickPreset("Follow-Up Consultation", 300)}
               >
-                + Follow-up (₹300)
+                {mode === "flat" && flatAmount === "300" ? "✓ " : "+ "}Follow-up (₹300)
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant={mode === "flat" && flatAmount === "250" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => addQuickPreset("Wound Dressing & Bandaging", 250)}
               >
-                + Dressing (₹250)
+                {mode === "flat" && flatAmount === "250" ? "✓ " : "+ "}Dressing (₹250)
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant={mode === "flat" && flatAmount === "1200" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => addQuickPreset("Plaster / POP Cast Application", 1200)}
               >
-                + Plaster / Cast (₹1200)
+                {mode === "flat" && flatAmount === "1200" ? "✓ " : "+ "}Plaster / Cast (₹1200)
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant={mode === "flat" && flatAmount === "1500" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => addQuickPreset("Intra-articular Joint Injection", 1500)}
               >
-                + Joint Injection (₹1500)
+                {mode === "flat" && flatAmount === "1500" ? "✓ " : "+ "}Joint Injection (₹1500)
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant={mode === "flat" && flatAmount === "400" ? "primary" : "secondary"}
                 size="sm"
                 onClick={() => addQuickPreset("Digital X-Ray Review & Report", 400)}
               >
-                + X-Ray Review (₹400)
+                {mode === "flat" && flatAmount === "400" ? "✓ " : "+ "}X-Ray Review (₹400)
               </Button>
             </div>
           </div>
@@ -907,7 +935,7 @@ export function BillingForm({
             <Select
               label="Add from clinic fee catalog"
               name="feePreset"
-              value=""
+              value={selectedFeePreset}
               onChange={(e) => {
                 if (e.target.value) applyFeePreset(e.target.value);
               }}
@@ -924,7 +952,7 @@ export function BillingForm({
 
         {/* Line Items Editor */}
         {mode === "flat" ? (
-          <div className="max-w-md">
+          <div className="max-w-md space-y-1.5">
             <Input
               label="Taxable consultation amount (₹)"
               name="amount"
@@ -932,10 +960,20 @@ export function BillingForm({
               min={0}
               step={0.01}
               value={flatAmount}
-              onChange={(e) => setFlatAmount(e.target.value)}
+              onChange={(e) => {
+                setFlatAmount(e.target.value);
+                setActivePresetName("");
+              }}
+              onFocus={(e) => e.target.select()}
               disabled={!isEditable}
               placeholder="500"
+              className="text-base font-semibold text-ink"
             />
+            {activePresetName && (
+              <p className="text-[11px] font-medium text-primary">
+                Selected service: {activePresetName}
+              </p>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
