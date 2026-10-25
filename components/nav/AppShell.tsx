@@ -103,11 +103,11 @@ function SidebarNavLink({
         if (!active) onNavigate();
       }}
       className={cn(
-        "group relative flex items-center rounded-xl text-xs font-semibold transition-all duration-150 select-none",
+        "group relative flex items-center rounded-xl text-sm font-semibold transition-all duration-150 select-none",
         "active:scale-[0.98]",
         collapsed
-          ? "justify-center p-2 mx-auto w-11 h-11"
-          : "gap-2.5 px-3 py-2.5 mx-2",
+          ? "justify-center p-2 mx-auto w-12 h-12"
+          : "gap-3 px-3.5 py-2.5 mx-2",
         active
           ? "bg-gradient-to-r from-sky-50 via-sky-50/70 to-white text-sky-950 border border-sky-200/80 shadow-[0_1px_2px_rgba(2,132,199,0.06)]"
           : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 border border-transparent"
@@ -116,7 +116,7 @@ function SidebarNavLink({
       {/* Active accent pill on the left */}
       {active && !collapsed && (
         <span
-          className="absolute -left-2 top-2 bottom-2 w-1 rounded-r-full bg-sky-600 shadow-xs shadow-sky-500/40"
+          className="absolute -left-2 top-2 bottom-2 w-1.5 rounded-r-full bg-sky-600 shadow-xs shadow-sky-500/40"
           aria-hidden
         />
       )}
@@ -124,13 +124,13 @@ function SidebarNavLink({
       {/* Icon with container */}
       <div
         className={cn(
-          "relative flex size-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
+          "relative flex size-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
           active
             ? "bg-sky-600 text-white shadow-xs shadow-sky-500/25"
             : "bg-slate-100/90 text-slate-500 group-hover:bg-white group-hover:text-slate-800 group-hover:shadow-2xs"
         )}
       >
-        <Icon icon={item.icon} aria-hidden className="size-3.5" />
+        <Icon icon={item.icon} aria-hidden className="size-4" />
         <NavPendingSpinner className="inset-1 size-5 border-sky-600 border-t-transparent" />
       </div>
 
@@ -145,7 +145,7 @@ function SidebarNavLink({
       {!collapsed && alertCount && alertCount > 0 ? (
         <span
           className={cn(
-            "ml-auto inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold leading-none shrink-0 shadow-2xs",
+            "ml-auto inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold leading-none shrink-0 shadow-2xs",
             alertTone === "danger"
               ? "bg-rose-100 text-rose-700 ring-1 ring-rose-300/80"
               : alertTone === "warning"
@@ -274,7 +274,7 @@ function ClinicMark({
         <img
           src={clinicLogoUrl}
           alt=""
-          className="size-9 rounded-xl border border-slate-200/90 bg-white object-contain p-0.5 shadow-2xs"
+          className="size-10 rounded-xl border border-slate-200/90 bg-white object-contain p-0.5 shadow-2xs"
         />
         <span
           className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white bg-emerald-500 shadow-xs"
@@ -285,7 +285,7 @@ function ClinicMark({
   }
 
   return (
-    <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-xs font-extrabold text-white shadow-xs ring-1 ring-sky-500/20">
+    <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-sm font-extrabold text-white shadow-xs ring-1 ring-sky-500/20">
       {clinicName.slice(0, 1).toUpperCase()}
       <span
         className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white bg-emerald-500 shadow-xs"
@@ -385,22 +385,22 @@ export function AppShell({
       <aside
         className={cn(
           "font-nav sticky top-0 hidden h-svh shrink-0 flex-col border-r border-slate-200/80 bg-white/95 backdrop-blur-sm transition-[width] duration-200 ease-out md:flex shadow-[1px_0_3px_rgba(0,0,0,0.02)] select-none",
-          collapsed ? "w-18" : "w-[16.5rem]"
+          collapsed ? "w-20" : "w-[20rem]"
         )}
       >
         {/* Brand Header */}
         <div
           className={cn(
             "flex items-center border-b border-slate-200/70",
-            collapsed ? "justify-center px-2 py-3.5" : "justify-between px-4 py-3.5"
+            collapsed ? "justify-center px-2 py-4" : "justify-between px-4.5 py-4"
           )}
         >
           {collapsed ? (
-            <OrthoIcon size={30} />
+            <OrthoIcon size={34} />
           ) : (
             <div className="flex items-center justify-between w-full">
               <BrandLogo size="sm" />
-              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 ring-1 ring-sky-200/80 tracking-wide select-none">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-bold text-sky-700 ring-1 ring-sky-200/80 tracking-wide select-none">
                 OPD
               </span>
             </div>
@@ -408,12 +408,12 @@ export function AppShell({
         </div>
 
         {/* Clinic Workspace Card */}
-        <div className={cn(collapsed ? "p-2" : "px-3 pt-3 pb-1")}>
+        <div className={cn(collapsed ? "p-2" : "px-3.5 pt-3.5 pb-1")}>
           <div
             className={cn(
-              "group relative flex items-center rounded-xl border border-slate-200/80 bg-white/90 p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150",
+              "group relative flex items-center rounded-xl border border-slate-200/80 bg-white/90 p-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150",
               "hover:border-sky-300/80 hover:bg-sky-50/20 hover:shadow-xs",
-              collapsed ? "justify-center p-2 mx-auto w-11 h-11" : "gap-2.5"
+              collapsed ? "justify-center p-2 mx-auto w-12 h-12" : "gap-3"
             )}
             title={clinicName}
           >
@@ -421,13 +421,13 @@ export function AppShell({
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <p
-                  className="truncate text-xs font-bold text-slate-900 tracking-tight leading-snug"
+                  className="truncate text-sm font-bold text-slate-900 tracking-tight leading-snug"
                   title={clinicName}
                 >
                   {clinicName}
                 </p>
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 mt-0.5">
-                  <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 mt-0.5">
+                  <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="truncate">Active Workspace</span>
                 </div>
               </div>
@@ -462,8 +462,8 @@ export function AppShell({
             return (
               <div key={group.id} className="space-y-0.5">
                 {!collapsed ? (
-                  <div className="flex items-center px-4 pt-2.5 pb-1 select-none">
-                    <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                  <div className="flex items-center px-4.5 pt-3 pb-1 select-none">
+                    <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">
                       {group.label}
                     </span>
                     <span className="ml-2 h-px flex-1 bg-slate-200/60" />
@@ -494,12 +494,12 @@ export function AppShell({
         </nav>
 
         {/* Clinician Profile & Footer Navigation */}
-        <div className="mt-auto border-t border-slate-200/80 p-2 space-y-1 bg-slate-50/50">
+        <div className="mt-auto border-t border-slate-200/80 p-2.5 space-y-1.5 bg-slate-50/50">
           {/* Clinician Card */}
           <div
             className={cn(
-              "group relative flex items-center rounded-xl border border-slate-200/70 bg-white/80 p-2 transition-all hover:border-slate-300 hover:bg-white hover:shadow-2xs",
-              collapsed ? "justify-center p-1.5 mx-auto w-11 h-11" : "gap-2.5"
+              "group relative flex items-center rounded-xl border border-slate-200/70 bg-white/80 p-2.5 transition-all hover:border-slate-300 hover:bg-white hover:shadow-2xs",
+              collapsed ? "justify-center p-1.5 mx-auto w-12 h-12" : "gap-3"
             )}
             title={
               collapsed
@@ -507,23 +507,23 @@ export function AppShell({
                 : undefined
             }
           >
-            <div className="relative flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-900 to-sky-950 text-xs font-bold text-white shadow-xs ring-1 ring-slate-200/60">
+            <div className="relative flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-900 to-sky-950 text-xs font-bold text-white shadow-xs ring-1 ring-slate-200/60">
               {userInitials}
               <span
-                className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-white bg-emerald-500 shadow-xs"
+                className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border border-white bg-emerald-500 shadow-xs"
                 title="Online / On Duty"
               />
             </div>
 
             {!collapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-slate-800 tracking-tight">
+                <p className="truncate text-sm font-semibold text-slate-800 tracking-tight">
                   {session.name || "Doctor"}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span
                     className={cn(
-                      "inline-block rounded px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider",
+                      "inline-block rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
                       session.role === "doctor" &&
                         "bg-sky-50 text-sky-700 ring-1 ring-sky-200/70",
                       session.role === "admin" &&
@@ -546,9 +546,9 @@ export function AppShell({
                   type="submit"
                   title="Sign out of OPD"
                   aria-label="Sign out"
-                  className="flex size-7 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                  className="flex size-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                 >
-                  <Icon icon={faRightFromBracket} className="size-3.5" />
+                  <Icon icon={faRightFromBracket} className="size-4" />
                 </button>
               </form>
             )}
@@ -583,12 +583,12 @@ export function AppShell({
             aria-label={collapsed ? "Expand sidebar (Ctrl+[)" : "Collapse sidebar (Ctrl+[)"}
             title={collapsed ? "Expand sidebar (Ctrl+[)" : "Collapse sidebar (Ctrl+[)"}
             className={cn(
-              "group relative flex w-full items-center rounded-xl text-xs font-medium text-slate-500 transition-all select-none",
+              "group relative flex w-full items-center rounded-xl text-sm font-medium text-slate-500 transition-all select-none cursor-pointer",
               "hover:bg-slate-100 hover:text-slate-800 active:scale-[0.98]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30",
               collapsed
-                ? "justify-center p-2 mx-auto w-11 h-11"
-                : "gap-2.5 px-3 py-2 mx-2 w-[calc(100%-1rem)]"
+                ? "justify-center p-2 mx-auto w-12 h-12"
+                : "gap-3 px-3.5 py-2.5 mx-2 w-[calc(100%-1rem)]"
             )}
           >
             <div className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-400 group-hover:text-slate-700 transition-colors">
@@ -596,7 +596,7 @@ export function AppShell({
                 icon={faAnglesLeft}
                 aria-hidden
                 className={cn(
-                  "size-3.5 transition-transform duration-200",
+                  "size-4 transition-transform duration-200",
                   collapsed && "rotate-180"
                 )}
               />
@@ -606,7 +606,7 @@ export function AppShell({
                 <span className="font-medium text-slate-700 group-hover:text-slate-950">
                   Collapse
                 </span>
-                <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-400 shadow-2xs">
+                <kbd className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-400 shadow-2xs">
                   Ctrl+[
                 </kbd>
               </div>
