@@ -3,6 +3,42 @@
  * Investigations, and Documents (Referral & Medical Certificate).
  */
 
+export type ClinicalTreatmentMode = "orthopedics" | "general" | "all";
+
+export const ORTHOPEDIC_CHIEF_COMPLAINTS = [
+  "Pain in right knee joint aggravated by walking and climbing stairs",
+  "Pain in left knee joint with morning stiffness and crepitus",
+  "Bilateral knee pain with joint stiffness and difficulty sitting cross-legged",
+  "Severe low back pain radiating to right lower limb (sciatica)",
+  "Lower backache with muscle stiffness, aggravated by forward bending",
+  "Neck pain with stiffness radiating to left shoulder and arm (cervical radiculopathy)",
+  "Acute right ankle pain, swelling, and difficulty bearing weight following twist",
+  "Acute left ankle sprain following slip and fall",
+  "Right shoulder pain with restricted overhead abduction (frozen shoulder / adhesive capsulitis)",
+  "Bilateral heel pain, severe on first taking steps in the morning (plantar fasciitis)",
+  "Right hip pain with groin stiffness and limping gait",
+  "Lateral elbow pain aggravated by gripping and wrist extension (tennis elbow)",
+  "Wrist pain with numbness and tingling in thumb/index/middle fingers (carpal tunnel)",
+  "Post-traumatic injury with localized swelling and tenderness",
+  "Acute knee locking and giving way on pivot (meniscal / ACL tear)",
+  "Achilles tendon pain and localized heel swelling on walking",
+] as const;
+
+export const GENERAL_CHIEF_COMPLAINTS = [
+  "High grade fever with chills, generalized body ache, and headache for 3 days",
+  "Persistent dry cough with sore throat and runny nose for 4 days",
+  "Productive cough with yellowish expectoration and low-grade fever",
+  "Burning epigastric pain, acid regurgitation, and bloating after meals (GERD)",
+  "Watery loose stools with cramping abdominal pain for 2 days (acute enteritis)",
+  "Burning micturition with increased urinary frequency and pelvic discomfort (UTI)",
+  "Generalized fatigue, body ache, and muscle weakness",
+  "Severe throbbing headache with nausea and light sensitivity (migraine)",
+  "Dizziness, vertigo, and lightheadedness on sudden change of posture",
+  "Loss of appetite, nausea, and abdominal distension",
+  "Allergic skin rash, itching, and generalized urticaria",
+  "Routine checkup for high blood pressure and blood sugar monitoring",
+] as const;
+
 export const CHIEF_COMPLAINT_RECOMMENDATIONS = [
   "Pain in right knee joint aggravated by walking and climbing stairs",
   "Pain in left knee joint with morning stiffness and crepitus",
@@ -23,6 +59,31 @@ export const CHIEF_COMPLAINT_RECOMMENDATIONS = [
   "Post-traumatic injury with localized swelling and tenderness",
 ] as const;
 
+export function getChiefComplaintRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_CHIEF_COMPLAINTS;
+  if (mode === "general") return GENERAL_CHIEF_COMPLAINTS;
+  return CHIEF_COMPLAINT_RECOMMENDATIONS;
+}
+
+export const ORTHOPEDIC_ONSET_RECOMMENDATIONS = [
+  "Post-traumatic (following twist / fall / sports injury)",
+  "Insidious onset (over 2-3 months)",
+  "Chronic progressive (over 6-12 months)",
+  "Recurrent episodic flare-up",
+  "Gradual wear-and-tear onset (1 month ago)",
+  "Acute flare after heavy exertion / weight lifting",
+] as const;
+
+export const GENERAL_ONSET_RECOMMENDATIONS = [
+  "Acute onset (today)",
+  "Acute onset (2-3 days ago)",
+  "Subacute onset (1-2 weeks ago)",
+  "Recurrent seasonal occurrence",
+  "Post-viral / post-exposure onset",
+] as const;
+
 export const ONSET_RECOMMENDATIONS = [
   "Acute onset (today)",
   "Acute onset (2-3 days ago)",
@@ -32,6 +93,37 @@ export const ONSET_RECOMMENDATIONS = [
   "Chronic progressive (over 6-12 months)",
   "Post-traumatic (following twist / fall)",
   "Recurrent episodic flare-up",
+] as const;
+
+export function getOnsetRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_ONSET_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_ONSET_RECOMMENDATIONS;
+  return ONSET_RECOMMENDATIONS;
+}
+
+export const ORTHOPEDIC_DURATION_RECOMMENDATIONS = [
+  "1-2 days (acute injury)",
+  "3 days",
+  "1 week",
+  "2 weeks",
+  "1 month",
+  "3 months",
+  "6 months",
+  "Chronic (> 1 year)",
+  "Intermittent (comes and goes with exertion)",
+  "Continuous and progressive",
+] as const;
+
+export const GENERAL_DURATION_RECOMMENDATIONS = [
+  "1 day",
+  "2 days",
+  "3 days",
+  "5 days",
+  "1 week",
+  "2 weeks",
+  "Intermittent (comes and goes)",
 ] as const;
 
 export const DURATION_RECOMMENDATIONS = [
@@ -48,6 +140,33 @@ export const DURATION_RECOMMENDATIONS = [
   "Continuous and progressive",
 ] as const;
 
+export function getDurationRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_DURATION_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_DURATION_RECOMMENDATIONS;
+  return DURATION_RECOMMENDATIONS;
+}
+
+export const ORTHOPEDIC_HPI_RECOMMENDATIONS = [
+  "Pain started gradually and has progressively worsened with prolonged standing and walking. Partially relieved by rest and oral analgesics.",
+  "Sudden onset sharp shooting pain down the posterior aspect of thigh and calf, associated with tingling sensation and numbness in L5-S1 dermatomal distribution. Exacerbated by coughing and forward bending.",
+  "Acute twisting injury while walking on uneven surface, followed by immediate localized swelling, lateral tenderness, and inability to bear full weight.",
+  "Severe morning joint stiffness lasting > 30 minutes, difficulty in initiating movements, improves gradually with warm fomentation and light mobility.",
+  "Dull shoulder ache aggravated by reaching overhead and behind back; unable to sleep on affected shoulder.",
+  "Sharp stabbing heel pain on taking first few steps out of bed in the morning, gradually easing with walking but worsening after rest.",
+  "Direct impact trauma / fall with immediate localized bony tenderness, ecchymosis, and restricted joint movement.",
+] as const;
+
+export const GENERAL_HPI_RECOMMENDATIONS = [
+  "Fever associated with chills, generalized malaise, myalgia, sore throat, and dry cough. No shortness of breath or chest pain reported.",
+  "Retrosternal burning pain and acid regurgitation, aggravated by spicy/oily food and lying flat after meals. Associated with water brash and nausea.",
+  "Acute onset of watery loose stools (5-6 episodes/day) with cramping abdominal pain and mild dehydration. No blood or mucus in stool.",
+  "Burning sensation during micturition with urgency, increased nocturnal frequency, and lower abdominal heaviness.",
+  "Frontal throbbing headache with photophobia and nausea, exacerbated by lack of sleep and screen time.",
+  "Productive cough with yellowish sputum for 4-5 days, low grade evening fever, and throat irritation.",
+] as const;
+
 export const HPI_RECOMMENDATIONS = [
   "Pain started gradually and has progressively worsened with prolonged standing and walking. Partially relieved by rest and oral analgesics.",
   "Sudden onset sharp shooting pain down the posterior aspect of thigh and calf, associated with tingling sensation and numbness in L5-S1 dermatomal distribution. Exacerbated by coughing and forward bending.",
@@ -57,6 +176,14 @@ export const HPI_RECOMMENDATIONS = [
   "Retrosternal burning pain and acid regurgitation, aggravated by spicy/oily food and lying flat after meals. Associated with water brash and nausea.",
   "Acute onset of watery loose stools (5-6 episodes/day) with cramping abdominal pain and mild dehydration. No blood or mucus in stool.",
 ] as const;
+
+export function getHpiRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_HPI_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_HPI_RECOMMENDATIONS;
+  return HPI_RECOMMENDATIONS;
+}
 
 export const PAST_MEDICAL_RECOMMENDATIONS = [
   "No known chronic medical illness",
@@ -223,6 +350,36 @@ export const JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS = [
 
 export const OTHER_EXAM_RECOMMENDATIONS = JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS;
 
+export const ORTHOPEDIC_DIAGNOSIS_RECOMMENDATIONS = [
+  "Bilateral Knee Osteoarthritis (Grade II-III Kellgren-Lawrence)",
+  "Acute Lumbar Spondylosis with L4-L5 Disc Protrusion and Sciatica",
+  "Cervical Spondylosis with Paravertebral Muscle Spasm",
+  "Acute Ankle Sprain (Lateral Ligament Complex Strain Grade I/II)",
+  "Right Shoulder Subacromial Impingement / Frozen Shoulder",
+  "Bilateral Plantar Fasciitis with Calcaneal Spur",
+  "Lateral Epicondylitis (Tennis Elbow)",
+  "Carpal Tunnel Syndrome (Median Nerve Entrapment)",
+  "Trochanteric Bursitis / Degenerative Hip Arthritis",
+  "Meniscal Tear / ACL Strain of Knee Joint",
+  "Post-Traumatic Contusion / Skeletal Trauma",
+  "Cervical Radiculopathy with Brachialgia",
+] as const;
+
+export const GENERAL_DIAGNOSIS_RECOMMENDATIONS = [
+  "Acute Viral Upper Respiratory Tract Infection (Common Cold & Flu)",
+  "Acute Bronchitis / Lower Respiratory Tract Infection",
+  "Acid Peptic Disease / Gastroesophageal Reflux Disease (GERD)",
+  "Acute Infectious Gastroenteritis with Mild Dehydration",
+  "Uncomplicated Urinary Tract Infection (Acute Cystitis)",
+  "Essential Hypertension (Grade 1 / 2)",
+  "Type 2 Diabetes Mellitus with Peripheral Neuropathy",
+  "Acute Pharyngitis / Streptococcal Tonsillitis",
+  "Tension-type Headache / Common Migraine",
+  "Allergic Rhinitis / Seasonal Bronchial Allergy",
+  "Iron Deficiency Anemia / Generalized Weakness",
+  "Acute Gastritis / Functional Dyspepsia",
+] as const;
+
 export const DIAGNOSIS_NOTES_RECOMMENDATIONS = [
   "Bilateral Knee Osteoarthritis (Grade II-III Kellgren-Lawrence)",
   "Acute Lumbar Spondylosis with L4-L5 Disc Protrusion and Sciatica",
@@ -237,6 +394,22 @@ export const DIAGNOSIS_NOTES_RECOMMENDATIONS = [
   "Essential Hypertension (Grade 1)",
   "Type 2 Diabetes Mellitus with Peripheral Neuropathy",
 ] as const;
+
+export function getDiagnosisRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_DIAGNOSIS_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_DIAGNOSIS_RECOMMENDATIONS;
+  return DIAGNOSIS_NOTES_RECOMMENDATIONS;
+}
+
+export function getExamRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_EXAM_RECOMMENDATIONS;
+  return OTHER_EXAM_RECOMMENDATIONS;
+}
 
 export const ADDITIONAL_NOTES_RECOMMENDATIONS = [
   "Patient reassured regarding benign degenerative changes. Prognosis and importance of non-pharmacological lifestyle modifications explained.",
@@ -280,6 +453,24 @@ export const DURATION_PRESETS = [
   "SOS (As needed)",
 ] as const;
 
+export const ORTHOPEDIC_ADVICE_RECOMMENDATIONS = [
+  "• Avoid squatting, sitting cross-legged, and frequent stair climbing.\n• Apply ice pack for 15 mins twice daily during acute flare.\n• Wear comfortable, well-cushioned footwear.\n• Isometric quadriceps exercises once acute pain subsides.",
+  "• Sleep on a firm mattress with pillow under knees.\n• Strictly avoid lifting heavy weights and forward bending from the waist.\n• Use a lumbar support cushion while sitting.\n• Core stability exercises after pain subsides.",
+  "• R.I.C.E. protocol:\n  - Rest: Minimize weight bearing\n  - Ice: Cold pack for 15 mins 3 times a day\n  - Compression: Crepe bandage wrap\n  - Elevation: Keep limb elevated above heart level.",
+  "• Ergonomic sitting: High-backed chair with lumbar support; take 5-min walk break every 45 mins.\n• Use LS belt during travel and brisk walking.\n• Avoid two-wheeler bumpy travel during acute spasm.",
+  "• Shoulder rehab: Codman's pendulum exercises twice daily; avoid sleeping on affected arm; avoid lifting heavy weights above shoulder level.",
+  "• Plantar fascia rehab: Calf muscle stretch, toe extension stretches, frozen water bottle roll under foot for 10 mins twice daily.",
+] as const;
+
+export const GENERAL_ADVICE_RECOMMENDATIONS = [
+  "• Steam inhalation twice daily.\n• Warm saline water gargles.\n• Drink plenty of warm fluids (2.5-3 liters/day).\n• Adequate bed rest.",
+  "• Avoid spicy, fried, sour foods, tea, coffee, and late-night snacking.\n• Take smaller, more frequent meals; do not skip breakfast.\n• Do not lie down within 2 hours of eating dinner.\n• Elevate head end of bed by 6 inches.",
+  "• Low salt diet (< 5g/day).\n• Avoid pickles, papads, and processed snacks.\n• 30 minutes of brisk walking daily.\n• Monitor blood pressure weekly.",
+  "• Strict diabetic diet: avoid sweets, table sugar, potatoes, and white bread.\n• 30-45 minutes of daily physical exercise.\n• Check fasting and post-prandial blood sugar every 2 weeks.",
+  "• Bland diet: Khichdi, curd rice, boiled potatoes, bananas, and coconut water.\n• Frequent oral rehydration solution (ORS) sips after loose stools.\n• Strictly avoid raw salads, street food, and unpasteurized milk.",
+  "• Drink at least 3 liters of water daily.\n• Maintain strict personal hygiene; do not hold urine for prolonged periods.\n• Complete the prescribed antibiotic course without skipping.",
+] as const;
+
 export const ADVICE_RECOMMENDATIONS = [
   "• Steam inhalation twice daily.\n• Warm saline water gargles.\n• Drink plenty of warm fluids (2.5-3 liters/day).\n• Adequate bed rest.",
   "• Avoid squatting, sitting cross-legged, and frequent stair climbing.\n• Apply ice pack for 15 mins twice daily during acute flare.\n• Wear comfortable, well-cushioned footwear.\n• Isometric quadriceps exercises once acute pain subsides.",
@@ -288,6 +479,32 @@ export const ADVICE_RECOMMENDATIONS = [
   "• R.I.C.E. protocol:\n  - Rest: Minimize weight bearing\n  - Ice: Cold pack for 15 mins 3 times a day\n  - Compression: Crepe bandage wrap\n  - Elevation: Keep limb elevated above heart level.",
   "• Low salt diet (< 5g/day).\n• Avoid pickles, papads, and processed snacks.\n• 30 minutes of brisk walking daily.\n• Monitor blood pressure weekly.",
   "• Strict diabetic diet: avoid sweets, table sugar, potatoes, and white bread.\n• 30-45 minutes of daily physical exercise.\n• Check fasting and post-prandial blood sugar every 2 weeks.",
+] as const;
+
+export function getAdviceRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_ADVICE_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_ADVICE_RECOMMENDATIONS;
+  return ADVICE_RECOMMENDATIONS;
+}
+
+export const ORTHOPEDIC_FOLLOW_UP_RECOMMENDATIONS = [
+  "Review after 7 days for clinical assessment and mobility review.",
+  "Review after 2 weeks with fresh X-ray imaging reports.",
+  "Review with MRI imaging reports.",
+  "Review after 3-4 weeks of conservative physiotherapy protocol.",
+  "Review after 1 month for post-operative rehabilitation evaluation.",
+  "SOS / report immediately if pain intensifies, limb swells, or red flag signs develop.",
+] as const;
+
+export const GENERAL_FOLLOW_UP_RECOMMENDATIONS = [
+  "Review after 3 days if fever or symptoms persist.",
+  "Review after 5 days for clinical progress assessment.",
+  "Review after 7 days upon completion of prescribed medication course.",
+  "Review after 2 weeks with Blood Pressure & Blood Sugar monitoring log.",
+  "Review with Lab reports (CBC, ESR, CRP, Blood Sugar, RFT, LFT).",
+  "SOS / report immediately if high fever >103°F, severe vomiting, or breathlessness develops.",
 ] as const;
 
 export const FOLLOW_UP_RECOMMENDATIONS = [
@@ -300,6 +517,14 @@ export const FOLLOW_UP_RECOMMENDATIONS = [
   "Review with Lab reports (CBC, ESR, CRP, Uric Acid).",
   "SOS / report immediately if pain intensifies or red flag signs develop.",
 ] as const;
+
+export function getFollowUpRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_FOLLOW_UP_RECOMMENDATIONS;
+  if (mode === "general") return GENERAL_FOLLOW_UP_RECOMMENDATIONS;
+  return FOLLOW_UP_RECOMMENDATIONS;
+}
 
 /* ---------------- ADVICE SECTION DETAILED RECOMMENDATIONS ---------------- */
 
@@ -521,6 +746,23 @@ export const REFERRAL_NOTES_RECOMMENDATIONS = [
   "Patient has multiple comorbidities (HTN, T2DM). Kindly review and provide clinical clearance / optimization.",
 ] as const;
 
+export const ORTHOPEDIC_MED_CERT_DIAGNOSES = [
+  "Acute flare of bilateral knee osteoarthritis",
+  "Acute lumbar disc herniation with severe radiculopathy / sciatica",
+  "Cervical spondylosis with paravertebral muscle spasm",
+  "Acute ankle ligament sprain (lateral ligament injury)",
+  "Post-operative orthopedic convalescence and rehabilitation",
+  "Severe shoulder adhesive capsulitis with functional disability",
+] as const;
+
+export const GENERAL_MED_CERT_DIAGNOSES = [
+  "Acute viral upper respiratory tract infection with fever",
+  "Acute infectious gastroenteritis with dehydration",
+  "Acute bronchitis with severe bronchospasm",
+  "Acute migraine with incapacitating headache",
+  "Severe generalized fatigue and viral convalescence",
+] as const;
+
 export const MED_CERT_DIAGNOSIS_RECOMMENDATIONS = [
   "Acute flare of bilateral knee osteoarthritis",
   "Acute lumbar disc herniation with severe radiculopathy / sciatica",
@@ -530,6 +772,14 @@ export const MED_CERT_DIAGNOSIS_RECOMMENDATIONS = [
   "Acute infectious gastroenteritis with dehydration",
   "Post-operative orthopedic convalescence and rehabilitation",
 ] as const;
+
+export function getMedCertDiagnosisRecommendations(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly string[] {
+  if (mode === "orthopedics") return ORTHOPEDIC_MED_CERT_DIAGNOSES;
+  if (mode === "general") return GENERAL_MED_CERT_DIAGNOSES;
+  return MED_CERT_DIAGNOSIS_RECOMMENDATIONS;
+}
 
 export const MED_CERT_FITNESS_RECOMMENDATIONS = [
   "Unfit for work/duty — Advised strict medical rest",

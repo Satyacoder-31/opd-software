@@ -72,7 +72,7 @@
     font-family: var(--font-sans);
     @apply font-sans;
     scroll-behavior: smooth;
-    font-size: 16.5px;
+    font-size: 18.5px;
   }
 
   body {

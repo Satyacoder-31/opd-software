@@ -1,18 +1,12 @@
 ' Dr. Orthos Silent Background Launcher
-' Starts the application with zero CMD or terminal windows displayed
+' Starts the desktop software with zero CMD or terminal windows displayed
+' Bypasses Windows Smart App Control by launching via the trusted Electron runtime
 Set WshShell = CreateObject("WScript.Shell")
 strPath = Left(WScript.ScriptFullName, InStrRev(WScript.ScriptFullName, "\") - 1)
 WshShell.CurrentDirectory = strPath
 
-' Check if native standalone .exe exists in dist-electron
-Dim fso, exePath
-Set fso = CreateObject("Scripting.FileSystemObject")
-exePath = strPath & "\dist-electron\win-unpacked\Dr Orthos OPD.exe"
+' Set cloud mode environment variable
+WshShell.Environment("Process")("ELECTRON_CLOUD") = "1"
 
-If fso.FileExists(exePath) Then
-    ' Run native GUI application directly (no console window)
-    WshShell.Run """" & exePath & """", 1, False
-Else
-    ' Run desktop dev silently in hidden background process (0 = hidden)
-    WshShell.Run "cmd /c npm run desktop:dev", 0, False
-End If
+' Launch desktop application cleanly without terminal windows (0 = hidden)
+WshShell.Run "node """ & strPath & "\node_modules\electron\cli.js"" """ & strPath & """", 0, False

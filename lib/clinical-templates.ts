@@ -401,15 +401,37 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
   },
 ] as const;
 
+import type { ClinicalTreatmentMode } from "@/lib/types";
+
+export function getClinicalTemplatesBySpecialty(
+  mode: ClinicalTreatmentMode = "orthopedics"
+): readonly ClinicalTemplate[] {
+  if (mode === "orthopedics") {
+    return COMMON_ILLNESS_TEMPLATES.filter(
+      (tpl) => tpl.category === "Orthopedics & Pain"
+    );
+  }
+  if (mode === "general") {
+    return COMMON_ILLNESS_TEMPLATES.filter(
+      (tpl) => tpl.category !== "Orthopedics & Pain"
+    );
+  }
+  return COMMON_ILLNESS_TEMPLATES;
+}
+
 export function findCommonTemplateById(id: string): ClinicalTemplate | undefined {
   return COMMON_ILLNESS_TEMPLATES.find((tpl) => tpl.id === id);
 }
 
-export function searchCommonTemplates(query: string): ClinicalTemplate[] {
+export function searchCommonTemplates(
+  query: string,
+  mode?: ClinicalTreatmentMode
+): ClinicalTemplate[] {
+  const base = mode ? getClinicalTemplatesBySpecialty(mode) : COMMON_ILLNESS_TEMPLATES;
   const q = query.trim().toLowerCase();
-  if (!q) return [...COMMON_ILLNESS_TEMPLATES];
+  if (!q) return [...base];
 
-  return COMMON_ILLNESS_TEMPLATES.filter((tpl) => {
+  return base.filter((tpl) => {
     return (
       tpl.name.toLowerCase().includes(q) ||
       tpl.illness.toLowerCase().includes(q) ||

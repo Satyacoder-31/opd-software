@@ -92,7 +92,10 @@ export type ReferralLetter = {
 
 export type { DiagnosisCodeEntry };
 
+export type ClinicalTreatmentMode = "orthopedics" | "general" | "all";
+
 export type ConsultationClinicalData = {
+  treatmentMode?: ClinicalTreatmentMode;
   chiefComplaint?: string;
   diagnosis?: string;
   diagnosisCodes?: DiagnosisCodeEntry[];
@@ -112,6 +115,7 @@ export type ConsultationClinicalData = {
 export type PreviousVisitData = {
   id: string;
   createdAt: string;
+  treatmentMode?: ClinicalTreatmentMode | null;
   chiefComplaint?: string | null;
   diagnosis?: string | null;
   diagnosisCodes?: DiagnosisCodeEntry[] | null;

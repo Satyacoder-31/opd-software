@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  faBone,
   faCheckCircle,
   faCircleExclamation,
   faCloudArrowUp,
@@ -43,7 +44,12 @@ import {
   type WorkspaceTabId,
 } from "@/lib/consultation-workspace";
 import { hasPatientSafetyAlerts } from "@/lib/consultation-utils";
-import type { ConsultationClinicalData, Medicine, PreviousVisitData } from "@/lib/types";
+import type {
+  ClinicalTreatmentMode,
+  ConsultationClinicalData,
+  Medicine,
+  PreviousVisitData,
+} from "@/lib/types";
 import { usePendingAction } from "@/hooks/usePendingAction";
 import {
   LabOrdersPanel,
@@ -156,6 +162,19 @@ export function ConsultationWorkspace({
 
   const [visitMode, setVisitMode] = useState<"same_problem" | "new_problem">(
     previousVisit ? "same_problem" : "new_problem"
+  );
+
+  const [treatmentMode, setTreatmentMode] = useState<ClinicalTreatmentMode>(
+    clinical.treatmentMode || previousVisit?.treatmentMode || "orthopedics"
+  );
+
+  const handleTreatmentModeChange = useCallback(
+    (mode: ClinicalTreatmentMode) => {
+      setTreatmentMode(mode);
+      isDirty.current = true;
+      setClinical((prev) => ({ ...prev, treatmentMode: mode }));
+    },
+    []
   );
 
   const handleSelectSameProblem = useCallback(() => {
@@ -558,11 +577,11 @@ export function ConsultationWorkspace({
           }}
           className="gap-0"
         >
-          {/* Sticky tab bar */}
-          <div className="sticky top-0 z-10 overflow-x-auto border-b border-border bg-card/95 px-2 py-2 backdrop-blur scrollbar-hide md:px-3">
+          {/* Sticky tab bar with treatment mode selector */}
+          <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-2 py-2 backdrop-blur scrollbar-hide md:px-3">
             <TabsList
               variant="line"
-              className="h-auto w-max min-w-full justify-start gap-0.5"
+              className="h-auto w-max shrink-0 justify-start gap-0.5"
             >
               {([
                 { id: "consultation", label: "Consultation", icon: faStethoscope, color: "text-blue-600" },
@@ -595,6 +614,51 @@ export function ConsultationWorkspace({
                 );
               })}
             </TabsList>
+
+            {/* Specialty Mode Selector in Sticky Bar */}
+            <div className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-muted/60 p-1 shrink-0 ml-auto">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 hidden sm:inline">
+                Specialty:
+              </span>
+              <button
+                type="button"
+                onClick={() => handleTreatmentModeChange("orthopedics")}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  treatmentMode === "orthopedics"
+                    ? "bg-primary text-primary-foreground shadow-xs ring-1 ring-primary/40"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Orthopedic Mode: Show orthopedic complaints, symptoms, joint exams & advice"
+              >
+                <Icon icon={faBone} className="size-3" />
+                Orthopedics
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTreatmentModeChange("general")}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  treatmentMode === "general"
+                    ? "bg-primary text-primary-foreground shadow-xs ring-1 ring-primary/40"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="General Treatment Mode: Show general medicine, fever, viral, cough & GI complaints"
+              >
+                <Icon icon={faStethoscope} className="size-3" />
+                General Treatment
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTreatmentModeChange("all")}
+                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  treatmentMode === "all"
+                    ? "bg-card text-foreground shadow-xs font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show all dropdown options"
+              >
+                All
+              </button>
+            </div>
           </div>
 
           <TabsContent value="consultation" className="mt-0">
@@ -750,6 +814,8 @@ export function ConsultationWorkspace({
             <ConsultationClinicalSections
               value={clinical}
               onChange={handleClinicalChange}
+              treatmentMode={treatmentMode}
+              onTreatmentModeChange={handleTreatmentModeChange}
             />
           </TabsContent>
 
@@ -764,6 +830,8 @@ export function ConsultationWorkspace({
               onAdviceChange={handleAdviceChange}
               onFollowUpChange={setFollowUp}
               patientAllergies={patientAllergies}
+              treatmentMode={treatmentMode}
+              onTreatmentModeChange={handleTreatmentModeChange}
               hideSaveActions
               saveTemplateInFooter={tab === "prescription"}
             />

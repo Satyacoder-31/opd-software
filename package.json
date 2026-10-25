@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "next dev",
     "desktop:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:127.0.0.1:3000 && electron .\"",
-    "desktop:dist": "electron-builder --win",
-    "desktop:pack": "electron-builder --dir",
+    "desktop:dist": "node --max-old-space-size=4096 ./node_modules/electron-builder/out/cli/cli.js --win",
+    "desktop:pack": "node --max-old-space-size=4096 ./node_modules/electron-builder/out/cli/cli.js --dir",
     "electron:start": "electron .",
     "build": "prisma generate && next build",
     "start": "next start",
@@ -73,12 +73,15 @@
   "build": {
     "appId": "in.drorthos.clinic",
     "productName": "Dr Orthos OPD",
+    "npmRebuild": false,
+    "compression": "normal",
     "directories": {
       "output": "dist-electron"
     },
     "files": [
       "electron/**/*",
-      "public/**/*",
+      "public/logo.png",
+      "public/app-icon.ico",
       "package.json"
     ],
     "win": {

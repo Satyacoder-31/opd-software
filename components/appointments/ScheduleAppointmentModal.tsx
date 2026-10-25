@@ -19,6 +19,8 @@ import {
   faCheck,
   faClock,
   faUserDoctor,
+  faBone,
+  faStethoscope,
 } from "@fortawesome/free-solid-svg-icons";
 
 type DoctorOption = { id: string; name: string };
@@ -108,6 +110,7 @@ export function ScheduleAppointmentModal({
   const [selectedSlot, setSelectedSlot] = useState(commonSlots[1]);
   const [doctorId, setDoctorId] = useState(doctors[0]?.id || "");
   const [reason, setReason] = useState("");
+  const [specialtyCategory, setSpecialtyCategory] = useState<"orthopedics" | "general">("orthopedics");
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -522,14 +525,78 @@ export function ScheduleAppointmentModal({
                 </div>
               </div>
 
-              {/* Reason / Notes */}
+              {/* Reason / Clinical Concern */}
               <div>
-                <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-1.5">
-                  Reason for Visit / Clinical Concern:
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-ink uppercase tracking-wider">
+                    Reason for Visit / Clinical Concern:
+                  </label>
+                  <div className="inline-flex rounded-lg bg-muted/70 p-0.5 border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setSpecialtyCategory("orthopedics")}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                        specialtyCategory === "orthopedics"
+                          ? "bg-primary text-primary-foreground shadow-2xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon icon={faBone} className="size-2.5" />
+                      Orthopedics
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSpecialtyCategory("general")}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                        specialtyCategory === "general"
+                          ? "bg-primary text-primary-foreground shadow-2xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Icon icon={faStethoscope} className="size-2.5" />
+                      General Treatment
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Symptom / Problem Chips */}
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {(specialtyCategory === "orthopedics"
+                    ? [
+                        "Knee Joint Pain",
+                        "Low Back Pain / Sciatica",
+                        "Neck & Shoulder Stiffness",
+                        "Ankle Sprain / Twist",
+                        "Heel Pain (Plantar Fasciitis)",
+                        "Post-op Follow-up",
+                      ]
+                    : [
+                        "Fever & Chills / Body Ache",
+                        "Persistent Cough & Cold",
+                        "Burning Acidity / GERD",
+                        "Stomach Upset / Loose Stools",
+                        "Urinary Burning / UTI",
+                        "Routine BP & Sugar Review",
+                      ]
+                  ).map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setReason(chip)}
+                      className="rounded-md border border-border/80 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors cursor-pointer"
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
+
                 <input
                   type="text"
-                  placeholder="e.g. Knee Pain Assessment, Follow-up, Post-op Review"
+                  placeholder={
+                    specialtyCategory === "general"
+                      ? "e.g. Fever & Chills, Upper Respiratory Symptoms, Acid Peptic Symptoms"
+                      : "e.g. Knee Pain Assessment, Lumbar Sciatica, Joint Review"
+                  }
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   className="w-full rounded-xl border border-border bg-card px-3.5 py-2 text-xs text-ink placeholder:text-muted-foreground focus:border-primary focus:outline-none"

@@ -15,7 +15,10 @@ import {
   savePrescriptionTemplate,
 } from "@/actions/templates";
 import { PatientPreviousPrescriptions } from "@/components/consultation/PatientPreviousPrescriptions";
-import { COMMON_ILLNESS_TEMPLATES } from "@/lib/clinical-templates";
+import {
+  COMMON_ILLNESS_TEMPLATES,
+  getClinicalTemplatesBySpecialty,
+} from "@/lib/clinical-templates";
 import {
   faCalendarDays,
   faClipboard,
@@ -24,6 +27,9 @@ import {
   DOSAGE_RECOMMENDATIONS,
   ADVICE_RECOMMENDATIONS,
   FOLLOW_UP_RECOMMENDATIONS,
+  getAdviceRecommendations,
+  getFollowUpRecommendations,
+  type ClinicalTreatmentMode,
 } from "@/lib/clinical-recommendations";
 import { MedicineCombobox } from "@/components/consultation/MedicineCombobox";
 import { PrescriptionOptionCombobox } from "@/components/consultation/PrescriptionOptionCombobox";
@@ -110,6 +116,8 @@ type PrescriptionBuilderProps = {
   mode?: "active" | "amend";
   amendmentReason?: string;
   patientAllergies?: string | null;
+  treatmentMode?: ClinicalTreatmentMode;
+  onTreatmentModeChange?: (mode: ClinicalTreatmentMode) => void;
 };
 
 function templateMedicineCount(medicines: unknown): number {
@@ -141,7 +149,10 @@ export function PrescriptionBuilder({
   mode = "active",
   amendmentReason = "",
   patientAllergies,
+  treatmentMode,
+  onTreatmentModeChange,
 }: PrescriptionBuilderProps) {
+  const currentMode: ClinicalTreatmentMode = treatmentMode ?? "orthopedics";
   const isAmendMode = mode === "amend";
   const isControlled = typeof onMedicinesChange === "function";
 
@@ -199,7 +210,8 @@ export function PrescriptionBuilder({
   }
 
   const allTemplates = useMemo(() => {
-    const builtIn = COMMON_ILLNESS_TEMPLATES.map((t) => ({
+    const builtInTemplates = getClinicalTemplatesBySpecialty(currentMode);
+    const builtIn = builtInTemplates.map((t) => ({
       id: t.id,
       name: t.name,
       category: t.category,
@@ -224,7 +236,7 @@ export function PrescriptionBuilder({
     }));
 
     return [...builtIn, ...custom];
-  }, [customTemplates]);
+  }, [customTemplates, currentMode]);
 
   useEffect(() => {
     if (isAmendMode) return;
@@ -764,9 +776,11 @@ export function PrescriptionBuilder({
           name="advice"
           value={advice}
           onChange={(val) => setAdvice(val)}
-          options={ADVICE_RECOMMENDATIONS}
+          options={getAdviceRecommendations(currentMode)}
           placeholder={
-            "Drink plenty of fluids.\nWarm saline gargles.\nTake adequate rest."
+            currentMode === "general"
+              ? "Drink plenty of fluids.\nWarm saline gargles.\nTake adequate rest."
+              : "Avoid squatting and sitting cross-legged.\nApply ice pack for 15 mins twice daily.\nRegular isometric quadriceps exercises."
           }
           rows={3}
         />
@@ -776,8 +790,12 @@ export function PrescriptionBuilder({
           name="followUp"
           value={followUp}
           onChange={(val) => setFollowUp(val)}
-          options={FOLLOW_UP_RECOMMENDATIONS}
-          placeholder="After 5 days if symptoms persist."
+          options={getFollowUpRecommendations(currentMode)}
+          placeholder={
+            currentMode === "general"
+              ? "After 3-5 days if symptoms persist."
+              : "Review after 7 days with fresh X-ray."
+          }
           rows={3}
         />
       </div>

@@ -43,6 +43,15 @@ import {
   VITAL_FIELDS,
 } from "@/lib/consultation-clinical";
 import {
+  getChiefComplaintRecommendations,
+  getDiagnosisRecommendations,
+  getHpiRecommendations,
+  getOnsetRecommendations,
+  getDurationRecommendations,
+  getAdviceRecommendations,
+  getExamRecommendations,
+  getMedCertDiagnosisRecommendations,
+  type ClinicalTreatmentMode,
   CHIEF_COMPLAINT_RECOMMENDATIONS,
   DIAGNOSIS_NOTES_RECOMMENDATIONS,
   HPI_RECOMMENDATIONS,
@@ -108,6 +117,8 @@ function updateRecordField<T extends Record<string, string | undefined>>(
 type ClinicalSectionsProps = {
   value: ConsultationClinicalData;
   onChange: (next: ConsultationClinicalData) => void;
+  treatmentMode?: ClinicalTreatmentMode;
+  onTreatmentModeChange?: (mode: ClinicalTreatmentMode) => void;
 };
 
 function patchClinical(
@@ -121,7 +132,20 @@ function patchClinical(
 export function ConsultationClinicalSections({
   value,
   onChange,
+  treatmentMode,
+  onTreatmentModeChange,
 }: ClinicalSectionsProps) {
+  const mode: ClinicalTreatmentMode =
+    treatmentMode ?? value.treatmentMode ?? "orthopedics";
+
+  function handleSetMode(nextMode: ClinicalTreatmentMode) {
+    if (onTreatmentModeChange) {
+      onTreatmentModeChange(nextMode);
+    } else {
+      patchClinical(value, onChange, { treatmentMode: nextMode });
+    }
+  }
+
   const vitals = (value.vitals as Vitals) ?? {};
   const clinicalPresentation =
     (value.clinicalPresentation as ClinicalPresentation) ??
@@ -168,6 +192,60 @@ export function ConsultationClinicalSections({
 
   return (
     <div>
+      {/* Specialty Mode Selector Bar */}
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-slate-50/90 dark:bg-slate-900/40 p-2.5 md:px-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 shrink-0">
+            Specialty Mode:
+          </span>
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
+            {mode === "orthopedics"
+              ? "🦴 Orthopedics (showing joint, bone, spine & ortho problems only)"
+              : mode === "general"
+                ? "🩺 General Treatment (showing fever, cough, viral, GI & general medicine only)"
+                : "🌐 All Options (showing combined dropdowns)"}
+          </span>
+        </div>
+
+        <div className="inline-flex rounded-xl bg-slate-200/70 dark:bg-slate-800/80 p-0.5 border border-border shrink-0">
+          <button
+            type="button"
+            onClick={() => handleSetMode("orthopedics")}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              mode === "orthopedics"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Icon icon={faBone} className="size-3" />
+            Orthopedics
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSetMode("general")}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              mode === "general"
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Icon icon={faStethoscope} className="size-3" />
+            General Treatment
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSetMode("all")}
+            className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              mode === "all"
+                ? "bg-card text-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All
+          </button>
+        </div>
+      </div>
+
       <div id="ws-vitals" className="scroll-mt-2" tabIndex={-1}>
         <CollapsibleSection
           flush
@@ -236,8 +314,12 @@ export function ConsultationClinicalSections({
                 onChange={(text) =>
                   patchClinical(value, onChange, { chiefComplaint: text })
                 }
-                options={CHIEF_COMPLAINT_RECOMMENDATIONS}
-                placeholder="e.g. Pain in right knee joint aggravated by walking"
+                options={getChiefComplaintRecommendations(mode)}
+                placeholder={
+                  mode === "general"
+                    ? "e.g. High grade fever with chills, body ache, and dry cough for 3 days"
+                    : "e.g. Pain in right knee joint aggravated by walking"
+                }
                 rows={2}
               />
               <ClinicalDropdownTextarea
@@ -248,7 +330,7 @@ export function ConsultationClinicalSections({
                 onChange={(text) =>
                   patchClinical(value, onChange, { diagnosis: text })
                 }
-                options={DIAGNOSIS_NOTES_RECOMMENDATIONS}
+                options={getDiagnosisRecommendations(mode)}
                 placeholder="Free-text notes (or select common clinical diagnosis)"
                 rows={2}
               />
@@ -271,7 +353,7 @@ export function ConsultationClinicalSections({
                   text,
                 )
               }
-              options={HPI_RECOMMENDATIONS}
+              options={getHpiRecommendations(mode)}
               placeholder="Onset, progression, aggravating/relieving factors, radiation…"
               rows={3}
             />
@@ -283,8 +365,12 @@ export function ConsultationClinicalSections({
                 onChange={(text) =>
                   updateRecordField(setClinicalPresentation, "onset", text)
                 }
-                options={ONSET_RECOMMENDATIONS}
-                placeholder="e.g. Acute onset (2-3 days ago)"
+                options={getOnsetRecommendations(mode)}
+                placeholder={
+                  mode === "general"
+                    ? "e.g. Acute onset (2-3 days ago)"
+                    : "e.g. Post-traumatic / Insidious"
+                }
               />
               <ClinicalDropdownInput
                 label="Duration"
@@ -293,7 +379,7 @@ export function ConsultationClinicalSections({
                 onChange={(text) =>
                   updateRecordField(setClinicalPresentation, "duration", text)
                 }
-                options={DURATION_RECOMMENDATIONS}
+                options={getDurationRecommendations(mode)}
                 placeholder="e.g. 5 days, 2 weeks, intermittent"
               />
             </div>
@@ -570,7 +656,7 @@ export function ConsultationClinicalSections({
                 onChange={(text) =>
                   patchClinical(value, onChange, { advice: text })
                 }
-                options={ADVICE_RECOMMENDATIONS}
+                options={getAdviceRecommendations(mode)}
                 placeholder="Advice, home precautions, exercises, follow-up timeline…"
                 rows={3}
               />
@@ -1045,7 +1131,9 @@ export function MedicalCertificateSections({
                 text,
               )
             }
-            options={MED_CERT_DIAGNOSIS_RECOMMENDATIONS}
+            options={getMedCertDiagnosisRecommendations(
+              value.treatmentMode ?? "orthopedics"
+            )}
             placeholder="Diagnosis certified on official medical certificate"
             rows={2}
           />

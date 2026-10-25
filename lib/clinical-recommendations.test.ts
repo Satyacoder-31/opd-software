@@ -48,6 +48,15 @@ import {
   MED_CERT_DIAGNOSIS_RECOMMENDATIONS,
   MED_CERT_FITNESS_RECOMMENDATIONS,
   MED_CERT_REMARKS_RECOMMENDATIONS,
+  getChiefComplaintRecommendations,
+  getDiagnosisRecommendations,
+  getHpiRecommendations,
+  getOnsetRecommendations,
+  getDurationRecommendations,
+  getAdviceRecommendations,
+  getFollowUpRecommendations,
+  getMedCertDiagnosisRecommendations,
+  getExamRecommendations,
 } from "./clinical-recommendations";
 
 describe("clinical-recommendations", () => {
@@ -163,5 +172,51 @@ describe("clinical-recommendations", () => {
     expect(TREATMENT_PLAN_PROCEDURE_RECOMMENDATIONS.some((p) => p.includes("Arthroplasty"))).toBe(true);
     expect(TREATMENT_PLAN_PROCEDURE_RECOMMENDATIONS.some((p) => p.includes("Arthroscopic"))).toBe(true);
     expect(TREATMENT_PLAN_PROCEDURE_RECOMMENDATIONS.some((p) => p.includes("Discectomy"))).toBe(true);
+  });
+
+  it("filters recommendations separately for orthopedics and general treatment", () => {
+    // Orthopedics chief complaints
+    const orthoComplaints = getChiefComplaintRecommendations("orthopedics");
+    expect(orthoComplaints.some((c) => c.includes("knee") || c.includes("back"))).toBe(true);
+    expect(orthoComplaints.some((c) => c.includes("fever") || c.includes("cough"))).toBe(false);
+
+    // General treatment chief complaints
+    const generalComplaints = getChiefComplaintRecommendations("general");
+    expect(generalComplaints.some((c) => c.includes("fever") || c.includes("cough"))).toBe(true);
+    expect(generalComplaints.some((c) => c.includes("knee") || c.includes("sciatica"))).toBe(false);
+
+    // Diagnoses
+    const orthoDiag = getDiagnosisRecommendations("orthopedics");
+    expect(orthoDiag.some((d) => d.includes("Osteoarthritis") || d.includes("Spondylosis"))).toBe(true);
+    expect(orthoDiag.some((d) => d.includes("Respiratory") || d.includes("Gastroenteritis"))).toBe(false);
+
+    const generalDiag = getDiagnosisRecommendations("general");
+    expect(generalDiag.some((d) => d.includes("Respiratory") || d.includes("GERD"))).toBe(true);
+    expect(generalDiag.some((d) => d.includes("Osteoarthritis"))).toBe(false);
+
+    // Advice
+    const orthoAdvice = getAdviceRecommendations("orthopedics");
+    expect(orthoAdvice.some((a) => a.includes("squatting"))).toBe(true);
+    expect(orthoAdvice.some((a) => a.includes("Steam inhalation"))).toBe(false);
+
+    const generalAdvice = getAdviceRecommendations("general");
+    expect(generalAdvice.some((a) => a.includes("Steam inhalation") || a.includes("gargles"))).toBe(true);
+    expect(generalAdvice.some((a) => a.includes("squatting"))).toBe(false);
+
+    // Follow-up
+    const orthoFollowUp = getFollowUpRecommendations("orthopedics");
+    expect(orthoFollowUp.some((f) => f.includes("X-ray") || f.includes("MRI"))).toBe(true);
+
+    const generalFollowUp = getFollowUpRecommendations("general");
+    expect(generalFollowUp.some((f) => f.includes("fever") || f.includes("Blood Sugar"))).toBe(true);
+
+    // Med cert
+    const orthoCert = getMedCertDiagnosisRecommendations("orthopedics");
+    expect(orthoCert.some((c) => c.includes("osteoarthritis") || c.includes("radiculopathy"))).toBe(true);
+    expect(orthoCert.some((c) => c.includes("gastroenteritis"))).toBe(false);
+
+    const generalCert = getMedCertDiagnosisRecommendations("general");
+    expect(generalCert.some((c) => c.includes("gastroenteritis") || c.includes("respiratory"))).toBe(true);
+    expect(generalCert.some((c) => c.includes("osteoarthritis"))).toBe(false);
   });
 });

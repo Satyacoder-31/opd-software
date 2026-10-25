@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   COMMON_ILLNESS_TEMPLATES,
   findCommonTemplateById,
+  getClinicalTemplatesBySpecialty,
   searchCommonTemplates,
 } from "./clinical-templates";
 
@@ -46,5 +47,22 @@ describe("clinical-templates", () => {
 
     const paracetamolResults = searchCommonTemplates("Paracetamol");
     expect(paracetamolResults.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("filters clinical templates separately for orthopedics and general treatment", () => {
+    const orthoTemplates = getClinicalTemplatesBySpecialty("orthopedics");
+    expect(orthoTemplates.length).toBeGreaterThan(0);
+    expect(orthoTemplates.every((t) => t.category === "Orthopedics & Pain")).toBe(true);
+    expect(orthoTemplates.some((t) => t.name.includes("Knee Osteoarthritis"))).toBe(true);
+    expect(orthoTemplates.some((t) => t.name.includes("Cold & Flu"))).toBe(false);
+
+    const generalTemplates = getClinicalTemplatesBySpecialty("general");
+    expect(generalTemplates.length).toBeGreaterThan(0);
+    expect(generalTemplates.every((t) => t.category !== "Orthopedics & Pain")).toBe(true);
+    expect(generalTemplates.some((t) => t.name.includes("Cold & Flu"))).toBe(true);
+    expect(generalTemplates.some((t) => t.name.includes("Knee Osteoarthritis"))).toBe(false);
+
+    const allTemplates = getClinicalTemplatesBySpecialty("all");
+    expect(allTemplates.length).toBe(COMMON_ILLNESS_TEMPLATES.length);
   });
 });

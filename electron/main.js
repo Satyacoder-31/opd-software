@@ -4,7 +4,8 @@ const http = require("http");
 
 let mainWindow = null;
 const PORT = process.env.PORT || 3000;
-const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
+const useCloud = process.env.ELECTRON_CLOUD === "1" || !!process.env.APP_URL;
+const isDev = !useCloud && (process.env.NODE_ENV === "development" || !app.isPackaged);
 
 // Production Cloud URL (hosted on Vercel)
 const PRODUCTION_CLOUD_URL =
@@ -52,7 +53,10 @@ function pollServer(url, timeoutMs = 60000) {
 }
 
 async function createMainWindow() {
-  const appIconPath = path.join(__dirname, "../public/web-app-manifest-512x512.png");
+  const appIconPath =
+    process.platform === "win32"
+      ? path.join(__dirname, "../public/app-icon.ico")
+      : path.join(__dirname, "../public/logo.png");
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -144,8 +148,17 @@ async function createMainWindow() {
   try {
     if (isDev) {
       await pollServer(APP_URL);
+    } else {
+      // Clear HTTP and session cache on startup to guarantee latest cloud updates are immediately loaded
+      try {
+        await mainWindow.webContents.session.clearCache();
+      } catch (cacheErr) {
+        console.warn("Could not clear session cache:", cacheErr);
+      }
     }
-    await mainWindow.loadURL(APP_URL);
+    await mainWindow.loadURL(APP_URL, {
+      extraHeaders: "pragma: no-cache\nCache-Control: no-cache\n",
+    });
   } catch (err) {
     console.error("Failed to connect to clinic server:", err);
     mainWindow.loadURL(`data:text/html;charset=utf-8,
