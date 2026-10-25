@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import {
   faBone,
   faBrain,
@@ -15,6 +15,7 @@ import {
   faLungs,
   faNotesMedical,
   faPills,
+  faPlus,
   faShieldHalved,
   faStethoscope,
   faTemperatureHalf,
@@ -138,6 +139,8 @@ export function ConsultationClinicalSections({
   const mode: ClinicalTreatmentMode =
     treatmentMode ?? value.treatmentMode ?? "orthopedics";
 
+  const [showSystemicExam, setShowSystemicExam] = useState(false);
+
   function handleSetMode(nextMode: ClinicalTreatmentMode) {
     if (onTreatmentModeChange) {
       onTreatmentModeChange(nextMode);
@@ -158,6 +161,28 @@ export function ConsultationClinicalSections({
   const adviceDetails =
     (value.adviceDetails as AdviceData) ?? emptyAdviceData();
   const completion = sectionCompletion(value);
+
+  const hasSystemicExamData = Boolean(
+    examination.cardiovascular?.trim() ||
+      examination.respiratory?.trim() ||
+      examination.abdomen?.trim() ||
+      examination.neurological?.trim()
+  );
+
+  const isSystemicExamVisible =
+    mode !== "orthopedics" || showSystemicExam || hasSystemicExamData;
+
+  const examTotal =
+    mode === "orthopedics" && !isSystemicExamVisible ? 2 : 6;
+  const examCount =
+    (examination.general?.trim() ? 1 : 0) +
+    ((examination.jointsAndParts ?? examination.other)?.trim() ? 1 : 0) +
+    (isSystemicExamVisible
+      ? (examination.cardiovascular?.trim() ? 1 : 0) +
+        (examination.respiratory?.trim() ? 1 : 0) +
+        (examination.abdomen?.trim() ? 1 : 0) +
+        (examination.neurological?.trim() ? 1 : 0)
+      : 0);
 
   function setVitals(next: SetStateAction<Vitals>) {
     const resolved = typeof next === "function" ? next(vitals) : next;
@@ -200,10 +225,10 @@ export function ConsultationClinicalSections({
           </span>
           <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
             {mode === "orthopedics"
-              ? "🦴 Orthopedics (showing joint, bone, spine & ortho problems only)"
+              ? "🦴 Orthopedics (orthopedic problems & joint exam only; non-ortho exams removed)"
               : mode === "general"
-                ? "🩺 General Treatment (showing fever, cough, viral, GI & general medicine only)"
-                : "🌐 All Options (showing combined dropdowns)"}
+                ? "🩺 General Treatment (fever, cough, viral, GI & systemic medical exams)"
+                : "🌐 All Options (showing all dropdowns & systemic exams)"}
           </span>
         </div>
 
@@ -484,10 +509,18 @@ export function ConsultationClinicalSections({
           flush
           density="compact"
           contentClassName="px-3 py-3 md:px-4"
-          title="Examination"
+          title={mode === "orthopedics" ? "Examination (Joints & Physical)" : "Examination"}
           icon={faStethoscope}
           iconColor="bg-violet-500/15 text-violet-600"
-          summary={sectionSummary(completion.examination)}
+          summary={sectionSummary(
+            mode === "orthopedics" && !isSystemicExamVisible
+              ? {
+                  filled: examCount > 0,
+                  count: examCount,
+                  total: examTotal,
+                }
+              : completion.examination
+          )}
           filled={completion.examination.filled}
         >
           <div className="flex flex-col gap-2.5">
@@ -503,56 +536,91 @@ export function ConsultationClinicalSections({
               placeholder="General appearance, consciousness, pallor, icterus, pedal edema…"
               rows={2}
             />
-            <div className="grid gap-2.5 md:grid-cols-2">
-              <ClinicalDropdownTextarea
-                icon={faHeartPulse}
-                label="Cardiovascular"
-                name="cardiovascular"
-                value={examination.cardiovascular ?? ""}
-                onChange={(text) =>
-                  updateRecordField(setExamination, "cardiovascular", text)
-                }
-                options={CVS_EXAM_RECOMMENDATIONS}
-                placeholder="Heart sounds, rhythm, murmurs…"
-                rows={2}
-              />
-              <ClinicalDropdownTextarea
-                icon={faLungs}
-                label="Respiratory"
-                name="respiratory"
-                value={examination.respiratory ?? ""}
-                onChange={(text) =>
-                  updateRecordField(setExamination, "respiratory", text)
-                }
-                options={RESP_EXAM_RECOMMENDATIONS}
-                placeholder="Air entry, breath sounds, wheezing, crepitations…"
-                rows={2}
-              />
-              <ClinicalDropdownTextarea
-                icon={faStethoscope}
-                label="Abdomen"
-                name="abdomen"
-                value={examination.abdomen ?? ""}
-                onChange={(text) =>
-                  updateRecordField(setExamination, "abdomen", text)
-                }
-                options={ABDOMEN_EXAM_RECOMMENDATIONS}
-                placeholder="Tenderness, guarding, bowel sounds, organomegaly…"
-                rows={2}
-              />
-              <ClinicalDropdownTextarea
-                icon={faBrain}
-                label="Neurological"
-                name="neurological"
-                value={examination.neurological ?? ""}
-                onChange={(text) =>
-                  updateRecordField(setExamination, "neurological", text)
-                }
-                options={NEURO_EXAM_RECOMMENDATIONS}
-                placeholder="Motor power, DTR, sensations, SLR test…"
-                rows={2}
-              />
-            </div>
+
+            {/* When Orthopedics is selected, systemic fields (Respiratory, Abdomen, Neurological, Cardiovascular) are removed */}
+            {isSystemicExamVisible ? (
+              <div className="space-y-2">
+                {mode === "orthopedics" && (
+                  <div className="flex items-center justify-between border-t border-border/60 pt-2 pb-0.5">
+                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                      <Icon icon={faStethoscope} className="size-3 text-muted-foreground" />
+                      Systemic Medical Examination
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowSystemicExam(false)}
+                      className="text-xs font-medium text-muted-foreground hover:text-danger cursor-pointer transition-colors"
+                    >
+                      Hide systemic fields
+                    </button>
+                  </div>
+                )}
+                <div className="grid gap-2.5 md:grid-cols-2">
+                  <ClinicalDropdownTextarea
+                    icon={faHeartPulse}
+                    label="Cardiovascular"
+                    name="cardiovascular"
+                    value={examination.cardiovascular ?? ""}
+                    onChange={(text) =>
+                      updateRecordField(setExamination, "cardiovascular", text)
+                    }
+                    options={CVS_EXAM_RECOMMENDATIONS}
+                    placeholder="Heart sounds, rhythm, murmurs…"
+                    rows={2}
+                  />
+                  <ClinicalDropdownTextarea
+                    icon={faLungs}
+                    label="Respiratory"
+                    name="respiratory"
+                    value={examination.respiratory ?? ""}
+                    onChange={(text) =>
+                      updateRecordField(setExamination, "respiratory", text)
+                    }
+                    options={RESP_EXAM_RECOMMENDATIONS}
+                    placeholder="Air entry, breath sounds, wheezing, crepitations…"
+                    rows={2}
+                  />
+                  <ClinicalDropdownTextarea
+                    icon={faStethoscope}
+                    label="Abdomen"
+                    name="abdomen"
+                    value={examination.abdomen ?? ""}
+                    onChange={(text) =>
+                      updateRecordField(setExamination, "abdomen", text)
+                    }
+                    options={ABDOMEN_EXAM_RECOMMENDATIONS}
+                    placeholder="Tenderness, guarding, bowel sounds, organomegaly…"
+                    rows={2}
+                  />
+                  <ClinicalDropdownTextarea
+                    icon={faBrain}
+                    label="Neurological"
+                    name="neurological"
+                    value={examination.neurological ?? ""}
+                    onChange={(text) =>
+                      updateRecordField(setExamination, "neurological", text)
+                    }
+                    options={NEURO_EXAM_RECOMMENDATIONS}
+                    placeholder="Motor power, DTR, sensations, SLR test…"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            ) : mode === "orthopedics" ? (
+              <div className="flex items-center justify-between rounded-lg border border-dashed border-border/70 bg-slate-50/60 dark:bg-slate-900/30 px-3 py-2">
+                <span className="text-xs text-muted-foreground italic">
+                  Respiratory, Abdomen, Cardiovascular &amp; Neurological fields hidden in Orthopedic mode.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowSystemicExam(true)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                >
+                  <Icon icon={faPlus} className="size-2.5" />
+                  <span>Show systemic fields</span>
+                </button>
+              </div>
+            ) : null}
             {/* Comprehensive Joints & Body Parts Examination (OPD / Orthopedic) */}
             <div className="rounded-lg border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-900/50 dark:bg-violet-950/20">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5">
