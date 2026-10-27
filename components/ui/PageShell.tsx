@@ -46,12 +46,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 px-6 py-6 sm:flex-row sm:justify-between md:px-8 md:py-8",
+        "flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-end sm:justify-between md:px-8 md:py-8 flex-wrap",
         inlineTitleWithBack ? "sm:items-center" : "sm:items-end",
         className
       )}
     >
-      <div className="min-w-0 flex flex-1 flex-col gap-3">
+      <div className="min-w-fit shrink-0 flex flex-col gap-2 max-w-full">
         <div className="flex flex-col gap-2">
           {backHref && inlineTitleWithBack ? (
             <div className="flex min-w-0 items-center gap-2">
@@ -62,7 +62,7 @@ export function PageHeader({
               >
                 <Icon icon={faChevronLeft} className="size-4" aria-hidden />
               </Link>
-              <h1 className="min-w-0 font-display text-2xl font-semibold text-balance text-ink">
+              <h1 className="min-w-0 font-display text-2xl font-semibold text-ink whitespace-nowrap">
                 {title}
               </h1>
               {backAccessory}
@@ -70,19 +70,19 @@ export function PageHeader({
           ) : (
             <>
               {backHref ? (
-                <div className="flex min-h-11 w-full items-center justify-between gap-2">
+                <div className="flex w-full items-center justify-between gap-2">
                   <Link
                     href={backHref}
                     aria-label={ariaBackLabel}
-                    className="inline-flex min-h-11 w-fit items-center gap-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="inline-flex py-1 w-fit items-center gap-1.5 whitespace-nowrap text-sm font-medium text-muted-foreground underline-offset-4 transition-[color,opacity,transform] duration-150 hover:text-primary hover:underline active:scale-[0.98] active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    <Icon icon={faChevronLeft} className="size-4" aria-hidden />
+                    <Icon icon={faChevronLeft} className="size-3.5 shrink-0" aria-hidden />
                     {trimmedBackLabel ? <span>{backLabel}</span> : null}
                   </Link>
                   {backAccessory}
                 </div>
               ) : null}
-              <h1 className="font-display text-2xl font-semibold text-balance text-ink">
+              <h1 className="font-display text-2xl font-semibold text-ink whitespace-nowrap">
                 {title}
               </h1>
             </>
@@ -101,7 +101,7 @@ export function PageHeader({
         {children}
       </div>
       {actions ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5 sm:justify-end">{actions}</div>
       ) : null}
     </div>
   );

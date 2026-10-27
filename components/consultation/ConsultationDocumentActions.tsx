@@ -22,6 +22,7 @@ type ConsultationDocumentActionsProps = {
   hasPrescription: boolean;
   hasMedicalCertificate: boolean;
   showBillingLink?: boolean;
+  children?: React.ReactNode;
 };
 
 export function ConsultationDocumentActions({
@@ -29,6 +30,7 @@ export function ConsultationDocumentActions({
   hasPrescription,
   hasMedicalCertificate,
   showBillingLink = true,
+  children,
 }: ConsultationDocumentActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
@@ -62,76 +64,77 @@ export function ConsultationDocumentActions({
     }, "certificate");
   }
 
-  if (!hasPrescription && !hasMedicalCertificate && !showBillingLink) {
+  if (!hasPrescription && !hasMedicalCertificate && !showBillingLink && !children) {
     return null;
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2.5">
-        {hasPrescription && (
-          <>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => setIsRxViewOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5 shadow-xs"
-              title="View full prescription on screen before printing or downloading"
-            >
-              <Icon icon={faEye} className="text-xs" />
-              View prescription
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsSummaryViewOpen(true)}
-              className="border-teal-300 text-teal-800 bg-teal-50/70 hover:bg-teal-100 font-bold gap-1.5 shadow-2xs"
-              title="View Apollo standard Outpatient Summary & Prescription"
-            >
-              <Icon icon={faFileContract} className="text-xs text-teal-600" />
-              Outpatient summary
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => handlePrescriptionDownload("en")}
-              loading={isPending("prescription")}
-              title="Download Prescription PDF (English)"
-              className="gap-1.5"
-            >
-              <Icon icon={faDownload} className="text-xs text-slate-500" />
-              Download Rx
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => handlePrescriptionDownload("hi")}
-              loading={isPending("prescription-hi")}
-              className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
-              title="पर्चा डाउनलोड करें (Hindi Prescription PDF)"
-            >
-              पर्चा डाउनलोड (Hindi)
-            </Button>
-          </>
-        )}
-        {hasMedicalCertificate && (
+    <>
+      {hasPrescription && (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => setIsRxViewOpen(true)}
+            className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-xs"
+            title="View full prescription on screen before printing or downloading"
+          >
+            <Icon icon={faEye} className="text-xs" />
+            View prescription
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsSummaryViewOpen(true)}
+            className="shrink-0 border-teal-300 text-teal-800 bg-teal-50/70 hover:bg-teal-100 font-semibold gap-1.5 shadow-2xs"
+            title="View Apollo standard Outpatient Summary & Prescription"
+          >
+            <Icon icon={faFileContract} className="text-xs text-teal-600" />
+            Outpatient summary
+          </Button>
           <Button
             type="button"
             variant="secondary"
-            onClick={handleCertificateDownload}
-            loading={isPending("certificate")}
+            onClick={() => handlePrescriptionDownload("en")}
+            loading={isPending("prescription")}
+            title="Download Prescription PDF (English)"
+            className="shrink-0 gap-1.5"
           >
-            Download medical certificate
+            <Icon icon={faDownload} className="text-xs text-slate-500" />
+            Download Rx
           </Button>
-        )}
-        {showBillingLink && (
-          <Link href={`/billing/${consultationId}`}>
-            <Button type="button" variant="secondary">
-              Go to billing
-            </Button>
-          </Link>
-        )}
-      </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => handlePrescriptionDownload("hi")}
+            loading={isPending("prescription-hi")}
+            className="shrink-0 border-sky-300 text-sky-800 hover:bg-sky-50 font-medium gap-1.5"
+            title="Download Hindi Prescription PDF"
+          >
+            <Icon icon={faDownload} className="text-xs text-sky-600" />
+            Download Rx (Hindi)
+          </Button>
+        </>
+      )}
+      {hasMedicalCertificate && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={handleCertificateDownload}
+          loading={isPending("certificate")}
+          className="shrink-0"
+        >
+          Download medical certificate
+        </Button>
+      )}
+      {showBillingLink && (
+        <Link href={`/billing/${consultationId}`}>
+          <Button type="button" variant="secondary" className="shrink-0">
+            Go to billing
+          </Button>
+        </Link>
+      )}
+      {children}
 
       {/* Prescription Viewer Modal */}
       <PrescriptionViewModal
@@ -147,10 +150,10 @@ export function ConsultationDocumentActions({
         onClose={() => setIsSummaryViewOpen(false)}
       />
       {error && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="w-full text-right text-sm text-danger" role="alert">
           {error}
         </p>
       )}
-    </div>
+    </>
   );
 }

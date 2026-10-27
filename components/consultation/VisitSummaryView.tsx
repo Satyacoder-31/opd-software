@@ -88,26 +88,25 @@ export function VisitSummaryView({
           backHref="/queue"
           backLabel="Back to queue"
           actions={
-            <div className="flex flex-wrap gap-3">
-              <ConsultationDocumentActions
-                consultationId={consultationId}
-                hasPrescription={hasPrescription}
-                hasMedicalCertificate={hasMedicalCertificate}
-                showBillingLink={false}
-              />
+            <ConsultationDocumentActions
+              consultationId={consultationId}
+              hasPrescription={hasPrescription}
+              hasMedicalCertificate={hasMedicalCertificate}
+              showBillingLink={false}
+            >
               <Link href={`/billing/${consultationId}`}>
-                <Button type="button" variant="secondary">
+                <Button type="button" variant="secondary" className="shrink-0">
                   Go to billing
                 </Button>
               </Link>
               {canAmend ? (
                 <Link href={`/consultations/${consultationId}/amend`}>
-                  <Button type="button" variant="secondary">
+                  <Button type="button" variant="secondary" className="shrink-0">
                     Amend consultation
                   </Button>
                 </Link>
               ) : null}
-            </div>
+            </ConsultationDocumentActions>
           }
         >
           {amendmentReason && amendedAt ? (
