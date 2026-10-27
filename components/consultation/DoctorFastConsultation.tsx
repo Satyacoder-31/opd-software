@@ -57,83 +57,91 @@ import type {
   Vitals,
 } from "@/lib/types";
 
-// Popular fast-click symptom chips
-const FAST_ORTHO_SYMPTOMS = [
-  "Pain in right knee joint aggravated by walking",
-  "Pain in left knee joint with morning stiffness",
-  "Bilateral knee pain, difficulty squatting",
-  "Severe low backache radiating to right leg (sciatica)",
-  "Lower backache with lumbar muscle stiffness",
-  "Neck pain with stiffness radiating to shoulder",
-  "Right shoulder pain with restricted overhead movement",
-  "Acute right ankle sprain and swelling after twist",
-  "Bilateral heel pain, severe in morning (plantar fasciitis)",
-] as const;
+export type QuickTag = {
+  label: string;
+  text: string;
+};
 
-const FAST_GENERAL_SYMPTOMS = [
-  "High grade fever with chills and generalized body ache for 3 days",
-  "Dry cough with sore throat and runny nose",
-  "Burning epigastric pain, acid regurgitation and bloating",
-  "Watery loose stools with cramping abdominal pain",
-  "Burning micturition with urinary frequency",
-  "Generalized fatigue and muscle weakness",
-] as const;
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-// Popular fast-click diagnosis chips
-const FAST_ORTHO_DIAGNOSES = [
-  "Bilateral Osteoarthritis Knee (Grade 2/3) with Joint Flare",
-  "Osteoarthritis Right Knee Joint",
-  "Lumbar Spondylosis with L4-L5 Radiculopathy (Sciatica)",
-  "Acute Mechanical Lower Back Strain with Muscle Spasm",
-  "Cervical Spondylosis with Trapezius Muscle Spasm",
-  "Adhesive Capsulitis of Right Shoulder (Frozen Shoulder)",
-  "Acute Lateral Ankle Ligament Sprain (Grade 1/2)",
-  "Plantar Fasciitis (Bilateral)",
-  "Lateral Epicondylitis (Tennis Elbow)",
-] as const;
+// Crisp, readable symptom tags (short label + rich clinical text)
+const FAST_ORTHO_SYMPTOMS: QuickTag[] = [
+  { label: "Right Knee Pain", text: "Pain in right knee joint aggravated by walking" },
+  { label: "Left Knee Pain", text: "Pain in left knee joint with morning stiffness" },
+  { label: "Bilateral Knee", text: "Bilateral knee pain, difficulty squatting" },
+  { label: "Low Backache", text: "Severe low backache radiating to right leg (sciatica)" },
+  { label: "Lumbar Spasm", text: "Lower backache with lumbar muscle stiffness and spasm" },
+  { label: "Neck & Shoulder", text: "Neck pain with stiffness radiating to shoulder" },
+  { label: "Frozen Shoulder", text: "Right shoulder pain with restricted overhead movement" },
+  { label: "Ankle Sprain", text: "Acute right ankle sprain and swelling after twist" },
+  { label: "Heel Pain (Morning)", text: "Bilateral heel pain, severe in morning (plantar fasciitis)" },
+];
 
-const FAST_GENERAL_DIAGNOSES = [
-  "Acute Viral Upper Respiratory Tract Infection (URTI)",
-  "Acute Gastroenteritis with Mild Dehydration",
-  "Acid Peptic Disease / GERD / Gastritis",
-  "Uncomplicated Urinary Tract Infection (UTI)",
-  "Allergic Rhinitis & Sinusitis",
-  "Essential Hypertension under evaluation",
-] as const;
+const FAST_GENERAL_SYMPTOMS: QuickTag[] = [
+  { label: "Fever & Chills", text: "High grade fever with chills and generalized body ache for 3 days" },
+  { label: "Cough & Cold", text: "Dry cough with sore throat and runny nose" },
+  { label: "Acidity / GERD", text: "Burning epigastric pain, acid regurgitation and bloating" },
+  { label: "Loose Stools", text: "Watery loose stools with cramping abdominal pain" },
+  { label: "Burning Urination", text: "Burning micturition with urinary frequency" },
+  { label: "Fatigue / Weakness", text: "Generalized fatigue and muscle weakness" },
+];
 
-// Quick 1-click exam findings
-const FAST_EXAM_CHIPS = [
-  "Tenderness along medial joint line, crepitus on flexion",
-  "Paravertebral muscle spasm present, SLR positive at 60°",
-  "Cervical paraspinal tenderness, restricted lateral rotation",
-  "Marked restriction of shoulder abduction and external rotation",
-  "Localized edema and tenderness over anterior talofibular ligament",
-  "Tender plantar fascia insertion at calcaneal tubercle",
-  "Normal range of motion, no neurological deficit",
-] as const;
+// Crisp, readable diagnosis tags (short label + rich clinical text)
+const FAST_ORTHO_DIAGNOSES: QuickTag[] = [
+  { label: "Bilateral Knee OA", text: "Bilateral Osteoarthritis Knee (Grade 2/3) with Joint Flare" },
+  { label: "Right Knee OA", text: "Osteoarthritis Right Knee Joint" },
+  { label: "Lumbar Spondylosis", text: "Lumbar Spondylosis with L4-L5 Radiculopathy (Sciatica)" },
+  { label: "Acute Back Strain", text: "Acute Mechanical Lower Back Strain with Muscle Spasm" },
+  { label: "Cervical Spondylosis", text: "Cervical Spondylosis with Trapezius Muscle Spasm" },
+  { label: "Frozen Shoulder", text: "Adhesive Capsulitis of Right Shoulder (Frozen Shoulder)" },
+  { label: "Ankle Sprain", text: "Acute Lateral Ankle Ligament Sprain (Grade 1/2)" },
+  { label: "Plantar Fasciitis", text: "Plantar Fasciitis (Bilateral)" },
+  { label: "Tennis Elbow", text: "Lateral Epicondylitis (Tennis Elbow)" },
+];
 
-// Quick 1-click advice chips
-const FAST_ADVICE_CHIPS = [
-  "Avoid squatting, sitting cross-legged, and frequent stair climbing",
-  "Apply cold / ice pack for 15 minutes twice daily during acute flare",
-  "Hot water fomentation twice daily before gentle stretching",
-  "Start isometric quadriceps strengthening exercises daily",
-  "Sleep on a firm mattress with knee support pillow",
-  "Strictly avoid forward bending and lifting heavy weights",
-  "Use contoured cervical pillow and lumbar back support",
-  "Drink at least 3 liters of clean water daily",
-] as const;
+const FAST_GENERAL_DIAGNOSES: QuickTag[] = [
+  { label: "Viral URTI / Flu", text: "Acute Viral Upper Respiratory Tract Infection (URTI)" },
+  { label: "Gastroenteritis", text: "Acute Gastroenteritis with Mild Dehydration" },
+  { label: "Acid Peptic / GERD", text: "Acid Peptic Disease / GERD / Gastritis" },
+  { label: "UTI Infection", text: "Uncomplicated Urinary Tract Infection (UTI)" },
+  { label: "Allergic Rhinitis", text: "Allergic Rhinitis & Sinusitis" },
+  { label: "Hypertension (Eval)", text: "Essential Hypertension under evaluation" },
+];
 
-// Quick 1-click follow-up timeframes
-const FAST_FOLLOW_UPS = [
-  "Review after 3 days",
-  "Review after 5 days",
-  "Review after 7 days (1 week)",
-  "Review after 10 days",
-  "Review after 15 days",
-  "Review after 1 month",
-  "SOS if severe pain persists",
-] as const;
+// Crisp, readable exam finding tags
+const FAST_EXAM_CHIPS: QuickTag[] = [
+  { label: "Knee OA (Crepitus/Tender)", text: "Medial joint line tenderness (+), joint crepitus on passive flexion, ROM 0-110°, no joint effusion." },
+  { label: "Lumbar Spasm (SLR+)", text: "Paravertebral muscle spasm present, tenderness at L4-L5, SLR positive at 60°." },
+  { label: "Cervical Paraspinal Spasm", text: "Cervical paraspinal tenderness, restricted lateral rotation, Spurling test negative." },
+  { label: "Shoulder Restricted ROM", text: "Marked restriction of shoulder abduction and external rotation, subacromial tenderness (+)." },
+  { label: "Ankle ATFL Sprain", text: "Localized edema and tenderness over anterior talofibular ligament, anterior drawer negative." },
+  { label: "Heel Tenderness (Plantar)", text: "Tender plantar fascia insertion at calcaneal tubercle, Windlass test positive." },
+];
+
+// Crisp, readable advice tags
+const FAST_ADVICE_CHIPS: QuickTag[] = [
+  { label: "Avoid Squatting/Stairs", text: "Avoid squatting, sitting cross-legged, and frequent stair climbing." },
+  { label: "Ice Pack (15 min)", text: "Apply cold / ice pack for 15 minutes twice daily during acute flare." },
+  { label: "Hot Water Fomentation", text: "Hot water fomentation twice daily before gentle stretching." },
+  { label: "Quad Exercises", text: "Start isometric quadriceps strengthening exercises daily." },
+  { label: "Firm Bed / Knee Pillow", text: "Sleep on a firm mattress with knee support pillow." },
+  { label: "No Heavy Lifting", text: "Strictly avoid forward bending and lifting heavy weights." },
+  { label: "Cervical Pillow", text: "Use contoured cervical pillow and lumbar back support." },
+  { label: "Drink 3L Water", text: "Drink at least 3 liters of clean water daily." },
+];
+
+// Crisp follow-up timeframes
+const FAST_FOLLOW_UPS: QuickTag[] = [
+  { label: "3 Days", text: "Review after 3 days" },
+  { label: "5 Days", text: "Review after 5 days" },
+  { label: "7 Days (1 Wk)", text: "Review after 7 days (1 week)" },
+  { label: "10 Days", text: "Review after 10 days" },
+  { label: "15 Days", text: "Review after 15 days" },
+  { label: "1 Month", text: "Review after 1 month" },
+  { label: "SOS / If Needed", text: "SOS if severe pain persists or symptoms worsen" },
+];
 
 // Rapid 1-click Dosing Presets for medicines
 const RAPID_DOSING_PRESETS = [
@@ -263,29 +271,90 @@ export function DoctorFastConsultation({
     });
   }
 
-  // Handle appending symptoms
-  function handleAddSymptom(text: string) {
-    const existing = clinical.chiefComplaint?.trim() ?? "";
-    const next = existing ? `${existing}; ${text}` : text;
-    onClinicalChange({ ...clinical, chiefComplaint: next });
+  // Handle toggling symptoms (append or remove cleanly)
+  function handleToggleSymptom(tag: QuickTag) {
+    const current = clinical.chiefComplaint?.trim() ?? "";
+    if (current.includes(tag.text)) {
+      const next = current
+        .replace(new RegExp(`;?\\s*${escapeRegex(tag.text)}`, "g"), "")
+        .replace(/^;\s*/, "")
+        .trim();
+      onClinicalChange({ ...clinical, chiefComplaint: next });
+    } else {
+      const next = current ? `${current}; ${tag.text}` : tag.text;
+      onClinicalChange({ ...clinical, chiefComplaint: next });
+    }
   }
 
-  // Handle setting diagnosis
-  function handleSetDiagnosis(text: string) {
-    onClinicalChange({ ...clinical, diagnosis: text });
+  // Handle setting/clearing diagnosis
+  function handleSelectDiagnosis(tag: QuickTag) {
+    const current = clinical.diagnosis?.trim() ?? "";
+    if (current.toLowerCase() === tag.text.toLowerCase()) {
+      onClinicalChange({ ...clinical, diagnosis: "" });
+    } else {
+      onClinicalChange({ ...clinical, diagnosis: tag.text });
+    }
   }
 
-  // Handle exam notes
-  function handleAddExamNote(text: string) {
-    const existingExam = clinical.examination?.jointsAndParts?.trim() ?? "";
-    const nextExam = existingExam ? `${existingExam}\n• ${text}` : `• ${text}`;
+  // Handle toggling exam notes
+  function handleToggleExamNote(tag: QuickTag) {
+    const current = clinical.examination?.jointsAndParts?.trim() ?? "";
+    if (current.includes(tag.text)) {
+      const next = current
+        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(tag.text)}`, "g"), "")
+        .trim();
+      onClinicalChange({
+        ...clinical,
+        examination: {
+          ...clinical.examination,
+          jointsAndParts: next,
+        },
+      });
+    } else {
+      const next = current ? `${current}\n• ${tag.text}` : `• ${tag.text}`;
+      onClinicalChange({
+        ...clinical,
+        examination: {
+          ...clinical.examination,
+          jointsAndParts: next,
+        },
+      });
+    }
+  }
+
+  // 1-Click Normal Examination (NAD)
+  function handleSetNormalExam() {
     onClinicalChange({
       ...clinical,
       examination: {
         ...clinical.examination,
-        jointsAndParts: nextExam,
+        jointsAndParts:
+          "No localized joint swelling, effusion or deformity. Full painless active & passive range of motion. No motor or sensory neurological deficit. Normal examination (NAD).",
       },
     });
+  }
+
+  // Handle toggling advice
+  function handleToggleAdvice(tag: QuickTag) {
+    const current = advice?.trim() ?? "";
+    if (current.includes(tag.text)) {
+      const next = current
+        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(tag.text)}`, "g"), "")
+        .trim();
+      onAdviceChange(next);
+    } else {
+      const next = current ? `${current}\n• ${tag.text}` : `• ${tag.text}`;
+      onAdviceChange(next);
+    }
+  }
+
+  // Handle follow up selection
+  function handleSelectFollowUp(tag: QuickTag) {
+    if (followUp?.trim().toLowerCase() === tag.text.toLowerCase()) {
+      onFollowUpChange("");
+    } else {
+      onFollowUpChange(tag.text);
+    }
   }
 
   // Handle medicine modification
@@ -527,100 +596,200 @@ export function DoctorFastConsultation({
 
       {/* TWO COLUMN GRID: CHIEF COMPLAINTS & DIAGNOSIS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* CARD 1: CHIEF COMPLAINT */}
-        <div className="rounded-xl border border-blue-200/80 bg-white p-3 shadow-2xs flex flex-col justify-between">
+        {/* CARD 1: CHIEF COMPLAINTS & SYMPTOMS */}
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="flex size-5 items-center justify-center rounded-md bg-blue-100 text-blue-700">
-                  <Icon icon={faStethoscope} className="size-3" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-blue-500/20">
+                  <Icon icon={faStethoscope} className="size-3.5" />
                 </span>
-                <span className="text-xs font-bold text-slate-900">
-                  Chief Complaints & Symptoms (मुख्य शिकायत / लक्षण)
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 tracking-tight">
+                    Chief Complaints & Symptoms
+                  </span>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                    लक्षण
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {clinical.chiefComplaint?.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => onClinicalChange({ ...clinical, chiefComplaint: "" })}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                    title="Clear complaints"
+                  >
+                    <Icon icon={faTrashCan} className="size-2.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+                <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
+                  Tap tag to toggle
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400">Click chips to add</span>
             </div>
             <Textarea
               value={clinical.chiefComplaint ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, chiefComplaint: e.target.value })}
-              placeholder="e.g. Pain in right knee joint aggravated by walking for 2 weeks..."
+              placeholder="Type complaints or tap quick tags below..."
               rows={3}
-              className="text-xs font-medium resize-none leading-relaxed"
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
 
           {/* Quick symptom pills */}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {(treatmentMode === "general" ? FAST_GENERAL_SYMPTOMS : FAST_ORTHO_SYMPTOMS)
-              .slice(0, 6)
-              .map((symp, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleAddSymptom(symp)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-900 cursor-pointer transition-colors"
-                >
-                  <Icon icon={faPlus} className="size-2 text-blue-600" />
-                  <span className="truncate max-w-[200px]">{symp}</span>
-                </button>
-              ))}
+          <div className="mt-2.5">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Quick Symptoms:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(treatmentMode === "general" ? FAST_GENERAL_SYMPTOMS : FAST_ORTHO_SYMPTOMS).map((tag, i) => {
+                const isSelected = Boolean(clinical.chiefComplaint?.includes(tag.text));
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleToggleSymptom(tag)}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer transition-all active:scale-95 whitespace-nowrap ${
+                      isSelected
+                        ? "bg-blue-600 text-white shadow-xs font-semibold ring-1 ring-blue-600"
+                        : "border border-slate-200 bg-slate-50/80 text-slate-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-900"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-blue-600"}`}
+                    />
+                    <span>{tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* CARD 2: CLINICAL DIAGNOSIS */}
-        <div className="rounded-xl border border-emerald-200/80 bg-white p-3 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <span className="flex size-5 items-center justify-center rounded-md bg-emerald-100 text-emerald-700">
-                  <Icon icon={faNotesMedical} className="size-3" />
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20">
+                  <Icon icon={faNotesMedical} className="size-3.5" />
                 </span>
-                <span className="text-xs font-bold text-slate-900">
-                  Clinical Diagnosis (निदान)
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 tracking-tight">
+                    Clinical Diagnosis
+                  </span>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                    निदान
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {clinical.diagnosis?.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => onClinicalChange({ ...clinical, diagnosis: "" })}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                    title="Clear diagnosis"
+                  >
+                    <Icon icon={faTrashCan} className="size-2.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+                <span className="text-[10px] font-medium text-slate-400 hidden sm:inline">
+                  1-Click to set
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400">Click chips to set</span>
             </div>
             <Input
               value={clinical.diagnosis ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, diagnosis: e.target.value })}
               placeholder="e.g. Bilateral Osteoarthritis Knee (Grade 2/3)"
-              className="h-10 text-xs font-bold text-emerald-950"
+              className="h-10 text-xs font-bold text-slate-900 border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
 
           {/* Quick diagnosis pills */}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {(treatmentMode === "general" ? FAST_GENERAL_DIAGNOSES : FAST_ORTHO_DIAGNOSES)
-              .slice(0, 6)
-              .map((diag, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleSetDiagnosis(diag)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100 cursor-pointer transition-colors"
-                >
-                  <Icon icon={faCheck} className="size-2 text-emerald-600" />
-                  <span className="truncate max-w-[220px]">{diag}</span>
-                </button>
-              ))}
+          <div className="mt-2.5">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Common Diagnoses:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(treatmentMode === "general" ? FAST_GENERAL_DIAGNOSES : FAST_ORTHO_DIAGNOSES).map((tag, i) => {
+                const isSelected = clinical.diagnosis?.trim().toLowerCase() === tag.text.toLowerCase();
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelectDiagnosis(tag)}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer transition-all active:scale-95 whitespace-nowrap ${
+                      isSelected
+                        ? "bg-emerald-600 text-white shadow-xs font-semibold ring-1 ring-emerald-600"
+                        : "border border-slate-200 bg-slate-50/80 text-slate-700 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-900"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-emerald-600"}`}
+                    />
+                    <span>{tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* QUICK EXAMINATION & LOCAL FINDINGS (COMPACT) */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-3 shadow-2xs">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <span className="flex size-5 items-center justify-center rounded-md bg-amber-100 text-amber-700">
-              <Icon icon={faBone} className="size-3" />
+      {/* QUICK EXAMINATION & LOCAL FINDINGS */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-500/20">
+              <Icon icon={faBone} className="size-3.5" />
             </span>
-            <span className="text-xs font-bold text-slate-900">
-              Examination & Joint Findings (शारीरिक एवं जोड़ जांच)
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-900 tracking-tight">
+                Physical & Joint Examination
+              </span>
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                शारीरिक जांच
+              </span>
+            </div>
           </div>
-          <span className="text-[10px] text-slate-400">Optional</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSetNormalExam}
+              className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition-colors shadow-2xs"
+              title="1-click mark examination as normal"
+            >
+              <Icon icon={faCheck} className="size-2.5 text-emerald-600" />
+              <span>Normal / NAD</span>
+            </button>
+            {clinical.examination?.jointsAndParts?.trim() && (
+              <button
+                type="button"
+                onClick={() =>
+                  onClinicalChange({
+                    ...clinical,
+                    examination: {
+                      ...clinical.examination,
+                      jointsAndParts: "",
+                    },
+                  })
+                }
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                title="Clear exam findings"
+              >
+                <Icon icon={faTrashCan} className="size-2.5" />
+                <span>Clear</span>
+              </button>
+            )}
+          </div>
         </div>
         <Textarea
           value={clinical.examination?.jointsAndParts ?? ""}
@@ -633,22 +802,37 @@ export function DoctorFastConsultation({
               },
             })
           }
-          placeholder="e.g. Medial joint line tenderness present, palpable crepitus on passive flexion, range of motion 0-110°..."
+          placeholder="e.g. Tenderness along medial joint line, crepitus on passive flexion, ROM 0-110°..."
           rows={2}
-          className="text-xs font-medium resize-none leading-relaxed"
+          className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
         />
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {FAST_EXAM_CHIPS.slice(0, 5).map((chip, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => handleAddExamNote(chip)}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-900 cursor-pointer"
-            >
-              <Icon icon={faPlus} className="size-2 text-amber-600" />
-              <span className="truncate max-w-[240px]">{chip}</span>
-            </button>
-          ))}
+        <div className="mt-2.5">
+          <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Preset Joint Findings:
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {FAST_EXAM_CHIPS.map((tag, i) => {
+              const isSelected = Boolean(clinical.examination?.jointsAndParts?.includes(tag.text));
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleToggleExamNote(tag)}
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer transition-all active:scale-95 whitespace-nowrap ${
+                    isSelected
+                      ? "bg-amber-600 text-white shadow-xs font-semibold ring-1 ring-amber-600"
+                      : "border border-slate-200 bg-slate-50/80 text-slate-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-900"
+                  }`}
+                >
+                  <Icon
+                    icon={isSelected ? faCheck : faPlus}
+                    className={`size-2.5 ${isSelected ? "text-white" : "text-amber-600"}`}
+                  />
+                  <span>{tag.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -827,74 +1011,139 @@ export function DoctorFastConsultation({
       {/* CARD 5: ADVICE & FOLLOW-UP */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* ADVICE */}
-        <div className="rounded-xl border border-amber-200/90 bg-white p-3 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="flex size-5 items-center justify-center rounded-md bg-amber-100 text-amber-800">
-                <Icon icon={faNotesMedical} className="size-3" />
-              </span>
-              <span className="text-xs font-bold text-slate-900">
-                Doctor's Advice & Precautions (परामर्श एवं सावधानियां)
-              </span>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-800 ring-1 ring-amber-500/20">
+                  <Icon icon={faNotesMedical} className="size-3.5" />
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 tracking-tight">
+                    Doctor's Advice & Precautions
+                  </span>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                    परामर्श
+                  </span>
+                </div>
+              </div>
+              {advice?.trim() && (
+                <button
+                  type="button"
+                  onClick={() => onAdviceChange("")}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                  title="Clear advice"
+                >
+                  <Icon icon={faTrashCan} className="size-2.5" />
+                  <span>Clear</span>
+                </button>
+              )}
             </div>
             <Textarea
               value={advice}
               onChange={(e) => onAdviceChange(e.target.value)}
-              placeholder="e.g. Avoid squatting and sitting on floor. Warm water fomentation twice daily..."
+              placeholder="e.g. Avoid squatting and sitting on floor. Hot water fomentation twice daily..."
               rows={3}
-              className="text-xs font-medium resize-none leading-relaxed"
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
+
           {/* Quick advice chips */}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {FAST_ADVICE_CHIPS.slice(0, 5).map((adv, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  const existing = advice?.trim() ?? "";
-                  onAdviceChange(existing ? `${existing}\n• ${adv}` : `• ${adv}`);
-                }}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700 hover:border-amber-400 hover:bg-amber-50 cursor-pointer"
-              >
-                <Icon icon={faPlus} className="size-2 text-amber-600" />
-                <span className="truncate max-w-[220px]">{adv}</span>
-              </button>
-            ))}
+          <div className="mt-2.5">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Common Precautions:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {FAST_ADVICE_CHIPS.map((tag, i) => {
+                const isSelected = Boolean(advice?.includes(tag.text));
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleToggleAdvice(tag)}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium cursor-pointer transition-all active:scale-95 whitespace-nowrap ${
+                      isSelected
+                        ? "bg-amber-600 text-white shadow-xs font-semibold ring-1 ring-amber-600"
+                        : "border border-slate-200 bg-slate-50/80 text-slate-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-900"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-amber-600"}`}
+                    />
+                    <span>{tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* FOLLOW-UP */}
-        <div className="rounded-xl border border-sky-200/90 bg-white p-3 shadow-2xs flex flex-col justify-between">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
           <div>
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <span className="flex size-5 items-center justify-center rounded-md bg-sky-100 text-sky-800">
-                <Icon icon={faClock} className="size-3" />
-              </span>
-              <span className="text-xs font-bold text-slate-900">
-                Follow-Up Timeframe (अगला परामर्श)
-              </span>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-800 ring-1 ring-sky-500/20">
+                  <Icon icon={faClock} className="size-3.5" />
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 tracking-tight">
+                    Follow-Up Timeframe
+                  </span>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                    अगला परामर्श
+                  </span>
+                </div>
+              </div>
+              {followUp?.trim() && (
+                <button
+                  type="button"
+                  onClick={() => onFollowUpChange("")}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                  title="Clear follow-up"
+                >
+                  <Icon icon={faTrashCan} className="size-2.5" />
+                  <span>Clear</span>
+                </button>
+              )}
             </div>
             <Input
               value={followUp}
               onChange={(e) => onFollowUpChange(e.target.value)}
               placeholder="e.g. Review after 7 days"
-              className="h-10 text-xs font-bold text-sky-950"
+              className="h-10 text-xs font-bold text-slate-900 border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
+
           {/* Quick follow up chips */}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {FAST_FOLLOW_UPS.map((f, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onFollowUpChange(f)}
-                className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-800 hover:bg-sky-100 cursor-pointer"
-              >
-                <Icon icon={faCheck} className="size-2 text-sky-600" />
-                <span>{f}</span>
-              </button>
-            ))}
+          <div className="mt-2.5">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Review In:
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {FAST_FOLLOW_UPS.map((f, i) => {
+                const isSelected = followUp?.trim().toLowerCase() === f.text.toLowerCase();
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleSelectFollowUp(f)}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold cursor-pointer transition-all active:scale-95 whitespace-nowrap ${
+                      isSelected
+                        ? "bg-sky-600 text-white shadow-xs ring-1 ring-sky-600"
+                        : "border border-slate-200 bg-slate-50/80 text-slate-700 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-sky-600"}`}
+                    />
+                    <span>{f.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
