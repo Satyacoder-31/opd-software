@@ -14,6 +14,9 @@ export type ClinicalTemplate = {
   category: ClinicalIllnessCategory;
   illness: string;
   description: string;
+  chiefComplaint?: string;
+  diagnosis?: string;
+  examination?: string;
   medicines: Medicine[];
   advice?: string;
   followUp?: string;
@@ -27,6 +30,9 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
     category: "Respiratory & ENT",
     illness: "Acute viral upper respiratory tract infection with fever, rhinorrhea, and malaise",
     description: "Standard symptomatic regimen: Antipyretic + Antihistamine + Antibiotic coverage + Zinc/Vitamin C",
+    chiefComplaint: "High grade fever with chills, generalized body ache, runny nose, and dry cough for 3 days",
+    diagnosis: "Acute Viral Upper Respiratory Tract Infection (URTI)",
+    examination: "Febrile (100.8°F), throat congested, posterior pharynx injected, chest clear bilaterally without wheeze or crackles",
     medicines: [
       {
         name: "Paracetamol 650 mg",
@@ -72,6 +78,9 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
     category: "Orthopedics & Pain",
     illness: "Acute symptomatic flare of knee osteoarthritis with joint stiffness and pain",
     description: "NSAID + Gastroprotection + Muscle relaxant + Topical analgesic + Calcium & Vitamin D3",
+    chiefComplaint: "Pain in bilateral knee joints aggravated by walking and climbing stairs, with morning stiffness and crepitus",
+    diagnosis: "Bilateral Osteoarthritis Knee (Grade 2/3) with Joint Flare",
+    examination: "Medial joint line tenderness present, palpable crepitus on passive flexion, mild joint effusion, no ligamentous laxity",
     medicines: [
       {
         name: "Aceclofenac 100 mg + Paracetamol 325 mg",
@@ -125,6 +134,9 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
     category: "Orthopedics & Pain",
     illness: "Mechanical low back pain with paravertebral muscle spasm and radicular discomfort",
     description: "Selective COX-2 NSAID + Centrally acting muscle relaxant + Neuropathic agent + PPI",
+    chiefComplaint: "Severe lower backache radiating to lower limb (sciatica), aggravated by forward bending and prolonged sitting",
+    diagnosis: "Lumbar Spondylosis with L4-L5 Radiculopathy (Sciatica)",
+    examination: "Paravertebral lumbar spasm, tender L4-L5 interspinous space, restricted forward bending, SLR positive at 60°",
     medicines: [
       {
         name: "Etoricoxib 90 mg",
@@ -162,6 +174,102 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
     advice:
       "• Sleep on a firm mattress with a pillow under your knees.\n• Strictly avoid lifting heavy weights and forward bending from the waist.\n• Use a lumbar support cushion while sitting.\n• Gentle core stability exercises once acute pain recedes.",
     followUp: "Review after 7 days, or immediately if leg weakness or bladder symptoms occur.",
+    isBuiltIn: true,
+  },
+  {
+    id: "builtin-cervical-spondylosis",
+    name: "Cervical Spondylosis & Neck Muscle Spasm",
+    category: "Orthopedics & Pain",
+    illness: "Cervical spine degeneration with neck stiffness, trapezius spasm, and radicular arm ache",
+    description: "NSAID + Muscle relaxant + Neuropathic vitamin B12 support + Gastroprotection",
+    chiefComplaint: "Neck pain with stiffness radiating to shoulder and arm, aggravated by prolonged sitting and screen use",
+    diagnosis: "Cervical Spondylosis with Paravertebral Trapezius Muscle Spasm",
+    examination: "Cervical paraspinal tenderness, restricted neck extension and lateral rotation, Spurling sign negative, deep tendon reflexes normal",
+    medicines: [
+      {
+        name: "Aceclofenac 100 mg + Paracetamol 325 mg",
+        dosage: "1 tablet",
+        route: "Oral",
+        frequency: "Twice daily",
+        duration: "5 days",
+        instructions: "After meals",
+      },
+      {
+        name: "Thiocolchicoside 4 mg",
+        dosage: "1 capsule",
+        route: "Oral",
+        frequency: "Twice daily",
+        duration: "5 days",
+        instructions: "After food (for neck muscle relaxation)",
+      },
+      {
+        name: "Methylcobalamin 1500 mcg + Pregabalin 75 mg",
+        dosage: "1 capsule",
+        route: "Oral",
+        frequency: "Once daily",
+        duration: "10 days",
+        instructions: "At bedtime (for nerve support)",
+      },
+      {
+        name: "Pantoprazole 40 mg",
+        dosage: "1 tablet",
+        route: "Oral",
+        frequency: "Once daily",
+        duration: "5 days",
+        instructions: "30 minutes before breakfast",
+      },
+    ],
+    advice:
+      "• Maintain ergonomic posture while working on computer/phone.\n• Use a contoured cervical contour pillow for sleep.\n• Gentle neck isometric strengthening and range of motion exercises.\n• Avoid sudden jerking movements and carrying heavy weights on shoulders.",
+    followUp: "Review after 7 days for clinical progress.",
+    isBuiltIn: true,
+  },
+  {
+    id: "builtin-frozen-shoulder",
+    name: "Frozen Shoulder (Adhesive Capsulitis)",
+    category: "Orthopedics & Pain",
+    illness: "Idiopathic adhesive capsulitis with nocturnal shoulder pain and restricted glenohumeral motion",
+    description: "Analgesic NSAID + Muscle relaxant + Topical anti-inflammatory + Structured mobilization protocol",
+    chiefComplaint: "Severe shoulder pain, worse at night when lying on the affected side, with progressive stiffness and inability to raise arm overhead",
+    diagnosis: "Adhesive Capsulitis of Shoulder Joint (Frozen Shoulder - Stage 2)",
+    examination: "Marked restriction of active and passive external rotation and overhead abduction, painful arc positive, rotator cuff strength intact",
+    medicines: [
+      {
+        name: "Aceclofenac 100 mg + Paracetamol 325 mg",
+        dosage: "1 tablet",
+        route: "Oral",
+        frequency: "Twice daily",
+        duration: "7 days",
+        instructions: "After meals",
+      },
+      {
+        name: "Pantoprazole 40 mg",
+        dosage: "1 tablet",
+        route: "Oral",
+        frequency: "Once daily",
+        duration: "7 days",
+        instructions: "30 minutes before breakfast",
+      },
+      {
+        name: "Tolperisone 150 mg",
+        dosage: "1 tablet",
+        route: "Oral",
+        frequency: "Twice daily",
+        duration: "7 days",
+        instructions: "After meals",
+      },
+      {
+        name: "Diclofenac Diethylamine Gel",
+        dosage: "Local application",
+        route: "Topical",
+        frequency: "Three times daily",
+        duration: "10 days",
+        instructions: "Apply over shoulder joint gently without vigorous rubbing",
+      },
+    ],
+    advice:
+      "• Hot water fomentation for 15 minutes before daily shoulder exercises.\n• Perform pendulum (Codman's) exercises and finger-ladder wall climbing exercises 3 times daily.\n• Avoid sleeping on the affected shoulder.\n• Regular physiotherapy sessions advised.",
+    followUp: "Review after 10 days to assess range of motion improvement.",
     isBuiltIn: true,
   },
   {
@@ -281,6 +389,9 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
     category: "Orthopedics & Pain",
     illness: "Acute ligament sprain or muscle strain with localized edema and tenderness",
     description: "NSAID + Anti-edema proteolytic enzyme + Gastroprotection + Topical spray",
+    chiefComplaint: "Acute ankle / joint pain with swelling, tenderness, and difficulty bearing weight following slip or twist injury",
+    diagnosis: "Acute Ankle / Soft Tissue Ligament Sprain (Grade 1/2)",
+    examination: "Localized soft tissue edema and tenderness over lateral ankle ligaments, no bony deformity, anterior drawer test negative",
     medicines: [
       {
         name: "Aceclofenac 100 mg + Paracetamol 325 mg + Serratiopeptidase 15 mg",

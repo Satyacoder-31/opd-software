@@ -11,6 +11,11 @@ export const FREQUENCY_SHORTCUTS = [
   { code: "HS", label: "At bedtime", timesPerDay: 1 },
   { code: "SOS", label: "As needed", timesPerDay: null },
   { code: "STAT", label: "Immediately", timesPerDay: null },
+  { code: "1-0-1", label: "Twice daily (1-0-1)", timesPerDay: 2 },
+  { code: "1-0-0", label: "Once daily - Morning (1-0-0)", timesPerDay: 1 },
+  { code: "0-0-1", label: "Once daily - Night (0-0-1)", timesPerDay: 1 },
+  { code: "1-1-1", label: "Three times daily (1-1-1)", timesPerDay: 3 },
+  { code: "0-1-0", label: "Once daily - Afternoon (0-1-0)", timesPerDay: 1 },
 ] as const;
 
 export type FrequencyShortcutCode =

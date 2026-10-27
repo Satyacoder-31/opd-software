@@ -108,8 +108,11 @@ export async function middleware(request: NextRequest) {
   const { response, user } = await updateSession(request);
 
   if (isPublic) {
-    // If authenticated user visits login or signup, redirect them into the dashboard
-    if (user && (pathname === "/login" || pathname === "/signup")) {
+    // If authenticated user visits login, signup, or landing page, redirect them directly into the OPD queue
+    if (
+      user &&
+      (pathname === "/login" || pathname === "/signup" || pathname === "/")
+    ) {
       return NextResponse.redirect(new URL("/queue", request.url));
     }
     return nextWithCleanHeaders(request, response);

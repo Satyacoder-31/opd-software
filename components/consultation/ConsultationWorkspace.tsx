@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  faBolt,
   faBone,
   faCheckCircle,
   faCircleExclamation,
@@ -16,6 +17,7 @@ import {
   faStethoscope,
 } from "@fortawesome/free-solid-svg-icons";
 import { completeVisit, saveVisitDraft } from "@/actions/consultations";
+import { DoctorFastConsultation } from "@/components/consultation/DoctorFastConsultation";
 import {
   ConsultationClinicalSections,
   InvestigationSections,
@@ -103,6 +105,27 @@ export function ConsultationWorkspace({
 }: ConsultationWorkspaceProps) {
   const router = useRouter();
   const [tab, setTab] = useState<WorkspaceTabId>("consultation");
+  const [workspaceViewMode, setWorkspaceViewMode] = useState<"fast" | "hospital">("fast");
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("drorthos.workspace.viewMode");
+      if (saved === "hospital" || saved === "fast") {
+        setWorkspaceViewMode(saved);
+      }
+    } catch {
+      // Storage unavailable in private browsing
+    }
+  }, []);
+
+  const handleToggleViewMode = useCallback((mode: "fast" | "hospital") => {
+    setWorkspaceViewMode(mode);
+    try {
+      window.localStorage.setItem("drorthos.workspace.viewMode", mode);
+    } catch {
+      // Storage unavailable in private browsing
+    }
+  }, []);
 
   const isFreshConsultation =
     (!initialClinical.diagnosis?.trim() || initialClinical.diagnosis === "null") &&
@@ -570,6 +593,105 @@ export function ConsultationWorkspace({
       ) : null}
 
       <div className="min-h-0 flex-1 border-b border-border bg-card">
+        {/* VIEW MODE SELECTOR (FAST OPD VS DETAILED HOSPITAL) */}
+        <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-white/95 px-3 py-2 backdrop-blur md:px-4 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Consultation Mode:
+            </span>
+            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => handleToggleViewMode("fast")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  workspaceViewMode === "fast"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                }`}
+                title="Doctor Fast Track: Everything on 1 clean, fast screen with 1-click super templates and dosing chips"
+              >
+                <Icon icon={faBolt} className="size-3 text-amber-300" />
+                <span>⚡ Doctor Fast OPD (1-Screen)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleViewMode("hospital")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  workspaceViewMode === "hospital"
+                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                }`}
+                title="Full Hospital Mode: Multi-tab layout for complex surgery planning, systemic exams, and certificates"
+              >
+                <Icon icon={faFileLines} className="size-3 text-slate-500" />
+                <span>📑 Full Hospital Tabs</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="min-h-8 text-xs gap-1.5"
+              onClick={handleSaveDraft}
+              loading={isPending("save")}
+              disabled={isPending("complete")}
+            >
+              <Icon icon={faCloudArrowUp} className="size-3" />
+              Save draft
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="min-h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-xs hover:from-emerald-700 hover:to-teal-700 cursor-pointer"
+              onClick={handleCompleteVisit}
+              loading={isPending("complete")}
+              disabled={isPending("complete")}
+            >
+              <Icon icon={faCheckCircle} className="size-3" />
+              {isPending("complete") ? "Completing..." : "Complete & Print Rx"}
+            </Button>
+          </div>
+        </div>
+
+        {workspaceViewMode === "fast" ? (
+          <DoctorFastConsultation
+            consultationId={consultationId}
+            patientId={patientId}
+            patientName={patientName}
+            uhid={uhid}
+            episodeNo={episodeNo}
+            clinical={clinical}
+            medicines={medicines}
+            advice={advice}
+            followUp={followUp}
+            treatmentMode={treatmentMode}
+            onClinicalChange={handleClinicalChange}
+            onMedicinesChange={setMedicines}
+            onAdviceChange={handleAdviceChange}
+            onFollowUpChange={setFollowUp}
+            onTreatmentModeChange={handleTreatmentModeChange}
+            onCompleteVisit={handleCompleteVisit}
+            onSaveDraft={handleSaveDraft}
+            isSaving={isPending("save")}
+            isCompleting={isPending("complete")}
+            onViewInvestigations={() => {
+              handleToggleViewMode("hospital");
+              setTab("investigations");
+            }}
+            onViewDocuments={() => {
+              handleToggleViewMode("hospital");
+              setTab("documents");
+            }}
+            previousVisit={previousVisit}
+            investigationHistoryCount={
+              investigationHistory.labResults.length +
+              investigationHistory.advisedInvestigations.length
+            }
+          />
+        ) : (
         <Tabs
           value={tab}
           onValueChange={(value) => {
@@ -881,6 +1003,7 @@ export function ConsultationWorkspace({
             </CollapsibleSection>
           </TabsContent>
         </Tabs>
+        )}
       </div>
 
       {/* Sticky footer actions */}

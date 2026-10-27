@@ -694,6 +694,34 @@ export function PrescriptionBuilder({
                   );
                 })()}
 
+                {/* 1-CLICK RAPID DOSING PRESETS */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-bold text-violet-700 uppercase">⚡ Rapid Dose:</span>
+                  {[
+                    { label: "1-0-1 After food · 5d", dosage: "1 tablet", frequency: "Twice daily (1-0-1)", duration: "5 days", instructions: "After meals (खाने के बाद)" },
+                    { label: "1-0-0 Before food · 5d", dosage: "1 tablet", frequency: "Once daily - Morning (1-0-0)", duration: "5 days", instructions: "30 mins before breakfast (खाली पेट)" },
+                    { label: "0-0-1 Night · 5d", dosage: "1 tablet", frequency: "Once daily - Night (0-0-1)", duration: "5 days", instructions: "At bedtime (सोते समय)" },
+                    { label: "1-1-1 After food · 3d", dosage: "1 tablet", frequency: "Three times daily (1-1-1)", duration: "3 days", instructions: "After meals (खाने के बाद)" },
+                    { label: "1 Tab SOS for pain", dosage: "1 tablet", frequency: "As needed (SOS)", duration: "5 days", instructions: "Only when having pain (दर्द होने पर)" },
+                  ].map((preset, pIdx) => (
+                    <button
+                      key={pIdx}
+                      type="button"
+                      onClick={() => {
+                        patchMedicine(index, {
+                          dosage: preset.dosage,
+                          frequency: preset.frequency,
+                          duration: preset.duration,
+                          instructions: preset.instructions,
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-md border border-violet-200/90 bg-white px-2 py-0.5 text-[10px] font-bold text-violet-900 hover:bg-violet-100 hover:border-violet-400 cursor-pointer transition-all active:scale-95"
+                    >
+                      <span>{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+
                 <div className="flex flex-col gap-2.5">
                   <div className="grid grid-cols-2 gap-2.5">
                     <PrescriptionOptionCombobox

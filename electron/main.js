@@ -4,15 +4,9 @@ const http = require("http");
 
 let mainWindow = null;
 const PORT = process.env.PORT || 3000;
-const useCloud = process.env.ELECTRON_CLOUD === "1" || !!process.env.APP_URL;
-const isDev = !useCloud && (process.env.NODE_ENV === "development" || !app.isPackaged);
-
-// Production Cloud URL (hosted on Vercel)
-const PRODUCTION_CLOUD_URL =
+const PRODUCTION_CLOUD_BASE =
   process.env.APP_URL || "https://dr-orthos-alpha.vercel.app";
-
-// In development, connect to local dev server; in production, connect to live Cloud URL!
-const APP_URL = isDev ? `http://127.0.0.1:${PORT}` : PRODUCTION_CLOUD_URL;
+const LOCAL_SERVER_BASE = `http://127.0.0.1:${PORT}`;
 
 // Enforce single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -28,7 +22,20 @@ if (!gotTheLock) {
   });
 }
 
-function pollServer(url, timeoutMs = 60000) {
+function checkLocalServer(port = PORT, timeoutMs = 800) {
+  return new Promise((resolve) => {
+    const req = http.get(`http://127.0.0.1:${port}/queue`, (res) => {
+      resolve(res.statusCode && res.statusCode < 500);
+    });
+    req.on("error", () => resolve(false));
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+function pollServer(url, timeoutMs = 30000) {
   const start = Date.now();
   return new Promise((resolve, reject) => {
     const check = () => {
@@ -89,17 +96,49 @@ async function createMainWindow() {
       label: "File",
       submenu: [
         {
-          label: "Reload (Get Latest Cloud Updates)",
+          label: "Reload (Get Latest Updates)",
           accelerator: "CmdOrCtrl+R",
           click: () => mainWindow?.reload(),
         },
         {
           label: "Force Reload (Clear Cache)",
           accelerator: "CmdOrCtrl+Shift+R",
-          click: () => mainWindow?.webContents.reloadIgnoringCache(),
+          click: async () => {
+            try {
+              await mainWindow?.webContents.session.clearCache();
+            } catch {}
+            mainWindow?.webContents.reloadIgnoringCache();
+          },
         },
         { type: "separator" },
         { role: "quit", label: "Exit Software" },
+      ],
+    },
+    {
+      label: "Server",
+      submenu: [
+        {
+          label: "Cloud Live Server (Vercel)",
+          click: async () => {
+            try {
+              await mainWindow?.webContents.session.clearCache();
+            } catch {}
+            mainWindow?.loadURL(`${PRODUCTION_CLOUD_BASE}/queue`, {
+              extraHeaders: "pragma: no-cache\nCache-Control: no-cache\n",
+            });
+          },
+        },
+        {
+          label: "Local Dev Server (127.0.0.1:3000)",
+          click: async () => {
+            try {
+              await mainWindow?.webContents.session.clearCache();
+            } catch {}
+            mainWindow?.loadURL(`${LOCAL_SERVER_BASE}/queue`, {
+              extraHeaders: "pragma: no-cache\nCache-Control: no-cache\n",
+            });
+          },
+        },
       ],
     },
     {
@@ -110,7 +149,7 @@ async function createMainWindow() {
         { role: "zoomOut" },
         { type: "separator" },
         { role: "togglefullscreen" },
-        ...(isDev ? [{ role: "toggleDevTools" }] : []),
+        { role: "toggleDevTools" },
       ],
     },
     {
@@ -118,7 +157,10 @@ async function createMainWindow() {
       submenu: [
         {
           label: "Check for Updates",
-          click: () => {
+          click: async () => {
+            try {
+              await mainWindow?.webContents.session.clearCache();
+            } catch {}
             mainWindow?.webContents.reloadIgnoringCache();
           },
         },
@@ -146,17 +188,26 @@ async function createMainWindow() {
   });
 
   try {
-    if (isDev) {
-      await pollServer(APP_URL);
+    // Clear HTTP and session cache on startup to guarantee latest updates are immediately loaded
+    try {
+      await mainWindow.webContents.session.clearCache();
+    } catch (cacheErr) {
+      console.warn("Could not clear session cache:", cacheErr);
+    }
+
+    // Determine target URL: prefer local server if running, else Cloud server
+    let targetUrl = `${PRODUCTION_CLOUD_BASE}/queue`;
+    if (process.env.ELECTRON_LOCAL === "1") {
+      targetUrl = `${LOCAL_SERVER_BASE}/queue`;
+      await pollServer(LOCAL_SERVER_BASE);
     } else {
-      // Clear HTTP and session cache on startup to guarantee latest cloud updates are immediately loaded
-      try {
-        await mainWindow.webContents.session.clearCache();
-      } catch (cacheErr) {
-        console.warn("Could not clear session cache:", cacheErr);
+      const isLocalActive = await checkLocalServer();
+      if (isLocalActive) {
+        targetUrl = `${LOCAL_SERVER_BASE}/queue`;
       }
     }
-    await mainWindow.loadURL(APP_URL, {
+
+    await mainWindow.loadURL(targetUrl, {
       extraHeaders: "pragma: no-cache\nCache-Control: no-cache\n",
     });
   } catch (err) {
