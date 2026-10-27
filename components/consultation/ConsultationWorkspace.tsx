@@ -8,6 +8,8 @@ import {
   faCheckCircle,
   faCircleExclamation,
   faCloudArrowUp,
+  faEye,
+  faFileContract,
   faFileLines,
   faFlaskVial,
   faPaperclip,
@@ -29,6 +31,8 @@ import {
   emptyMedicine,
   PrescriptionBuilder,
 } from "@/components/consultation/PrescriptionBuilder";
+import { PrescriptionViewModal } from "@/components/consultation/PrescriptionViewModal";
+import { PatientSummaryModal } from "@/components/consultation/PatientSummaryModal";
 import { PatientSafetyBanner } from "@/components/patients/PatientSafetyBanner";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -106,6 +110,8 @@ export function ConsultationWorkspace({
   const router = useRouter();
   const [tab, setTab] = useState<WorkspaceTabId>("consultation");
   const [workspaceViewMode, setWorkspaceViewMode] = useState<"fast" | "hospital">("fast");
+  const [isRxViewOpen, setIsRxViewOpen] = useState(false);
+  const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -632,6 +638,28 @@ export function ConsultationWorkspace({
           <div className="flex items-center gap-2 ml-auto">
             <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-8 text-xs gap-1.5 font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs"
+              onClick={() => setIsRxViewOpen(true)}
+              title="View full prescription on screen before printing or downloading"
+            >
+              <Icon icon={faEye} className="size-3 text-indigo-600" />
+              View Rx
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-8 text-xs gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              onClick={() => setIsSummaryViewOpen(true)}
+              title="View Apollo standard Outpatient Summary & Prescription"
+            >
+              <Icon icon={faFileContract} className="size-3 text-teal-600" />
+              Summary
+            </Button>
+            <Button
+              type="button"
               variant="secondary"
               size="sm"
               className="min-h-8 text-xs gap-1.5"
@@ -1037,6 +1065,28 @@ export function ConsultationWorkspace({
           <div className="flex flex-wrap gap-2 ml-auto">
             <Button
               type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-10 gap-1.5 font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs"
+              onClick={() => setIsRxViewOpen(true)}
+              title="View full prescription on screen before printing or downloading"
+            >
+              <Icon icon={faEye} className="size-3 text-indigo-600" />
+              View Rx
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-10 gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              onClick={() => setIsSummaryViewOpen(true)}
+              title="View Apollo standard Outpatient Summary & Prescription"
+            >
+              <Icon icon={faFileContract} className="size-3 text-teal-600" />
+              Summary
+            </Button>
+            <Button
+              type="button"
               variant="secondary"
               size="sm"
               className="min-h-10 gap-1.5"
@@ -1062,6 +1112,20 @@ export function ConsultationWorkspace({
         </div>
         <div id="prescription-save-template-host" />
       </div>
+
+      {/* Prescription Viewer Modal */}
+      <PrescriptionViewModal
+        consultationId={consultationId}
+        isOpen={isRxViewOpen}
+        onClose={() => setIsRxViewOpen(false)}
+      />
+
+      {/* Apollo-Standard Outpatient Summary Modal */}
+      <PatientSummaryModal
+        consultationId={consultationId}
+        isOpen={isSummaryViewOpen}
+        onClose={() => setIsSummaryViewOpen(false)}
+      />
     </PageShell>
   );
 }

@@ -10,6 +10,8 @@ import {
   faChevronUp,
   faClock,
   faCopy,
+  faEye,
+  faFileContract,
   faFileLines,
   faFlaskVial,
   faHeartPulse,
@@ -17,7 +19,9 @@ import {
   faNotesMedical,
   faPills,
   faPlus,
+  faPrint,
   faRotate,
+  faStar,
   faStethoscope,
   faTemperatureHalf,
   faTrashCan,
@@ -33,6 +37,9 @@ import { MedicineCombobox } from "@/components/consultation/MedicineCombobox";
 import {
   emptyMedicine,
 } from "@/components/consultation/PrescriptionBuilder";
+import { useClinicalRecommendations } from "@/lib/clinical-recommendations-storage";
+import { PrescriptionViewModal } from "@/components/consultation/PrescriptionViewModal";
+import { PatientSummaryModal } from "@/components/consultation/PatientSummaryModal";
 import {
   COMMON_ILLNESS_TEMPLATES,
   getClinicalTemplatesBySpecialty,
@@ -151,43 +158,43 @@ const FAST_FOLLOW_UPS: QuickTag[] = [
 const RAPID_DOSING_PRESETS = [
   {
     label: "1-0-1 After food · 5d",
-    hindi: "सुबह-शाम",
+    subtext: "Twice daily",
     dosage: "1 tablet",
     frequency: "Twice daily (1-0-1)",
     duration: "5 days",
-    instructions: "After meals (खाने के बाद)",
+    instructions: "After meals",
   },
   {
     label: "1-0-0 Before food · 5d",
-    hindi: "सुबह खाली पेट",
+    subtext: "Morning empty stomach",
     dosage: "1 tablet",
     frequency: "Once daily - Morning (1-0-0)",
     duration: "5 days",
-    instructions: "30 mins before breakfast (खाली पेट)",
+    instructions: "30 mins before breakfast",
   },
   {
     label: "0-0-1 Night · 5d",
-    hindi: "रात को",
+    subtext: "At bedtime",
     dosage: "1 tablet",
     frequency: "Once daily - Night (0-0-1)",
     duration: "5 days",
-    instructions: "At bedtime (सोते समय)",
+    instructions: "At bedtime",
   },
   {
     label: "1-1-1 After food · 3d",
-    hindi: "दिन में 3 बार",
+    subtext: "Three times daily",
     dosage: "1 tablet",
     frequency: "Three times daily (1-1-1)",
     duration: "3 days",
-    instructions: "After meals (खाने के बाद)",
+    instructions: "After meals",
   },
   {
     label: "1 Tab SOS for pain",
-    hindi: "दर्द होने पर",
+    subtext: "When having pain",
     dosage: "1 tablet",
     frequency: "As needed (SOS)",
     duration: "5 days",
-    instructions: "Only when having pain (दर्द होने पर)",
+    instructions: "When having pain",
   },
 ] as const;
 
@@ -247,19 +254,89 @@ export function DoctorFastConsultation({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
 
+  // Modals for Prescription View & Apollo Outpatient Summary
+  const [isRxViewOpen, setIsRxViewOpen] = useState(false);
+  const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
+
   // Suggestion Dropdown States
   const [symptomsMenuOpen, setSymptomsMenuOpen] = useState(false);
   const [symptomSearch, setSymptomSearch] = useState("");
+  const [newComplaintInput, setNewComplaintInput] = useState("");
+  const [complaintNotice, setComplaintNotice] = useState<string | null>(null);
   const symptomsRef = useRef<HTMLDivElement>(null);
 
   const [diagnosisMenuOpen, setDiagnosisMenuOpen] = useState(false);
+  const [newDiagnosisInput, setNewDiagnosisInput] = useState("");
+  const [diagnosisNotice, setDiagnosisNotice] = useState<string | null>(null);
   const diagnosisRef = useRef<HTMLDivElement>(null);
 
   const [examMenuOpen, setExamMenuOpen] = useState(false);
+  const [newExamInput, setNewExamInput] = useState("");
+  const [examNotice, setExamNotice] = useState<string | null>(null);
   const examRef = useRef<HTMLDivElement>(null);
 
   const [adviceMenuOpen, setAdviceMenuOpen] = useState(false);
+  const [adviceFilter, setAdviceFilter] = useState("");
+  const [newAdviceInput, setNewAdviceInput] = useState("");
+  const [adviceNotice, setAdviceNotice] = useState<string | null>(null);
   const adviceRef = useRef<HTMLDivElement>(null);
+
+  // Default preset lists
+  const defaultSymptomsList = useMemo(() => {
+    const list =
+      treatmentMode === "general"
+        ? [...FAST_GENERAL_SYMPTOMS, ...FAST_ORTHO_SYMPTOMS]
+        : [...FAST_ORTHO_SYMPTOMS, ...FAST_GENERAL_SYMPTOMS];
+    return list.map((c) => c.text);
+  }, [treatmentMode]);
+
+  const defaultDiagnosisList = useMemo(() => {
+    const list =
+      treatmentMode === "general"
+        ? [...FAST_GENERAL_DIAGNOSES, ...FAST_ORTHO_DIAGNOSES]
+        : [...FAST_ORTHO_DIAGNOSES, ...FAST_GENERAL_DIAGNOSES];
+    return list.map((c) => c.text);
+  }, [treatmentMode]);
+
+  const defaultExamList = useMemo(() => FAST_EXAM_CHIPS.map((c) => c.text), []);
+  const defaultAdviceList = useMemo(() => FAST_ADVICE_CHIPS.map((c) => c.text), []);
+
+  // Clinical Recommendations Hooks (Syncs across Fast OPD & Full Hospital Tabs)
+  const {
+    allOptions: complaintsOptions,
+    isFavorite: isComplaintFavorite,
+    isCustom: isComplaintCustom,
+    addCustom: addCustomComplaint,
+    removeCustom: removeCustomComplaint,
+    toggleFavorite: toggleComplaintFavorite,
+  } = useClinicalRecommendations("chief_complaint", defaultSymptomsList);
+
+  const {
+    allOptions: diagnosisOptions,
+    isFavorite: isDiagnosisFavorite,
+    isCustom: isDiagnosisCustom,
+    addCustom: addCustomDiagnosis,
+    removeCustom: removeCustomDiagnosis,
+    toggleFavorite: toggleDiagnosisFavorite,
+  } = useClinicalRecommendations("diagnosis", defaultDiagnosisList);
+
+  const {
+    allOptions: examOptions,
+    isFavorite: isExamFavorite,
+    isCustom: isExamCustom,
+    addCustom: addCustomExam,
+    removeCustom: removeCustomExam,
+    toggleFavorite: toggleExamFavorite,
+  } = useClinicalRecommendations("examination", defaultExamList);
+
+  const {
+    allOptions: adviceOptions,
+    isFavorite: isAdviceFavorite,
+    isCustom: isAdviceCustom,
+    addCustom: addCustomAdvice,
+    removeCustom: removeCustomAdvice,
+    toggleFavorite: toggleAdviceFavorite,
+  } = useClinicalRecommendations("advice", defaultAdviceList);
 
   // Click outside listener for suggestion menus
   useEffect(() => {
@@ -283,34 +360,25 @@ export function DoctorFastConsultation({
   }, []);
 
   // Filtered symptoms for the dropdown search
-  const allSymptoms = useMemo(() => {
-    return treatmentMode === "general"
-      ? [...FAST_GENERAL_SYMPTOMS, ...FAST_ORTHO_SYMPTOMS]
-      : [...FAST_ORTHO_SYMPTOMS, ...FAST_GENERAL_SYMPTOMS];
-  }, [treatmentMode]);
-
   const filteredSymptoms = useMemo(() => {
     const q = symptomSearch.trim().toLowerCase();
-    if (!q) return allSymptoms;
-    return allSymptoms.filter(
-      (s) => s.label.toLowerCase().includes(q) || s.text.toLowerCase().includes(q)
-    );
-  }, [symptomSearch, allSymptoms]);
+    if (!q) return complaintsOptions;
+    return complaintsOptions.filter((s) => s.toLowerCase().includes(q));
+  }, [symptomSearch, complaintsOptions]);
 
   // Filtered diagnoses for auto-suggest
-  const allDiagnoses = useMemo(() => {
-    return treatmentMode === "general"
-      ? [...FAST_GENERAL_DIAGNOSES, ...FAST_ORTHO_DIAGNOSES]
-      : [...FAST_ORTHO_DIAGNOSES, ...FAST_GENERAL_DIAGNOSES];
-  }, [treatmentMode]);
-
   const filteredDiagnoses = useMemo(() => {
     const q = (clinical.diagnosis ?? "").trim().toLowerCase();
-    if (!q) return allDiagnoses;
-    return allDiagnoses.filter(
-      (d) => d.label.toLowerCase().includes(q) || d.text.toLowerCase().includes(q)
-    );
-  }, [clinical.diagnosis, allDiagnoses]);
+    if (!q) return diagnosisOptions;
+    return diagnosisOptions.filter((d) => d.toLowerCase().includes(q));
+  }, [clinical.diagnosis, diagnosisOptions]);
+
+  // Filtered advice for dropdown
+  const filteredAdvice = useMemo(() => {
+    const q = adviceFilter.trim().toLowerCase();
+    if (!q) return adviceOptions;
+    return adviceOptions.filter((a) => a.toLowerCase().includes(q));
+  }, [adviceFilter, adviceOptions]);
 
   // Load drugs catalog
   useEffect(() => {
@@ -497,6 +565,48 @@ export function DoctorFastConsultation({
 
   return (
     <div className="flex flex-col gap-3 p-3 md:p-4 max-w-7xl mx-auto">
+      {/* TOP ACTION BAR: VIEW PRESCRIPTION & OUTPATIENT SUMMARY */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 text-white font-bold text-sm shadow-xs">
+            ⚡
+          </span>
+          <div>
+            <div className="text-xs font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Doctor Fast OPD Workspace</span>
+            </div>
+            <p className="text-[11px] text-slate-500">
+              Patient: <strong className="text-slate-700">{patientName}</strong> ({uhid}) · Episode: {episodeNo}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsRxViewOpen(true)}
+            className="h-8 gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs cursor-pointer"
+            title="View full prescription on screen before printing or downloading"
+          >
+            <Icon icon={faEye} className="size-3 text-indigo-600" />
+            <span>View Prescription</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSummaryViewOpen(true)}
+            className="h-8 gap-1.5 text-xs font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs cursor-pointer"
+            title="View Apollo standard Outpatient Summary & Prescription"
+          >
+            <Icon icon={faFileContract} className="size-3 text-teal-600" />
+            <span>Outpatient Summary</span>
+          </Button>
+        </div>
+      </div>
+
       {/* 1-CLICK SUPER TEMPLATES BANNER */}
       <div className="rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-r from-indigo-50/90 via-sky-50/70 to-indigo-50/90 p-3 shadow-xs">
         <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
@@ -506,10 +616,10 @@ export function DoctorFastConsultation({
             </span>
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-950">
-                1-Click Clinical Super Templates (सुपर टेम्पलेट्स)
+                Clinical Quick Templates
               </span>
               <p className="text-[11px] text-slate-600">
-                Click any condition below to instantly fill Complaints, Diagnosis, Examination, Medicines & Advice in 1 second!
+                Select a condition below to quickly prefill complaints, diagnosis, examination, medicines & advice.
               </p>
             </div>
           </div>
@@ -611,7 +721,7 @@ export function DoctorFastConsultation({
         <div className="flex items-center gap-2 mb-1.5">
           <Icon icon={faHeartPulse} className="size-3 text-rose-500" />
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-            Quick Vitals (विटल्स - Optional)
+            Quick Vitals
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -673,14 +783,9 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-blue-500/20">
                   <Icon icon={faStethoscope} className="size-3.5" />
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-900 tracking-tight">
-                    Chief Complaints & Symptoms
-                  </span>
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-                    लक्षण
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900 tracking-tight">
+                  Chief Complaints
+                </span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -704,14 +809,15 @@ export function DoctorFastConsultation({
                     className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs cursor-pointer"
                   >
                     <Icon icon={faWandMagicSparkles} className="size-2.5 text-blue-600" />
-                    <span>Suggestions</span>
+                    <span>Suggestions ({complaintsOptions.length})</span>
                     <Icon icon={symptomsMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-blue-500" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {symptomsMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-blue-200 bg-white p-2 shadow-2xl ring-1 ring-black/5">
-                      <div className="flex items-center gap-1.5 pb-2 mb-1.5 border-b border-slate-100">
+                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-blue-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5">
+                      {/* Search Bar */}
+                      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-slate-100">
                         <div className="relative flex-1">
                           <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
                           <input
@@ -741,37 +847,142 @@ export function DoctorFastConsultation({
                         </button>
                       </div>
 
-                      <div className="max-h-60 overflow-y-auto space-y-1">
+                      {/* Doctor Custom Symptom Add Box */}
+                      <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-lg mb-2">
+                        <div className="text-[10px] font-bold text-blue-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>+ Add Doctor Custom Symptom</span>
+                          <span className="text-[9px] text-blue-600 font-normal">Saves for future visits</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={newComplaintInput}
+                            onChange={(e) => setNewComplaintInput(e.target.value)}
+                            placeholder="e.g. Pain in shoulder during gym..."
+                            className="h-7 flex-1 rounded border border-blue-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newComplaintInput.trim()) {
+                                e.preventDefault();
+                                const text = newComplaintInput.trim();
+                                addCustomComplaint(text);
+                                const current = clinical.chiefComplaint?.trim() ?? "";
+                                const next = current ? `${current}; ${text}` : text;
+                                onClinicalChange({ ...clinical, chiefComplaint: next });
+                                setNewComplaintInput("");
+                                setComplaintNotice("Added & saved for future ✓");
+                                setTimeout(() => setComplaintNotice(null), 3000);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = newComplaintInput.trim();
+                              if (text) {
+                                addCustomComplaint(text);
+                                const current = clinical.chiefComplaint?.trim() ?? "";
+                                const next = current ? `${current}; ${text}` : text;
+                                onClinicalChange({ ...clinical, chiefComplaint: next });
+                                setNewComplaintInput("");
+                                setComplaintNotice("Added & saved for future ✓");
+                                setTimeout(() => setComplaintNotice(null), 3000);
+                              }
+                            }}
+                            disabled={!newComplaintInput.trim()}
+                            className="h-7 px-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Options List */}
+                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
                         {filteredSymptoms.length === 0 ? (
                           <div className="p-3 text-center text-xs text-slate-500">
-                            No matching preset symptoms found.
+                            No matching symptoms found. Type above to add a custom one.
                           </div>
                         ) : (
-                          filteredSymptoms.map((tag, idx) => {
-                            const isAdded = Boolean(clinical.chiefComplaint?.includes(tag.text));
+                          filteredSymptoms.map((text, idx) => {
+                            const isAdded = Boolean(clinical.chiefComplaint?.includes(text));
+                            const isFav = isComplaintFavorite(text);
+                            const isCust = isComplaintCustom(text);
                             return (
-                              <button
+                              <div
                                 key={idx}
-                                type="button"
-                                onClick={() => handleToggleSymptom(tag)}
-                                className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
                                   isAdded
-                                    ? "bg-blue-50 font-bold text-blue-900 border border-blue-200"
+                                    ? "bg-blue-50 font-bold text-blue-950 border border-blue-200"
                                     : "text-slate-700 hover:bg-slate-100 font-medium"
                                 }`}
                               >
-                                <div className="flex flex-col min-w-0 pr-2">
-                                  <span className="font-bold text-slate-900 truncate">{tag.label}</span>
-                                  <span className="text-[11px] text-slate-500 truncate">{tag.text}</span>
-                                </div>
-                                <span
-                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                    isAdded ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-700"
+                                <button
+                                  type="button"
+                                  onClick={() => toggleComplaintFavorite(text)}
+                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                                >
+                                  <Icon
+                                    icon={faStar}
+                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                                  />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = clinical.chiefComplaint?.trim() ?? "";
+                                    if (current.includes(text)) {
+                                      const next = current
+                                        .replace(new RegExp(`;?\\s*${escapeRegex(text)}`, "g"), "")
+                                        .replace(/^;\s*/, "")
+                                        .trim();
+                                      onClinicalChange({ ...clinical, chiefComplaint: next });
+                                    } else {
+                                      const next = current ? `${current}; ${text}` : text;
+                                      onClinicalChange({ ...clinical, chiefComplaint: next });
+                                    }
+                                  }}
+                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                                >
+                                  <span className="text-xs text-slate-800 break-words block">{text}</span>
+                                  {isCust && (
+                                    <span className="text-[9px] font-bold text-blue-700 bg-blue-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                      Doctor Custom
+                                    </span>
+                                  )}
+                                </button>
+                                {isCust && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCustomComplaint(text)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                    title="Delete custom symptom"
+                                  >
+                                    <Icon icon={faTrashCan} className="size-2.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = clinical.chiefComplaint?.trim() ?? "";
+                                    if (current.includes(text)) {
+                                      const next = current
+                                        .replace(new RegExp(`;?\\s*${escapeRegex(text)}`, "g"), "")
+                                        .replace(/^;\s*/, "")
+                                        .trim();
+                                      onClinicalChange({ ...clinical, chiefComplaint: next });
+                                    } else {
+                                      const next = current ? `${current}; ${text}` : text;
+                                      onClinicalChange({ ...clinical, chiefComplaint: next });
+                                    }
+                                  }}
+                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                    isAdded ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                                   }`}
                                 >
                                   {isAdded ? "✓ Added" : "+ Add"}
-                                </span>
-                              </button>
+                                </button>
+                              </div>
                             );
                           })
                         )}
@@ -785,14 +996,40 @@ export function DoctorFastConsultation({
             <Textarea
               value={clinical.chiefComplaint ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, chiefComplaint: e.target.value })}
-              placeholder="Type complaints here, or click 'Suggestions ▾' above for 1-click clinical symptoms..."
+              placeholder="Enter chief complaints (e.g. Joint pain, swelling, difficulty walking)..."
               rows={4}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
-            <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
-              <Icon icon={faWandMagicSparkles} className="size-2.5 text-blue-500" />
-              <span>Tip: Click <strong>&ldquo;Suggestions ▾&rdquo;</strong> above to select common complaints without typing</span>
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
+              {complaintNotice ? (
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-in fade-in">
+                  {complaintNotice}
+                </span>
+              ) : clinical.chiefComplaint?.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const raw = clinical.chiefComplaint!.trim();
+                    const parts = raw
+                      .split(/[;\n]+/)
+                      .map((s) => s.trim().replace(/^[•\-\*]\s*/, ""))
+                      .filter((s) => s.length >= 3);
+                    if (parts.length > 0) {
+                      parts.forEach((p) => addCustomComplaint(p));
+                    } else {
+                      addCustomComplaint(raw);
+                    }
+                    setComplaintNotice("Saved to your future suggestions ✓");
+                    setTimeout(() => setComplaintNotice(null), 3000);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-blue-50/90 px-2 py-0.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
+                  title="Save to your future reusable complaints"
+                >
+                  <Icon icon={faStar} className="size-2.5 text-amber-500" />
+                  <span>Save as future suggestion</span>
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -804,14 +1041,9 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20">
                   <Icon icon={faNotesMedical} className="size-3.5" />
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-900 tracking-tight">
-                    Clinical Diagnosis
-                  </span>
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-                    निदान
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900 tracking-tight">
+                  Clinical Diagnosis
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 {clinical.diagnosis?.trim() && (
@@ -831,7 +1063,7 @@ export function DoctorFastConsultation({
                   className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
                 >
                   <Icon icon={faWandMagicSparkles} className="size-2.5 text-emerald-600" />
-                  <span>Suggestions</span>
+                  <span>Suggestions ({diagnosisOptions.length})</span>
                   <Icon icon={diagnosisMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-emerald-600" />
                 </button>
               </div>
@@ -846,7 +1078,7 @@ export function DoctorFastConsultation({
                   setDiagnosisMenuOpen(true);
                 }}
                 onFocus={() => setDiagnosisMenuOpen(true)}
-                placeholder="Search or type diagnosis (e.g. Osteoarthritis, Spondylosis)..."
+                placeholder="Search or enter clinical diagnosis..."
                 className="h-10 text-xs font-bold text-slate-900 border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors pr-8"
               />
               {clinical.diagnosis ? (
@@ -862,8 +1094,8 @@ export function DoctorFastConsultation({
 
               {/* Autocomplete Dropdown List */}
               {diagnosisMenuOpen && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-xl border border-emerald-200 bg-white p-1.5 shadow-2xl ring-1 ring-black/5">
-                  <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center justify-between border-b border-slate-100 mb-1">
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-xl border border-emerald-200 bg-white p-2 shadow-2xl ring-1 ring-black/5">
+                  <div className="px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center justify-between border-b border-slate-100 mb-1.5">
                     <span>Suggested Diagnoses ({filteredDiagnoses.length})</span>
                     <button
                       type="button"
@@ -873,35 +1105,112 @@ export function DoctorFastConsultation({
                       Close ✕
                     </button>
                   </div>
+
+                  {/* Doctor Custom Diagnosis Add Box */}
+                  <div className="p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg mb-2">
+                    <div className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>+ Add Doctor Custom Diagnosis</span>
+                      <span className="text-[9px] text-emerald-600 font-normal">Saves for future visits</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={newDiagnosisInput}
+                        onChange={(e) => setNewDiagnosisInput(e.target.value)}
+                        placeholder="e.g. Lumbar Canal Stenosis..."
+                        className="h-7 flex-1 rounded border border-emerald-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newDiagnosisInput.trim()) {
+                            e.preventDefault();
+                            const text = newDiagnosisInput.trim();
+                            addCustomDiagnosis(text);
+                            onClinicalChange({ ...clinical, diagnosis: text });
+                            setNewDiagnosisInput("");
+                            setDiagnosisMenuOpen(false);
+                            setDiagnosisNotice("Saved & applied diagnosis ✓");
+                            setTimeout(() => setDiagnosisNotice(null), 3000);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const text = newDiagnosisInput.trim();
+                          if (text) {
+                            addCustomDiagnosis(text);
+                            onClinicalChange({ ...clinical, diagnosis: text });
+                            setNewDiagnosisInput("");
+                            setDiagnosisMenuOpen(false);
+                            setDiagnosisNotice("Saved & applied diagnosis ✓");
+                            setTimeout(() => setDiagnosisNotice(null), 3000);
+                          }
+                        }}
+                        disabled={!newDiagnosisInput.trim()}
+                        className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+
                   {filteredDiagnoses.length === 0 ? (
                     <div className="p-3 text-center text-xs text-slate-500">
-                      No matching presets. You can continue typing custom diagnosis.
+                      No matching presets. You can continue typing custom diagnosis or add it above.
                     </div>
                   ) : (
-                    filteredDiagnoses.map((tag, idx) => {
-                      const isSelected = clinical.diagnosis?.trim().toLowerCase() === tag.text.toLowerCase();
+                    filteredDiagnoses.map((text, idx) => {
+                      const isSelected = clinical.diagnosis?.trim().toLowerCase() === text.toLowerCase();
+                      const isFav = isDiagnosisFavorite(text);
+                      const isCust = isDiagnosisCustom(text);
                       return (
-                        <button
+                        <div
                           key={idx}
-                          type="button"
-                          onClick={() => {
-                            onClinicalChange({ ...clinical, diagnosis: tag.text });
-                            setDiagnosisMenuOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                          className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
                             isSelected
                               ? "bg-emerald-50 font-bold text-emerald-950 border border-emerald-200"
                               : "text-slate-800 hover:bg-slate-50 hover:text-emerald-900 font-medium"
                           }`}
                         >
-                          <div className="flex flex-col min-w-0 pr-2">
-                            <span className="font-bold text-slate-900 truncate">{tag.label}</span>
-                            <span className="text-[11px] text-slate-500 truncate">{tag.text}</span>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => toggleDiagnosisFavorite(text)}
+                            className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                            title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                          >
+                            <Icon
+                              icon={faStar}
+                              className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onClinicalChange({ ...clinical, diagnosis: text });
+                              setDiagnosisMenuOpen(false);
+                            }}
+                            className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                          >
+                            <span className="text-xs text-slate-900 font-semibold break-words block">{text}</span>
+                            {isCust && (
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                Doctor Custom
+                              </span>
+                            )}
+                          </button>
+                          {isCust && (
+                            <button
+                              type="button"
+                              onClick={() => removeCustomDiagnosis(text)}
+                              className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              title="Delete custom diagnosis"
+                            >
+                              <Icon icon={faTrashCan} className="size-2.5" />
+                            </button>
+                          )}
                           {isSelected && (
                             <Icon icon={faCheck} className="size-3 text-emerald-600 shrink-0" />
                           )}
-                        </button>
+                        </div>
                       );
                     })
                   )}
@@ -909,10 +1218,27 @@ export function DoctorFastConsultation({
               )}
             </div>
 
-            <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
-              <Icon icon={faWandMagicSparkles} className="size-2.5 text-emerald-500" />
-              <span>Smart search: Type any keyword to filter, or click <strong>Suggestions</strong> for full list</span>
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
+              {diagnosisNotice ? (
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-in fade-in">
+                  {diagnosisNotice}
+                </span>
+              ) : clinical.diagnosis?.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    addCustomDiagnosis(clinical.diagnosis!.trim());
+                    setDiagnosisNotice("Saved to your future diagnoses ✓");
+                    setTimeout(() => setDiagnosisNotice(null), 3000);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50/90 px-2 py-0.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
+                  title="Save to your future reusable diagnoses"
+                >
+                  <Icon icon={faStar} className="size-2.5 text-amber-500" />
+                  <span>Save as future diagnosis</span>
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
@@ -924,14 +1250,9 @@ export function DoctorFastConsultation({
             <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-500/20">
               <Icon icon={faBone} className="size-3.5" />
             </span>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-900 tracking-tight">
-                Physical & Joint Examination
-              </span>
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-                शारीरिक जांच
-              </span>
-            </div>
+            <span className="text-xs font-bold text-slate-900 tracking-tight">
+              Physical Examination
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -952,13 +1273,13 @@ export function DoctorFastConsultation({
                 className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs cursor-pointer"
               >
                 <Icon icon={faBone} className="size-2.5 text-amber-700" />
-                <span>Preset Findings</span>
+                <span>Preset Findings ({examOptions.length})</span>
                 <Icon icon={examMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-amber-600" />
               </button>
 
               {examMenuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2 shadow-2xl ring-1 ring-black/5">
-                  <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 px-1">
+                <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5">
+                  <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 px-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
                       Preset Joint Findings
                     </span>
@@ -970,32 +1291,171 @@ export function DoctorFastConsultation({
                       Done ✕
                     </button>
                   </div>
-                  <div className="max-h-60 overflow-y-auto space-y-1">
-                    {FAST_EXAM_CHIPS.map((tag, idx) => {
-                      const isAdded = Boolean(clinical.examination?.jointsAndParts?.includes(tag.text));
+
+                  {/* Doctor Custom Exam Finding Add Box */}
+                  <div className="p-2 bg-amber-50/80 border border-amber-200 rounded-lg mb-2">
+                    <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>+ Add Doctor Custom Exam Finding</span>
+                      <span className="text-[9px] text-amber-600 font-normal">Saves for future visits</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={newExamInput}
+                        onChange={(e) => setNewExamInput(e.target.value)}
+                        placeholder="e.g. Mild effusion in right suprapatellar pouch..."
+                        className="h-7 flex-1 rounded border border-amber-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newExamInput.trim()) {
+                            e.preventDefault();
+                            const text = newExamInput.trim();
+                            addCustomExam(text);
+                            const current = clinical.examination?.jointsAndParts?.trim() ?? "";
+                            const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                            onClinicalChange({
+                              ...clinical,
+                              examination: {
+                                ...clinical.examination,
+                                jointsAndParts: next,
+                              },
+                            });
+                            setNewExamInput("");
+                            setExamNotice("Added to findings & saved for future ✓");
+                            setTimeout(() => setExamNotice(null), 3000);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const text = newExamInput.trim();
+                          if (text) {
+                            addCustomExam(text);
+                            const current = clinical.examination?.jointsAndParts?.trim() ?? "";
+                            const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                            onClinicalChange({
+                              ...clinical,
+                              examination: {
+                                ...clinical.examination,
+                                jointsAndParts: next,
+                              },
+                            });
+                            setNewExamInput("");
+                            setExamNotice("Added to findings & saved for future ✓");
+                            setTimeout(() => setExamNotice(null), 3000);
+                          }
+                        }}
+                        disabled={!newExamInput.trim()}
+                        className="h-7 px-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                    {examOptions.map((text, idx) => {
+                      const isAdded = Boolean(clinical.examination?.jointsAndParts?.includes(text));
+                      const isFav = isExamFavorite(text);
+                      const isCust = isExamCustom(text);
                       return (
-                        <button
+                        <div
                           key={idx}
-                          type="button"
-                          onClick={() => handleToggleExamNote(tag)}
-                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
+                          className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
                             isAdded
                               ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
                               : "text-slate-700 hover:bg-slate-100 font-medium"
                           }`}
                         >
-                          <div className="flex flex-col min-w-0 pr-2">
-                            <span className="font-bold text-slate-900 truncate">{tag.label}</span>
-                            <span className="text-[11px] text-slate-500 truncate">{tag.text}</span>
-                          </div>
-                          <span
-                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                              isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700"
+                          <button
+                            type="button"
+                            onClick={() => toggleExamFavorite(text)}
+                            className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                            title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                          >
+                            <Icon
+                              icon={faStar}
+                              className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = clinical.examination?.jointsAndParts?.trim() ?? "";
+                              if (current.includes(text)) {
+                                const next = current
+                                  .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
+                                  .trim();
+                                onClinicalChange({
+                                  ...clinical,
+                                  examination: {
+                                    ...clinical.examination,
+                                    jointsAndParts: next,
+                                  },
+                                });
+                              } else {
+                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                                onClinicalChange({
+                                  ...clinical,
+                                  examination: {
+                                    ...clinical.examination,
+                                    jointsAndParts: next,
+                                  },
+                                });
+                              }
+                            }}
+                            className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                          >
+                            <span className="text-xs text-slate-800 break-words block">{text}</span>
+                            {isCust && (
+                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                Doctor Custom
+                              </span>
+                            )}
+                          </button>
+                          {isCust && (
+                            <button
+                              type="button"
+                              onClick={() => removeCustomExam(text)}
+                              className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              title="Delete custom exam finding"
+                            >
+                              <Icon icon={faTrashCan} className="size-2.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = clinical.examination?.jointsAndParts?.trim() ?? "";
+                              if (current.includes(text)) {
+                                const next = current
+                                  .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
+                                  .trim();
+                                onClinicalChange({
+                                  ...clinical,
+                                  examination: {
+                                    ...clinical.examination,
+                                    jointsAndParts: next,
+                                  },
+                                });
+                              } else {
+                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                                onClinicalChange({
+                                  ...clinical,
+                                  examination: {
+                                    ...clinical.examination,
+                                    jointsAndParts: next,
+                                  },
+                                });
+                              }
+                            }}
+                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                              isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                             }`}
                           >
                             {isAdded ? "✓ Added" : "+ Add"}
-                          </span>
-                        </button>
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1035,14 +1495,40 @@ export function DoctorFastConsultation({
               },
             })
           }
-          placeholder="e.g. Tenderness along medial joint line, crepitus on passive flexion, ROM 0-110°..."
+          placeholder="Enter physical examination findings or select presets above..."
           rows={3}
           className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
         />
-        <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
-          <Icon icon={faBone} className="size-2.5 text-amber-500" />
-          <span>Tip: Click <strong>&ldquo;Normal / NAD&rdquo;</strong> for healthy findings, or <strong>&ldquo;Preset Findings ▾&rdquo;</strong> for specific joint notes</span>
-        </p>
+        <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
+          {examNotice ? (
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-in fade-in">
+              {examNotice}
+            </span>
+          ) : clinical.examination?.jointsAndParts?.trim() ? (
+            <button
+              type="button"
+              onClick={() => {
+                const raw = clinical.examination!.jointsAndParts!.trim();
+                const lines = raw
+                  .split("\n")
+                  .map((l) => l.trim().replace(/^[•\-\*]\s*/, ""))
+                  .filter((l) => l.length >= 3);
+                if (lines.length > 0) {
+                  lines.forEach((l) => addCustomExam(l));
+                } else {
+                  addCustomExam(raw);
+                }
+                setExamNotice("Saved to your future findings ✓");
+                setTimeout(() => setExamNotice(null), 3000);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-amber-50/90 px-2 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
+              title="Save to your future reusable exam findings"
+            >
+              <Icon icon={faStar} className="size-2.5 text-amber-500" />
+              <span>Save as future finding</span>
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {/* CARD 4: MEDICINES & PRESCRIPTION (Rx) - THE DOCTOR'S HEART */}
@@ -1054,10 +1540,10 @@ export function DoctorFastConsultation({
             </span>
             <div>
               <span className="text-sm font-extrabold text-slate-950">
-                Prescription Medicines (दवाइयाँ - Rx)
+                Prescription Medicines
               </span>
               <p className="text-[11px] text-slate-500">
-                {medicines.filter((m) => m.name?.trim()).length} medicine(s) prescribed · Use 1-click dosing buttons below
+                {medicines.filter((m) => m.name?.trim()).length} medicine{medicines.filter((m) => m.name?.trim()).length === 1 ? "" : "s"} prescribed
               </p>
             </div>
           </div>
@@ -1149,7 +1635,6 @@ export function DoctorFastConsultation({
                       className="inline-flex items-center gap-1 rounded-md border border-violet-200/90 bg-white px-2 py-0.5 text-[10px] font-bold text-violet-900 hover:bg-violet-100 hover:border-violet-400 cursor-pointer transition-all active:scale-95"
                     >
                       <span>{preset.label}</span>
-                      <span className="text-[9px] text-violet-500 font-medium">({preset.hindi})</span>
                     </button>
                   ))}
                 </div>
@@ -1192,7 +1677,7 @@ export function DoctorFastConsultation({
                     <Input
                       value={med.instructions ?? ""}
                       onChange={(e) => handleUpdateMedicine(index, { instructions: e.target.value })}
-                      placeholder="After food (खाने के बाद)"
+                      placeholder="e.g. After food, at bedtime..."
                       className="h-8 text-xs font-semibold"
                     />
                   </div>
@@ -1227,14 +1712,9 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-800 ring-1 ring-amber-500/20">
                   <Icon icon={faNotesMedical} className="size-3.5" />
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-900 tracking-tight">
-                    Doctor's Advice & Precautions
-                  </span>
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-                    परामर्श
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900 tracking-tight">
+                  Advice & Recommendations
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 {advice?.trim() && (
@@ -1257,15 +1737,15 @@ export function DoctorFastConsultation({
                     className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs cursor-pointer"
                   >
                     <Icon icon={faWandMagicSparkles} className="size-2.5 text-amber-700" />
-                    <span>Suggestions</span>
+                    <span>Suggestions ({adviceOptions.length})</span>
                     <Icon icon={adviceMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-amber-600" />
                   </button>
 
                   {adviceMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2 shadow-2xl ring-1 ring-black/5">
-                      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-100 px-1">
+                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5">
+                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 px-1">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                          Precaution Presets
+                          Precaution Presets & Recommendations
                         </span>
                         <button
                           type="button"
@@ -1275,34 +1755,164 @@ export function DoctorFastConsultation({
                           Done ✕
                         </button>
                       </div>
-                      <div className="max-h-60 overflow-y-auto space-y-1">
-                        {FAST_ADVICE_CHIPS.map((tag, idx) => {
-                          const isAdded = Boolean(advice?.includes(tag.text));
-                          return (
-                            <button
-                              key={idx}
-                              type="button"
-                              onClick={() => handleToggleAdvice(tag)}
-                              className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors cursor-pointer ${
-                                isAdded
-                                  ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
-                                  : "text-slate-700 hover:bg-slate-100 font-medium"
-                              }`}
-                            >
-                              <div className="flex flex-col min-w-0 pr-2">
-                                <span className="font-bold text-slate-900 truncate">{tag.label}</span>
-                                <span className="text-[11px] text-slate-500 truncate">{tag.text}</span>
-                              </div>
-                              <span
-                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                  isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700"
+
+                      {/* Search / Filter Advice */}
+                      <div className="relative mb-2">
+                        <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
+                        <input
+                          type="text"
+                          value={adviceFilter}
+                          onChange={(e) => setAdviceFilter(e.target.value)}
+                          placeholder="Filter precautions..."
+                          className="h-7 w-full rounded-md border border-slate-200 bg-slate-50 pl-7 pr-6 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-500 focus:outline-none"
+                        />
+                        {adviceFilter && (
+                          <button
+                            type="button"
+                            onClick={() => setAdviceFilter("")}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            <Icon icon={faXmark} className="size-2.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Doctor Custom Precaution Add Box */}
+                      <div className="p-2 bg-amber-50/80 border border-amber-200 rounded-lg mb-2">
+                        <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>+ Add Doctor Custom Precaution</span>
+                          <span className="text-[9px] text-amber-600 font-normal">Saves for future visits</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={newAdviceInput}
+                            onChange={(e) => setNewAdviceInput(e.target.value)}
+                            placeholder="e.g. Avoid cold drinks, steam twice daily..."
+                            className="h-7 flex-1 rounded border border-amber-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newAdviceInput.trim()) {
+                                e.preventDefault();
+                                const text = newAdviceInput.trim();
+                                addCustomAdvice(text);
+                                const current = advice?.trim() ?? "";
+                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                                onAdviceChange(next);
+                                setNewAdviceInput("");
+                                setAdviceNotice("Added to advice & saved for future ✓");
+                                setTimeout(() => setAdviceNotice(null), 3000);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = newAdviceInput.trim();
+                              if (text) {
+                                addCustomAdvice(text);
+                                const current = advice?.trim() ?? "";
+                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                                onAdviceChange(next);
+                                setNewAdviceInput("");
+                                setAdviceNotice("Added to advice & saved for future ✓");
+                                setTimeout(() => setAdviceNotice(null), 3000);
+                              }
+                            }}
+                            disabled={!newAdviceInput.trim()}
+                            className="h-7 px-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                        {filteredAdvice.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-500">
+                            No matching precautions found. Add custom above.
+                          </div>
+                        ) : (
+                          filteredAdvice.map((text, idx) => {
+                            const isAdded = Boolean(advice?.includes(text));
+                            const isFav = isAdviceFavorite(text);
+                            const isCust = isAdviceCustom(text);
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                                  isAdded
+                                    ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
+                                    : "text-slate-700 hover:bg-slate-100 font-medium"
                                 }`}
                               >
-                                {isAdded ? "✓ Added" : "+ Add"}
-                              </span>
-                            </button>
-                          );
-                        })}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAdviceFavorite(text)}
+                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                                >
+                                  <Icon
+                                    icon={faStar}
+                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                                  />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = advice?.trim() ?? "";
+                                    if (current.includes(text)) {
+                                      const next = current
+                                        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
+                                        .trim();
+                                      onAdviceChange(next);
+                                    } else {
+                                      const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                                      onAdviceChange(next);
+                                    }
+                                  }}
+                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                                >
+                                  <span className="text-xs text-slate-800 break-words block">{text}</span>
+                                  {isCust && (
+                                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                      Doctor Custom
+                                    </span>
+                                  )}
+                                </button>
+                                {isCust && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCustomAdvice(text)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                    title="Delete custom recommendation"
+                                  >
+                                    <Icon icon={faTrashCan} className="size-2.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const current = advice?.trim() ?? "";
+                                    if (current.includes(text)) {
+                                      const next = current
+                                        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
+                                        .trim();
+                                      onAdviceChange(next);
+                                    } else {
+                                      const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                                      onAdviceChange(next);
+                                    }
+                                  }}
+                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                    isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                  }`}
+                                >
+                                  {isAdded ? "✓ Added" : "+ Add"}
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   )}
@@ -1312,14 +1922,40 @@ export function DoctorFastConsultation({
             <Textarea
               value={advice}
               onChange={(e) => onAdviceChange(e.target.value)}
-              placeholder="e.g. Avoid squatting and sitting on floor. Hot water fomentation twice daily..."
+              placeholder="Enter advice, precautions, lifestyle recommendations..."
               rows={3}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
-            <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
-              <Icon icon={faWandMagicSparkles} className="size-2.5 text-amber-500" />
-              <span>Tip: Click <strong>&ldquo;Suggestions ▾&rdquo;</strong> above to append precautions</span>
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
+              {adviceNotice ? (
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 animate-in fade-in">
+                  {adviceNotice}
+                </span>
+              ) : advice?.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const raw = advice.trim();
+                    const lines = raw
+                      .split("\n")
+                      .map((l) => l.trim().replace(/^[•\-\*]\s*/, ""))
+                      .filter((l) => l.length >= 3);
+                    if (lines.length > 0) {
+                      lines.forEach((l) => addCustomAdvice(l));
+                    } else {
+                      addCustomAdvice(raw);
+                    }
+                    setAdviceNotice("Saved to your future recommendations ✓");
+                    setTimeout(() => setAdviceNotice(null), 3000);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-50/90 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
+                  title="Save to your future reusable recommendations"
+                >
+                  <Icon icon={faStar} className="size-2.5 text-amber-500" />
+                  <span>Save as future recommendation</span>
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -1331,14 +1967,9 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-800 ring-1 ring-sky-500/20">
                   <Icon icon={faClock} className="size-3.5" />
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-900 tracking-tight">
-                    Follow-Up Timeframe
-                  </span>
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-                    अगला परामर्श
-                  </span>
-                </div>
+                <span className="text-xs font-bold text-slate-900 tracking-tight">
+                  Follow-Up Timeframe
+                </span>
               </div>
               {followUp?.trim() && (
                 <button
@@ -1355,7 +1986,7 @@ export function DoctorFastConsultation({
             <Input
               value={followUp}
               onChange={(e) => onFollowUpChange(e.target.value)}
-              placeholder="e.g. Review after 7 days"
+              placeholder="e.g. Review after 7 days..."
               className="h-10 text-xs font-bold text-slate-900 border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
@@ -1421,6 +2052,20 @@ export function DoctorFastConsultation({
           )}
         </div>
       </div>
+
+      {/* Prescription Viewer Modal */}
+      <PrescriptionViewModal
+        consultationId={consultationId}
+        isOpen={isRxViewOpen}
+        onClose={() => setIsRxViewOpen(false)}
+      />
+
+      {/* Apollo-Standard Outpatient Summary Modal */}
+      <PatientSummaryModal
+        consultationId={consultationId}
+        isOpen={isSummaryViewOpen}
+        onClose={() => setIsSummaryViewOpen(false)}
+      />
     </div>
   );
 }

@@ -10,7 +10,11 @@ import { isConsultationEditable } from "@/lib/consultation-utils";
 import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
 import { applyPrescriptionStockMovements } from "@/lib/prescription-stock.server";
 import { zodFieldErrors } from "@/lib/form-utils";
-import { renderMedicalCertificatePdf, renderReferralPdf } from "@/lib/pdf";
+import {
+  renderMedicalCertificatePdf,
+  renderOutpatientSummaryPdf,
+  renderReferralPdf,
+} from "@/lib/pdf";
 import { formatPatientAge } from "@/lib/date-utils";
 import { validatePrescriptionDraft } from "@/lib/prescription-validation";
 import { can } from "@/lib/rbac";
@@ -854,3 +858,266 @@ export async function generateReferralPdf(
     },
   };
 }
+
+export type PatientOutpatientSummaryData = {
+  consultationId: string;
+  clinic: {
+    name: string;
+    phone: string;
+    address: string;
+    email?: string | null;
+    logoUrl?: string | null;
+  };
+  doctor: {
+    name: string;
+    specialty?: string | null;
+    qualifications?: string | null;
+    registrationNo?: string | null;
+    email?: string | null;
+  };
+  patient: {
+    id: string;
+    name: string;
+    dob?: string | null;
+    age?: string | null;
+    gender?: string | null;
+    address?: string | null;
+    phone: string;
+    uhid: string;
+    opNumber?: string | null;
+    allergies?: string | null;
+  };
+  visitDate: string;
+  chiefComplaints?: string | null;
+  historyOfPresentIllness?: string | null;
+  currentMedications?: string | null;
+  physicalExamination?: string | null;
+  diagnosis: string;
+  diagnosisType?: string;
+  investigationResults?: string | null;
+  labs?: string | null;
+  medicines: Medicine[];
+  advice?: string | null;
+  followUp?: string | null;
+  pdfBase64: string;
+  filename: string;
+  language: "en" | "hi";
+};
+
+function formatExaminationSummary(exam: any): string | null {
+  if (!exam) return null;
+  if (typeof exam === "string") return exam.trim() || null;
+  const parts: string[] = [];
+  if (exam.general?.trim()) parts.push(`General: ${exam.general.trim()}`);
+  if (exam.jointsAndParts?.trim()) parts.push(`Joints & Local Examination: ${exam.jointsAndParts.trim()}`);
+  if (exam.cardiovascular?.trim()) parts.push(`CVS: ${exam.cardiovascular.trim()}`);
+  if (exam.respiratory?.trim()) parts.push(`RS: ${exam.respiratory.trim()}`);
+  if (exam.abdomen?.trim()) parts.push(`Abdomen: ${exam.abdomen.trim()}`);
+  if (exam.neurological?.trim()) parts.push(`CNS: ${exam.neurological.trim()}`);
+  if (exam.other?.trim()) parts.push(`Other: ${exam.other.trim()}`);
+  return parts.length > 0 ? parts.join("\n") : null;
+}
+
+function formatAdviceSummary(rawAdvice: any, rxAdvice?: string | null): string | null {
+  const parts: string[] = [];
+  if (rxAdvice?.trim()) parts.push(rxAdvice.trim());
+  if (typeof rawAdvice === "string" && rawAdvice.trim() && rawAdvice.trim() !== rxAdvice?.trim()) {
+    parts.push(rawAdvice.trim());
+  } else if (rawAdvice && typeof rawAdvice === "object") {
+    if (rawAdvice.generalAdvice?.trim() && rawAdvice.generalAdvice.trim() !== rxAdvice?.trim()) {
+      parts.push(rawAdvice.generalAdvice.trim());
+    }
+    if (rawAdvice.physiotherapyExercises?.trim()) {
+      parts.push(`Physiotherapy / Exercise: ${rawAdvice.physiotherapyExercises.trim()}`);
+    }
+    if (rawAdvice.dosAndDonts?.trim()) {
+      parts.push(`Do's & Don'ts: ${rawAdvice.dosAndDonts.trim()}`);
+    }
+    if (rawAdvice.dietAndLifestyle?.trim()) {
+      parts.push(`Diet & Lifestyle: ${rawAdvice.dietAndLifestyle.trim()}`);
+    }
+    if (rawAdvice.warningSignsEmergency?.trim()) {
+      parts.push(`Warning Signs / Emergency: ${rawAdvice.warningSignsEmergency.trim()}`);
+    }
+  }
+  return parts.length > 0 ? parts.join("\n") : null;
+}
+
+export async function getPatientOutpatientSummary(
+  consultationId: string,
+  language: "en" | "hi" = "en"
+): Promise<ActionResult<PatientOutpatientSummaryData>> {
+  const session = await requireSessionUser();
+  if (!can(session, "consultations.read")) return permissionDenied();
+
+  const consultation = await prisma.consultation.findFirst({
+    where: { id: consultationId, clinicId: session.clinicId },
+    include: {
+      patient: true,
+      doctor: true,
+      clinic: true,
+      prescription: true,
+      appointment: {
+        select: {
+          id: true,
+          tokenNumber: true,
+          queueDate: true,
+        },
+      },
+    },
+  });
+
+  if (!consultation) {
+    return { success: false, error: "Consultation not found." };
+  }
+
+  const clinicalPres = consultation.clinicalPresentation as any;
+  const hpi =
+    clinicalPres?.historyOfPresentIllness?.trim() ||
+    [
+      clinicalPres?.onset ? `Onset: ${clinicalPres.onset}` : "",
+      clinicalPres?.duration ? `Duration: ${clinicalPres.duration}` : "",
+    ]
+      .filter(Boolean)
+      .join(", ") ||
+    null;
+
+  const patHist = consultation.patientHistory as any;
+  const currentMeds =
+    patHist?.medications?.trim() ||
+    consultation.patient.chronicConditions?.trim() ||
+    null;
+
+  const physExam = formatExaminationSummary(consultation.examination);
+
+  const invResults = consultation.investigationResults as any;
+  const imaging =
+    invResults?.imaging?.trim() ||
+    invResults?.other?.trim() ||
+    null;
+  const labs = invResults?.labs?.trim() || null;
+
+  const medicines = (consultation.prescription?.medicines as Medicine[]) || [];
+  const advice = formatAdviceSummary(consultation.advice, consultation.prescription?.advice);
+  const followUp =
+    consultation.prescription?.followUp ||
+    (consultation.advice as any)?.followUpInstructions ||
+    null;
+
+  const allergies =
+    consultation.patient.allergies?.trim() ||
+    patHist?.allergies?.trim() ||
+    null;
+
+  const patientDob = consultation.patient.dateOfBirth
+    ? formatCertificateDate(consultation.patient.dateOfBirth)
+    : undefined;
+
+  const visitDate = formatCertificateDate(consultation.createdAt);
+
+  const opNumber = consultation.appointment
+    ? `OP-${consultation.appointment.tokenNumber ?? consultation.appointment.id.slice(0, 8).toUpperCase()}`
+    : undefined;
+
+  const diagnosis = consultation.diagnosis?.trim() || "Clinical Evaluation";
+  const diagnosisType = Array.isArray(consultation.diagnosisCodes) && consultation.diagnosisCodes.length > 0
+    ? (consultation.diagnosisCodes as any[]).map((c) => `${c.code} - ${c.display}`).join(", ")
+    : "Primary / Confirmed";
+
+  const pdfBytes = await renderOutpatientSummaryPdf({
+    clinicName: consultation.clinic.name,
+    clinicPhone: consultation.clinic.phone,
+    clinicAddress: consultation.clinic.address,
+    clinicEmail: consultation.clinic.email ?? undefined,
+    clinicLogoUrl: consultation.clinic.logoUrl,
+    doctorName: consultation.doctor.name,
+    doctorSpecialty: consultation.doctor.specialty ?? undefined,
+    doctorEmail: consultation.doctor.email ?? undefined,
+    doctorRegistrationNo: consultation.doctor.registrationNo ?? undefined,
+    doctorQualifications: consultation.doctor.qualifications ?? undefined,
+    date: visitDate,
+    patientName: consultation.patient.name,
+    patientDob,
+    patientAge: formatPatientAge(consultation.patient) ?? undefined,
+    patientGender: formatGender(consultation.patient.gender),
+    patientAddress: consultation.patient.address ?? undefined,
+    patientPhone: consultation.patient.phone,
+    patientUhid: consultation.patient.mrn,
+    opNumber,
+    visitDate,
+    patientAllergies: allergies,
+    chiefComplaints: consultation.chiefComplaint,
+    historyOfPresentIllness: hpi,
+    currentMedications: currentMeds,
+    physicalExamination: physExam,
+    diagnosis,
+    diagnosisType,
+    investigationResults: imaging,
+    labs,
+    medicines,
+    advice,
+    followUp,
+    language,
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "export",
+    resourceType: "consultation",
+    resourceId: consultation.id,
+    metadata: { document: "outpatient_summary", language },
+  });
+
+  const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
+  const filename = `outpatient-summary-${consultation.patient.mrn}-${language}.pdf`;
+
+  return {
+    success: true,
+    data: {
+      consultationId: consultation.id,
+      clinic: {
+        name: consultation.clinic.name,
+        phone: consultation.clinic.phone,
+        address: consultation.clinic.address,
+        email: consultation.clinic.email,
+        logoUrl: consultation.clinic.logoUrl,
+      },
+      doctor: {
+        name: consultation.doctor.name,
+        specialty: consultation.doctor.specialty,
+        qualifications: consultation.doctor.qualifications,
+        registrationNo: consultation.doctor.registrationNo,
+        email: consultation.doctor.email,
+      },
+      patient: {
+        id: consultation.patient.id,
+        name: consultation.patient.name,
+        dob: patientDob,
+        age: formatPatientAge(consultation.patient) ?? null,
+        gender: formatGender(consultation.patient.gender) ?? null,
+        address: consultation.patient.address,
+        phone: consultation.patient.phone,
+        uhid: consultation.patient.mrn,
+        opNumber,
+        allergies,
+      },
+      visitDate,
+      chiefComplaints: consultation.chiefComplaint,
+      historyOfPresentIllness: hpi,
+      currentMedications: currentMeds,
+      physicalExamination: physExam,
+      diagnosis,
+      diagnosisType,
+      investigationResults: imaging,
+      labs,
+      medicines,
+      advice,
+      followUp,
+      pdfBase64,
+      filename,
+      language,
+    },
+  };
+}
+

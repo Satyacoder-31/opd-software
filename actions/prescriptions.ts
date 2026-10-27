@@ -288,6 +288,170 @@ export async function generatePrescriptionPdf(
   return { success: true, data: { pdfBase64, filename } };
 }
 
+export type PrescriptionViewData = {
+  consultationId: string;
+  prescriptionId: string;
+  date: string;
+  clinic: {
+    name: string;
+    phone: string;
+    address: string;
+    email?: string | null;
+    logoUrl?: string | null;
+  };
+  doctor: {
+    name: string;
+    specialty?: string | null;
+    registrationNo?: string | null;
+    qualifications?: string | null;
+  };
+  patient: {
+    id: string;
+    name: string;
+    mrn: string;
+    age?: string | null;
+    gender: string | null;
+    phone: string;
+    address?: string | null;
+    allergies?: string | null;
+    chronicConditions?: string | null;
+    abhaNumber?: string | null;
+  };
+  tokenNumber?: number | null;
+  chiefComplaint?: string | null;
+  diagnosis: string;
+  vitals?: any | null;
+  medicines: Medicine[];
+  advice?: string | null;
+  followUp?: string | null;
+  pdfBase64: string;
+  filename: string;
+  language: "en" | "hi";
+};
+
+export async function getPrescriptionViewData(
+  consultationId: string,
+  language: "en" | "hi" = "en"
+): Promise<ActionResult<PrescriptionViewData>> {
+  const session = await requireSessionUser();
+  if (!can(session, "consultations.read")) return permissionDenied();
+
+  const consultation = await prisma.consultation.findFirst({
+    where: { id: consultationId, clinicId: session.clinicId },
+    include: {
+      patient: true,
+      doctor: true,
+      prescription: true,
+      appointment: {
+        select: {
+          tokenNumber: true,
+          queueDate: true,
+        },
+      },
+    },
+  });
+
+  if (!consultation?.prescription) {
+    return { success: false, error: "Prescription not found for this consultation." };
+  }
+
+  const clinic = await prisma.clinic.findUniqueOrThrow({
+    where: { id: session.clinicId },
+  });
+
+  const medicines = consultation.prescription.medicines as Medicine[];
+  const consultationDate = consultation.createdAt;
+  const vitals = (consultation.vitals as any) ?? null;
+  const formattedDate = formatPrescriptionDate(consultationDate);
+
+  const pdfBytes = await renderPrescriptionPdf({
+    clinicName: clinic.name,
+    clinicPhone: clinic.phone,
+    clinicAddress: clinic.address,
+    clinicLogoUrl: clinic.logoUrl,
+    doctorName: consultation.doctor.name,
+    doctorQualifications: consultation.doctor.qualifications ?? undefined,
+    doctorSpecialization: consultation.doctor.specialty ?? undefined,
+    doctorRegistrationNo: consultation.doctor.registrationNo ?? undefined,
+    date: formattedDate,
+    patientName: consultation.patient.name,
+    patientAge: formatPatientAge(consultation.patient),
+    patientGender: formatGender(consultation.patient.gender),
+    patientMrn: consultation.patient.mrn,
+    patientPhone: consultation.patient.phone,
+    patientAddress: consultation.patient.address ?? undefined,
+    patientAllergies: consultation.patient.allergies ?? undefined,
+    patientChronicConditions: consultation.patient.chronicConditions ?? undefined,
+    vitals,
+    chiefComplaint: consultation.chiefComplaint ?? undefined,
+    tokenNumber: consultation.appointment?.tokenNumber ?? undefined,
+    abhaNumber: consultation.patient.abhaNumber ?? undefined,
+    abhaAddress: consultation.patient.abhaAddress ?? undefined,
+    diagnosis: consultation.diagnosis ?? "",
+    medicines,
+    advice: consultation.prescription.advice ?? undefined,
+    followUp: consultation.prescription.followUp ?? undefined,
+    layout: clinic.prescriptionLayout,
+    language,
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "read",
+    resourceType: "prescription",
+    resourceId: consultation.prescription.id,
+    metadata: { view: "prescription_preview", language },
+  });
+
+  const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
+  const filename = `prescription-${consultation.patient.mrn}-${language}.pdf`;
+
+  return {
+    success: true,
+    data: {
+      consultationId,
+      prescriptionId: consultation.prescription.id,
+      date: formattedDate,
+      clinic: {
+        name: clinic.name,
+        phone: clinic.phone,
+        address: clinic.address,
+        email: clinic.email,
+        logoUrl: clinic.logoUrl,
+      },
+      doctor: {
+        name: consultation.doctor.name,
+        specialty: consultation.doctor.specialty,
+        registrationNo: consultation.doctor.registrationNo,
+        qualifications: consultation.doctor.qualifications,
+      },
+      patient: {
+        id: consultation.patient.id,
+        name: consultation.patient.name,
+        mrn: consultation.patient.mrn,
+        age: formatPatientAge(consultation.patient) ?? null,
+        gender: consultation.patient.gender,
+        phone: consultation.patient.phone,
+        address: consultation.patient.address,
+        allergies: consultation.patient.allergies,
+        chronicConditions: consultation.patient.chronicConditions,
+        abhaNumber: consultation.patient.abhaNumber,
+      },
+      tokenNumber: consultation.appointment?.tokenNumber ?? null,
+      chiefComplaint: consultation.chiefComplaint,
+      diagnosis: consultation.diagnosis ?? "",
+      vitals,
+      medicines,
+      advice: consultation.prescription.advice,
+      followUp: consultation.prescription.followUp,
+      pdfBase64,
+      filename,
+      language,
+    },
+  };
+}
+
 export async function updateDoctorCredentials(
   userId: string,
   formData: FormData

@@ -9,7 +9,7 @@ type ButtonProps = Omit<
   React.ComponentProps<typeof ShadcnButton>,
   "variant" | "size"
 > & {
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "outline";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
 };
@@ -17,6 +17,7 @@ type ButtonProps = Omit<
 const variantMap = {
   primary: "default",
   secondary: "outline",
+  outline: "outline",
   ghost: "ghost",
   danger: "destructive",
 } as const;

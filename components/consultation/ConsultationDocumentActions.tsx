@@ -2,11 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { FontAwesomeIcon as Icon } from "@fortawesome/react-fontawesome";
+import {
+  faEye,
+  faFileContract,
+  faDownload,
+  faPrint,
+} from "@fortawesome/free-solid-svg-icons";
 import { generatePrescriptionPdf } from "@/actions/prescriptions";
 import { generateMedicalCertificatePdf } from "@/actions/consultations";
 import { Button } from "@/components/ui/Button";
 import { downloadBase64Pdf } from "@/lib/utils";
 import { usePendingAction } from "@/hooks/usePendingAction";
+import { PrescriptionViewModal } from "@/components/consultation/PrescriptionViewModal";
+import { PatientSummaryModal } from "@/components/consultation/PatientSummaryModal";
 
 type ConsultationDocumentActionsProps = {
   consultationId: string;
@@ -22,6 +31,8 @@ export function ConsultationDocumentActions({
   showBillingLink = true,
 }: ConsultationDocumentActionsProps) {
   const [error, setError] = useState<string | null>(null);
+  const [isRxViewOpen, setIsRxViewOpen] = useState(false);
+  const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
   const { isPending, run } = usePendingAction<
     "prescription" | "prescription-hi" | "certificate"
   >();
@@ -62,12 +73,34 @@ export function ConsultationDocumentActions({
           <>
             <Button
               type="button"
+              variant="primary"
+              onClick={() => setIsRxViewOpen(true)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5 shadow-xs"
+              title="View full prescription on screen before printing or downloading"
+            >
+              <Icon icon={faEye} className="text-xs" />
+              View prescription
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsSummaryViewOpen(true)}
+              className="border-teal-300 text-teal-800 bg-teal-50/70 hover:bg-teal-100 font-bold gap-1.5 shadow-2xs"
+              title="View Apollo standard Outpatient Summary & Prescription"
+            >
+              <Icon icon={faFileContract} className="text-xs text-teal-600" />
+              Outpatient summary
+            </Button>
+            <Button
+              type="button"
               variant="secondary"
               onClick={() => handlePrescriptionDownload("en")}
               loading={isPending("prescription")}
               title="Download Prescription PDF (English)"
+              className="gap-1.5"
             >
-              Download prescription
+              <Icon icon={faDownload} className="text-xs text-slate-500" />
+              Download Rx
             </Button>
             <Button
               type="button"
@@ -99,6 +132,20 @@ export function ConsultationDocumentActions({
           </Link>
         )}
       </div>
+
+      {/* Prescription Viewer Modal */}
+      <PrescriptionViewModal
+        consultationId={consultationId}
+        isOpen={isRxViewOpen}
+        onClose={() => setIsRxViewOpen(false)}
+      />
+
+      {/* Outpatient Summary Modal */}
+      <PatientSummaryModal
+        consultationId={consultationId}
+        isOpen={isSummaryViewOpen}
+        onClose={() => setIsSummaryViewOpen(false)}
+      />
       {error && (
         <p className="text-sm text-danger" role="alert">
           {error}
