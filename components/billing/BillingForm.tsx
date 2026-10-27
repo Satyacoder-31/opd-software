@@ -14,6 +14,7 @@ import {
   faPills,
   faPrint,
   faDownload,
+  faEye,
   faTriangleExclamation,
   faPenToSquare,
   faCheck,
@@ -43,6 +44,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Icon } from "@/components/ui/Icon";
+import { ReceiptViewModal } from "@/components/billing/ReceiptViewModal";
 import { downloadBase64Pdf, cn, formatPhone } from "@/lib/utils";
 import { validateBillingInput } from "@/lib/validation";
 import type { LineItem, Medicine, Vitals } from "@/lib/types";
@@ -190,6 +192,8 @@ export function BillingForm({
   const [voidReason, setVoidReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptLang, setReceiptLang] = useState<"en" | "hi">("en");
 
   // Vitals State & Live Editor
   const [vitals, setVitals] = useState<Vitals>(initialVitals ?? {});
@@ -522,6 +526,22 @@ export function BillingForm({
             <span className="rounded-md bg-white border border-border px-2.5 py-1 text-xs font-mono font-medium text-slate-700 shadow-2xs">
               INV-{receiptNo}
             </span>
+            {isPaid && (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setReceiptLang("en");
+                  setShowReceiptModal(true);
+                }}
+                className="border-sky-300 text-sky-800 bg-sky-50 hover:bg-sky-100 font-semibold text-xs shadow-2xs"
+                title="View & Preview Receipt"
+              >
+                <Icon icon={faEye} data-icon="inline-start" />
+                View Receipt
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1140,6 +1160,20 @@ export function BillingForm({
             <>
               <Button
                 type="button"
+                variant="primary"
+                onClick={() => {
+                  setReceiptLang("en");
+                  setShowReceiptModal(true);
+                }}
+                className="font-semibold shadow-xs"
+                title="View official receipt & tax invoice before downloading"
+              >
+                <Icon icon={faEye} data-icon="inline-start" />
+                View Receipt
+              </Button>
+
+              <Button
+                type="button"
                 variant="secondary"
                 onClick={() => handleDownloadReceipt("en")}
                 loading={isPending("receipt")}
@@ -1164,7 +1198,9 @@ export function BillingForm({
               <Button
                 type="button"
                 variant="secondary"
-                onClick={handlePrintBrowser}
+                onClick={() => {
+                  setShowReceiptModal(true);
+                }}
               >
                 <Icon icon={faPrint} data-icon="inline-start" />
                 Print Receipt
@@ -1297,6 +1333,14 @@ export function BillingForm({
           </div>
         </div>
       </div>
+
+      {/* RECEIPT PREVIEW & DOWNLOAD MODAL */}
+      <ReceiptViewModal
+        consultationId={consultationId}
+        isOpen={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        initialLang={receiptLang}
+      />
     </div>
   );
 }

@@ -579,7 +579,7 @@ export async function generateReceiptPdf(
   language: "en" | "hi" = "en"
 ): Promise<ActionResult<{ pdfBase64: string; filename: string }>> {
   const session = await requireSessionUser();
-  if (!can(session, "billing.write")) return permissionDenied();
+  if (!can(session, "billing.read")) return permissionDenied();
 
   const invoice = await prisma.invoice.findFirst({
     where: { consultationId, clinicId: session.clinicId },
@@ -678,6 +678,258 @@ export async function generateReceiptPdf(
   const filename = `receipt-${(invoice.invoiceNumber ?? invoice.id).slice(0, 12)}-${language}.pdf`;
 
   return { success: true, data: { pdfBase64, filename } };
+}
+
+export type ReceiptViewData = {
+  consultationId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  date: string;
+  paymentMode: string;
+  amount: number;
+  taxableAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  lineItems: LineItem[] | null;
+  status: string;
+  clinic: {
+    name: string;
+    phone: string;
+    address: string;
+    gstin?: string | null;
+    email?: string | null;
+    logoUrl?: string | null;
+  };
+  patient: {
+    id: string;
+    name: string;
+    mrn: string;
+    age?: string | null;
+    gender: string | null;
+    phone: string;
+    address?: string | null;
+  };
+  doctor: {
+    name: string;
+    specialty?: string | null;
+    registrationNo?: string | null;
+    qualifications?: string | null;
+  };
+  tokenNumber?: number | null;
+  queueDate?: string | null;
+  chiefComplaint?: string | null;
+  diagnosis?: string | null;
+  vitals?: any | null;
+  pdfBase64: string;
+  filename: string;
+  language: "en" | "hi";
+};
+
+export async function getReceiptViewData(
+  consultationId: string,
+  language: "en" | "hi" = "en"
+): Promise<ActionResult<ReceiptViewData>> {
+  const session = await requireSessionUser();
+  if (!can(session, "billing.read")) return permissionDenied();
+
+  const invoice = await prisma.invoice.findFirst({
+    where: { consultationId, clinicId: session.clinicId },
+    include: {
+      consultation: {
+        include: {
+          patient: true,
+          doctor: {
+            select: {
+              name: true,
+              specialty: true,
+              registrationNo: true,
+              qualifications: true,
+            },
+          },
+          appointment: {
+            select: {
+              tokenNumber: true,
+              queueDate: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!invoice || invoice.status !== InvoiceStatus.paid) {
+    return { success: false, error: "Paid tax invoice not found for this consultation." };
+  }
+
+  const clinic = await prisma.clinic.findUniqueOrThrow({
+    where: { id: session.clinicId },
+  });
+
+  const lineItems = Array.isArray(invoice.lineItems)
+    ? (invoice.lineItems as LineItem[])
+    : null;
+  const amount = Number(invoice.amount);
+  const taxableAmount =
+    invoice.taxableAmount != null ? Number(invoice.taxableAmount) : amount;
+  const taxRate = invoice.taxRate != null ? Number(invoice.taxRate) : 0;
+  const taxAmount = invoice.taxAmount != null ? Number(invoice.taxAmount) : 0;
+
+  const consultation = invoice.consultation;
+  const patient = consultation.patient;
+  const doctor = consultation.doctor;
+  const appointment = consultation.appointment;
+  const vitals = (consultation.vitals as any) ?? null;
+  const dateFormatted = new Date().toLocaleDateString("en-IN");
+  const invoiceNumber = invoice.invoiceNumber ?? invoice.id.slice(0, 8).toUpperCase();
+
+  const pdfBytes = await renderReceiptPdf({
+    clinicName: clinic.name,
+    clinicPhone: clinic.phone,
+    clinicAddress: clinic.address,
+    clinicGstin: clinic.gstin ?? undefined,
+    clinicEmail: clinic.email ?? undefined,
+    clinicLogoUrl: clinic.logoUrl,
+    patientName: patient.name,
+    patientMrn: patient.mrn,
+    patientAge: formatPatientAge(patient),
+    patientGender: patient.gender
+      ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
+      : null,
+    patientPhone: patient.phone,
+    patientAddress: patient.address ?? undefined,
+    doctorName: doctor.name,
+    doctorSpecialty: doctor.specialty ?? undefined,
+    doctorRegNo: doctor.registrationNo ?? undefined,
+    tokenNumber: appointment?.tokenNumber,
+    queueDate: appointment?.queueDate
+      ? new Date(appointment.queueDate).toLocaleDateString("en-IN")
+      : undefined,
+    chiefComplaint: consultation.chiefComplaint ?? undefined,
+    diagnosis: consultation.diagnosis ?? undefined,
+    vitals,
+    lineItems,
+    amount,
+    taxableAmount,
+    taxRate,
+    taxAmount,
+    paymentMode: invoice.paymentMode ?? "cash",
+    date: dateFormatted,
+    invoiceId: invoice.id,
+    invoiceNumber,
+    language,
+  });
+
+  await logAudit({
+    clinicId: session.clinicId,
+    actorId: session.userId,
+    action: "read",
+    resourceType: "invoice",
+    resourceId: invoice.id,
+    metadata: { view: "receipt_preview", language },
+  });
+
+  const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
+  const filename = `receipt-${invoiceNumber.slice(0, 12)}-${language}.pdf`;
+
+  return {
+    success: true,
+    data: {
+      consultationId,
+      invoiceId: invoice.id,
+      invoiceNumber,
+      date: dateFormatted,
+      paymentMode: invoice.paymentMode ?? "cash",
+      amount,
+      taxableAmount,
+      taxRate,
+      taxAmount,
+      lineItems,
+      status: invoice.status,
+      clinic: {
+        name: clinic.name,
+        phone: clinic.phone,
+        address: clinic.address,
+        gstin: clinic.gstin,
+        email: clinic.email,
+        logoUrl: clinic.logoUrl,
+      },
+      patient: {
+        id: patient.id,
+        name: patient.name,
+        mrn: patient.mrn,
+        age: formatPatientAge(patient) ?? null,
+        gender: patient.gender
+          ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
+          : null,
+        phone: patient.phone,
+        address: patient.address,
+      },
+      doctor: {
+        name: doctor.name,
+        specialty: doctor.specialty,
+        registrationNo: doctor.registrationNo,
+        qualifications: doctor.qualifications,
+      },
+      tokenNumber: appointment?.tokenNumber ?? null,
+      queueDate: appointment?.queueDate
+        ? new Date(appointment.queueDate).toLocaleDateString("en-IN")
+        : null,
+      chiefComplaint: consultation.chiefComplaint,
+      diagnosis: consultation.diagnosis,
+      vitals,
+      pdfBase64,
+      filename,
+      language,
+    },
+  };
+}
+
+export type PatientReceiptSummary = {
+  consultationId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  date: string;
+  amount: number;
+  paymentMode: string | null;
+  status: string;
+};
+
+export async function getPatientReceiptsList(
+  patientId: string
+): Promise<ActionResult<PatientReceiptSummary[]>> {
+  const session = await requireSessionUser();
+  if (!can(session, "billing.read")) return permissionDenied();
+
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      clinicId: session.clinicId,
+      status: InvoiceStatus.paid,
+      consultation: { patientId },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      invoiceNumber: true,
+      amount: true,
+      paymentMode: true,
+      status: true,
+      createdAt: true,
+      consultationId: true,
+    },
+  });
+
+  return {
+    success: true,
+    data: invoices.map((inv) => ({
+      consultationId: inv.consultationId,
+      invoiceId: inv.id,
+      invoiceNumber: inv.invoiceNumber ?? inv.id.slice(0, 8).toUpperCase(),
+      date: new Date(inv.createdAt).toLocaleDateString("en-IN"),
+      amount: Number(inv.amount),
+      paymentMode: inv.paymentMode,
+      status: inv.status,
+    })),
+  };
 }
 
 export async function recordPartialPayment(

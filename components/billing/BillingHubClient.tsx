@@ -7,6 +7,7 @@ import {
   faDownload,
   faMoneyBillWave,
   faReceipt,
+  faEye,
   faCalendarDay,
   faArrowTrendUp,
   faCheckDouble,
@@ -30,6 +31,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { PageHeader, PageShell } from "@/components/ui/PageShell";
 import { usePendingAction } from "@/hooks/usePendingAction";
+import { ReceiptViewModal } from "@/components/billing/ReceiptViewModal";
 
 type BillingHubClientProps = {
   date: string;
@@ -60,6 +62,7 @@ export function BillingHubClient({
   const [q, setQ] = useState(initialQ);
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewReceiptConsultationId, setViewReceiptConsultationId] = useState<string | null>(null);
   const [pendingNav, startTransition] = useTransition();
   const { isPending, run } = usePendingAction();
   const selectedDate = parseLocalDateInput(date) ?? undefined;
@@ -320,7 +323,7 @@ export function BillingHubClient({
             [
               { key: "all", label: "All Items", count: rows.length },
               { key: "unbilled", label: "Pending Bill", count: metrics.unbilledCount },
-              { key: "paid", label: "Paid", count: metrics.paidCount },
+              { key: "paid", label: "Paid (All Receipts)", count: metrics.paidCount },
               { key: "draft", label: "Drafts", count: metrics.draftCount },
               { key: "void", label: "Voided", count: rows.filter((r) => r.invoiceStatus === "void").length },
             ] as const
@@ -478,12 +481,23 @@ export function BillingHubClient({
                                 type="button"
                                 size="sm"
                                 variant="secondary"
+                                onClick={() => setViewReceiptConsultationId(row.consultationId)}
+                                className="border-sky-300 text-sky-800 bg-sky-50/70 hover:bg-sky-100 font-semibold shadow-2xs"
+                                title="View official receipt & tax invoice before downloading"
+                              >
+                                <Icon icon={faEye} data-icon="inline-start" />
+                                View Receipt
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
                                 loading={isPending(`receipt-${row.consultationId}-en`)}
                                 onClick={() => handleReprint(row.consultationId, "en")}
                                 title="Download PDF Receipt (English)"
                               >
                                 <Icon icon={faDownload} data-icon="inline-start" />
-                                Receipt (EN)
+                                EN
                               </Button>
                               <Button
                                 type="button"
@@ -491,10 +505,10 @@ export function BillingHubClient({
                                 variant="secondary"
                                 loading={isPending(`receipt-${row.consultationId}-hi`)}
                                 onClick={() => handleReprint(row.consultationId, "hi")}
-                                className="border-sky-300 text-sky-800 hover:bg-sky-50 font-medium"
+                                className="border-sky-200 text-sky-700 hover:bg-sky-50 font-medium"
                                 title="रसीद डाउनलोड करें (Hindi Receipt PDF)"
                               >
-                                रसीद (HI)
+                                HI
                               </Button>
                             </div>
                           )}
@@ -508,6 +522,13 @@ export function BillingHubClient({
           </div>
         )}
       </section>
+
+      {/* RECEIPT VIEWER & DOWNLOAD MODAL */}
+      <ReceiptViewModal
+        consultationId={viewReceiptConsultationId}
+        isOpen={Boolean(viewReceiptConsultationId)}
+        onClose={() => setViewReceiptConsultationId(null)}
+      />
     </PageShell>
   );
 }
