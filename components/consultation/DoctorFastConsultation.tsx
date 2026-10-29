@@ -257,6 +257,7 @@ export function DoctorFastConsultation({
 
   // Modals for Prescription View & Apollo Outpatient Summary
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
+  const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
 
   // Suggestion Dropdown States
@@ -592,12 +593,29 @@ export function DoctorFastConsultation({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => setIsRxViewOpen(true)}
+            onClick={() => {
+              setRxModalLang("en");
+              setIsRxViewOpen(true);
+            }}
             className="h-8 gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs cursor-pointer"
-            title="View full prescription on screen before printing or downloading"
+            title="View full prescription in English"
           >
             <Icon icon={faEye} className="size-3 text-indigo-600" />
-            <span>View Prescription</span>
+            <span>View Rx (EN)</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setRxModalLang("hi");
+              setIsRxViewOpen(true);
+            }}
+            className="h-8 gap-1.5 text-xs font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs cursor-pointer"
+            title="चिकित्सीय पर्चा हिंदी में देखें (Hindi Prescription Preview)"
+          >
+            <Icon icon={faEye} className="size-3 text-teal-600" />
+            <span>पर्चा देखें (Hindi)</span>
           </Button>
           <Button
             type="button"
@@ -2163,6 +2181,7 @@ export function DoctorFastConsultation({
         consultationId={consultationId}
         isOpen={isRxViewOpen}
         onClose={() => setIsRxViewOpen(false)}
+        initialLang={rxModalLang}
       />
 
       {/* Apollo-Standard Outpatient Summary Modal */}

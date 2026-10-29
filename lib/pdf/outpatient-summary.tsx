@@ -59,8 +59,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   clinicLogo: {
-    width: 36,
-    height: 36,
+    width: 52,
+    height: 52,
     objectFit: "contain",
   },
 

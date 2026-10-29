@@ -111,6 +111,7 @@ export function ConsultationWorkspace({
   const [tab, setTab] = useState<WorkspaceTabId>("consultation");
   const [workspaceViewMode, setWorkspaceViewMode] = useState<"fast" | "hospital">("fast");
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
+  const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
 
   useEffect(() => {
@@ -641,11 +642,28 @@ export function ConsultationWorkspace({
               variant="outline"
               size="sm"
               className="min-h-8 text-xs gap-1.5 font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs"
-              onClick={() => setIsRxViewOpen(true)}
-              title="View full prescription on screen before printing or downloading"
+              onClick={() => {
+                setRxModalLang("en");
+                setIsRxViewOpen(true);
+              }}
+              title="View full prescription in English"
             >
               <Icon icon={faEye} className="size-3 text-indigo-600" />
-              View Rx
+              View Rx (EN)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-8 text-xs gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              onClick={() => {
+                setRxModalLang("hi");
+                setIsRxViewOpen(true);
+              }}
+              title="पर्चा देखें (Hindi Prescription Preview)"
+            >
+              <Icon icon={faEye} className="size-3 text-teal-600" />
+              पर्चा देखें (Hindi)
             </Button>
             <Button
               type="button"
@@ -1068,11 +1086,28 @@ export function ConsultationWorkspace({
               variant="outline"
               size="sm"
               className="min-h-10 gap-1.5 font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs"
-              onClick={() => setIsRxViewOpen(true)}
-              title="View full prescription on screen before printing or downloading"
+              onClick={() => {
+                setRxModalLang("en");
+                setIsRxViewOpen(true);
+              }}
+              title="View full prescription in English"
             >
               <Icon icon={faEye} className="size-3 text-indigo-600" />
-              View Rx
+              View Rx (EN)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-10 gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              onClick={() => {
+                setRxModalLang("hi");
+                setIsRxViewOpen(true);
+              }}
+              title="पर्चा देखें (Hindi Prescription Preview)"
+            >
+              <Icon icon={faEye} className="size-3 text-teal-600" />
+              पर्चा देखें (Hindi)
             </Button>
             <Button
               type="button"
@@ -1118,6 +1153,7 @@ export function ConsultationWorkspace({
         consultationId={consultationId}
         isOpen={isRxViewOpen}
         onClose={() => setIsRxViewOpen(false)}
+        initialLang={rxModalLang}
       />
 
       {/* Apollo-Standard Outpatient Summary Modal */}

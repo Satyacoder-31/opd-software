@@ -60,10 +60,17 @@ export function PrescriptionViewModal({
   const [lang, setLang] = useState<"en" | "hi">(initialLang);
   const [viewMode, setViewMode] = useState<"paper" | "pdf">("paper");
   const [loading, setLoading] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prescriptionData, setPrescriptionData] = useState<PrescriptionViewData | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [isPendingLang, startTransition] = useTransition();
+
+  // Sync initial language whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLang(initialLang);
+    }
+  }, [isOpen, initialLang]);
 
   // Clean up previous blob URL
   useEffect(() => {
@@ -79,36 +86,48 @@ export function PrescriptionViewModal({
     if (!isOpen || !consultationId) return;
 
     let isSubscribed = true;
-    setLoading(true);
+    if (!prescriptionData) {
+      setLoading(true);
+    } else {
+      setIsGeneratingPdf(true);
+    }
     setError(null);
 
-    void getPrescriptionViewData(consultationId, lang).then((res) => {
-      if (!isSubscribed) return;
-      setLoading(false);
+    void getPrescriptionViewData(consultationId, lang)
+      .then((res) => {
+        if (!isSubscribed) return;
+        setLoading(false);
+        setIsGeneratingPdf(false);
 
-      if (!res.success) {
-        setError(res.error);
-        return;
-      }
-
-      setPrescriptionData(res.data);
-
-      if (res.data.pdfBase64) {
-        try {
-          const bytes = Uint8Array.from(atob(res.data.pdfBase64), (c) =>
-            c.charCodeAt(0)
-          );
-          const blob = new Blob([bytes], { type: "application/pdf" });
-          const url = URL.createObjectURL(blob);
-          setPdfBlobUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return url;
-          });
-        } catch (e) {
-          console.error("Failed to create blob for prescription PDF:", e);
+        if (!res.success) {
+          setError(res.error);
+          return;
         }
-      }
-    });
+
+        setPrescriptionData(res.data);
+
+        if (res.data.pdfBase64) {
+          try {
+            const bytes = Uint8Array.from(atob(res.data.pdfBase64), (c) =>
+              c.charCodeAt(0)
+            );
+            const blob = new Blob([bytes], { type: "application/pdf" });
+            const url = URL.createObjectURL(blob);
+            setPdfBlobUrl((prev) => {
+              if (prev) URL.revokeObjectURL(prev);
+              return url;
+            });
+          } catch (e) {
+            console.error("Failed to create blob for prescription PDF:", e);
+          }
+        }
+      })
+      .catch((err) => {
+        if (!isSubscribed) return;
+        setLoading(false);
+        setIsGeneratingPdf(false);
+        setError(err instanceof Error ? err.message : "Failed to load prescription.");
+      });
 
     return () => {
       isSubscribed = false;
@@ -219,30 +238,34 @@ export function PrescriptionViewModal({
             </div>
 
             {/* Language Switcher */}
-            <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <div className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 p-1 text-xs shadow-2xs">
               <button
                 type="button"
-                onClick={() => startTransition(() => setLang("en"))}
+                onClick={() => setLang("en")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-bold transition-all cursor-pointer",
                   lang === "en"
-                    ? "bg-teal-600 text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-teal-600 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 )}
+                title="View prescription in English"
               >
-                EN
+                <span>EN</span>
+                <span className="text-[10px] font-normal opacity-85">(English)</span>
               </button>
               <button
                 type="button"
-                onClick={() => startTransition(() => setLang("hi"))}
+                onClick={() => setLang("hi")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-bold transition-all cursor-pointer",
                   lang === "hi"
-                    ? "bg-teal-600 text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-teal-600 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 )}
+                title="चिकित्सीय पर्चा हिंदी में देखें"
               >
-                हिंदी
+                <span>हिंदी</span>
+                <span className="text-[10px] font-normal opacity-85">(Hindi)</span>
               </button>
             </div>
 
@@ -334,7 +357,7 @@ export function PrescriptionViewModal({
                     <img
                       src={prescriptionData.clinic.logoUrl}
                       alt={prescriptionData.clinic.name}
-                      className="size-14 rounded-lg object-contain border border-slate-100"
+                      className="h-20 w-auto max-w-[140px] rounded-lg object-contain border border-slate-100 shadow-2xs"
                     />
                   )}
                   <div>

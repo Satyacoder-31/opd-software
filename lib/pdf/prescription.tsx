@@ -99,7 +99,7 @@ function parseAdviceLines(advice?: string): string[] {
 
 function ClinicLogoMark({
   url,
-  size = 36,
+  size = 54,
 }: {
   url?: string | null;
   size?: number;
@@ -123,7 +123,7 @@ function ClinicBrandBlock({
   metaStyle,
   clinicMeta,
   align = "left",
-  logoSize = 36,
+  logoSize = 54,
 }: {
   props: PrescriptionPdfProps;
   nameStyle: Style;
@@ -150,10 +150,10 @@ function ClinicBrandBlock({
       style={{
         flexDirection: "row",
         alignItems: "center",
-        maxWidth: 320,
+        maxWidth: 350,
       }}
     >
-      {hasLogo ? <View style={{ marginRight: 10 }}>{logo}</View> : null}
+      {hasLogo ? <View style={{ marginRight: 12 }}>{logo}</View> : null}
       <View style={{ flexGrow: 1, flexShrink: 1 }}>
         <Text style={nameStyle}>{props.clinicName}</Text>
         {clinicMeta ? <Text style={metaStyle}>{clinicMeta}</Text> : null}
@@ -344,7 +344,7 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
           <ClinicBrandBlock
             props={props}
             clinicMeta={clinicMeta}
-            logoSize={28}
+            logoSize={42}
             nameStyle={{
               fontSize: 13,
               fontFamily: theme.bold,
@@ -383,7 +383,7 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
             props={props}
             clinicMeta={clinicMeta}
             align="center"
-            logoSize={40}
+            logoSize={58}
             nameStyle={{
               fontSize: 17,
               fontFamily: theme.bold,
@@ -419,7 +419,7 @@ function Header({ theme, props }: { theme: Theme; props: PrescriptionPdfProps })
             props={props}
             clinicMeta={clinicMeta}
             align="center"
-            logoSize={40}
+            logoSize={58}
             nameStyle={{
               fontSize: 16,
               fontFamily: theme.bold,

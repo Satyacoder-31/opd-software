@@ -34,6 +34,7 @@ export function ConsultationDocumentActions({
 }: ConsultationDocumentActionsProps) {
   const [error, setError] = useState<string | null>(null);
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
+  const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
   const { isPending, run } = usePendingAction<
     "prescription" | "prescription-hi" | "certificate"
@@ -75,12 +76,28 @@ export function ConsultationDocumentActions({
           <Button
             type="button"
             variant="primary"
-            onClick={() => setIsRxViewOpen(true)}
+            onClick={() => {
+              setRxModalLang("en");
+              setIsRxViewOpen(true);
+            }}
             className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-xs"
-            title="View full prescription on screen before printing or downloading"
+            title="View full prescription on screen (English)"
           >
             <Icon icon={faEye} className="text-xs" />
-            View prescription
+            View Rx (EN)
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setRxModalLang("hi");
+              setIsRxViewOpen(true);
+            }}
+            className="shrink-0 border-indigo-300 text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 font-bold gap-1.5 shadow-2xs"
+            title="पर्चा देखें (Hindi Prescription Preview)"
+          >
+            <Icon icon={faEye} className="text-xs text-indigo-600" />
+            पर्चा देखें (Hindi)
           </Button>
           <Button
             type="button"
@@ -141,6 +158,7 @@ export function ConsultationDocumentActions({
         consultationId={consultationId}
         isOpen={isRxViewOpen}
         onClose={() => setIsRxViewOpen(false)}
+        initialLang={rxModalLang}
       />
 
       {/* Outpatient Summary Modal */}

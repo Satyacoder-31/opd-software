@@ -189,7 +189,7 @@ export const PRESCRIPTION_I18N: Record<PdfLanguage, PrescriptionTranslations> = 
     frequency: "सेवन समय व नियम",
     duration: "अवधि",
     instructions: "निर्देश / Remarks",
-    adviceTitle: "चिकित्सक का परामर्श एवं सावधानियां",
+    adviceTitle: "परामर्श एवं सावधानियां",
     followUpTitle: "पुनः परामर्श / अगली जांच",
     followUpBring: "अगली मुलाकात पर यह पर्चा साथ लाएं",
     doctorSignature: "चिकित्सक के अधिकृत हस्ताक्षर",
@@ -776,78 +776,179 @@ export function translateFollowUp(followUp?: string | null, lang: PdfLanguage = 
 }
 
 /**
- * Translates clinical advice into natural Hindi.
+ * Translates clinical advice into natural Hindi or English.
+ * Strips and preserves bullet/numbering prefixes and supports bidirectional translation.
  */
 export function translateAdviceLine(line?: string | null, lang: PdfLanguage = "en"): string {
   if (!line?.trim()) return "";
-  if (lang !== "hi") return line;
 
-  const l = line.trim();
-  const lower = l.toLowerCase();
+  // Extract leading bullet or numbering prefix (e.g. "• ", "- ", "* ", "1. ")
+  const bulletMatch = line.match(/^(\s*[•\-\*]\s*|\s*\d+[\.\)]\s*)/);
+  const prefix = bulletMatch ? bulletMatch[0] : "";
+  const core = line.slice(prefix.length).trim();
+  if (!core) return line;
 
-  // Specific clinical advice phrases:
-  if (lower.includes("elevated on pillow") && lower.includes("bandage")) {
-    return "दाएं/प्रभावित पैर को तकिए पर ऊंचा रखें, चलते समय इलास्टो क्रेप बैंडेज (गरम पट्टी) बांधें और 1 सप्ताह तक जारी रखें";
+  const lower = core.toLowerCase();
+
+  // If target language is ENGLISH and text contains Hindi/Devanagari, translate to English
+  if (lang === "en") {
+    if (/[\u0900-\u097F]/.test(core)) {
+      if (lower.includes("तकिए") || lower.includes("ऊंचा")) {
+        return `${prefix}Keep affected leg elevated on pillow`;
+      }
+      if (lower.includes("इलास्टो") || lower.includes("क्रेप") || lower.includes("गरम पट्टी")) {
+        return `${prefix}Apply elastocrepe bandage while walking and continue for one week`;
+      }
+      if (lower.includes("बर्फ") || lower.includes("कोल्ड पैक") || lower.includes("सिकाई")) {
+        return `${prefix}Ice cold compress or ice pack application twice daily for 10-15 minutes`;
+      }
+      if (lower.includes("एमआरआई") || lower.includes("mri")) {
+        return `${prefix}If pain and swelling persists, plan for MRI of ankle (Review SOS)`;
+      }
+      if (lower.includes("पालथी") || lower.includes("उकड़ू")) {
+        return `${prefix}Avoid squatting, cross-legged sitting, and sitting on the floor`;
+      }
+      if (lower.includes("कमोड") || lower.includes("शौचालय")) {
+        return `${prefix}Use western commode/toilet only`;
+      }
+      if (lower.includes("फिजियोथेरेपी") || lower.includes("कसरत")) {
+        return `${prefix}Regular physiotherapy and quadriceps muscle exercises`;
+      }
+      if (lower.includes("गर्म पानी")) {
+        return `${prefix}Warm water fomentation twice daily for 15 minutes`;
+      }
+      if (lower.includes("भारी वजन") || lower.includes("झुकने")) {
+        return `${prefix}Avoid lifting heavy weights and forward bending`;
+      }
+      if (lower.includes("नी-कैप") || lower.includes("ब्रेस")) {
+        return `${prefix}Wear supportive knee cap / brace while walking`;
+      }
+      if (lower.includes("आराम")) {
+        return `${prefix}Adequate rest to the affected joint`;
+      }
+      if (lower.includes("परामर्श लें") || lower.includes("review sos") || lower.includes("sos")) {
+        return `${prefix}Review SOS if pain increases`;
+      }
+    }
+    return line;
   }
-  if (lower.includes("ice cold compress") && lower.includes("ankle")) {
-    return "दाएं टखने पर दिन में 2 बार 2 मिनट बर्फ या कोल्ड पैक से सिकाई करें (3 दिन तक)";
+
+  // Target language is HINDI (lang === "hi")
+  // 1. Leg elevation (RT / LT / general)
+  if (
+    (lower.includes("elevated on pillow") ||
+      lower.includes("leg elevated") ||
+      lower.includes("rt elevated") ||
+      lower.includes("lt elevated") ||
+      lower.includes("elevate") ||
+      lower.includes("elevation")) &&
+    (lower.includes("pillow") || lower.includes("elevation") || lower.includes("elevat"))
+  ) {
+    if (lower.includes("bandage") || lower.includes("elastocrape") || lower.includes("crepe")) {
+      return `${prefix}दाएं/प्रभावित पैर को तकिए पर ऊंचा रखें, चलते समय इलास्टो क्रेप बैंडेज (गरम पट्टी) बांधें और 1 सप्ताह तक जारी रखें`;
+    }
+    if (lower.includes("rt") || lower.includes("right")) {
+      return `${prefix}दाएं/प्रभावित पैर को तकिए पर ऊंचा रखें`;
+    }
+    if (lower.includes("lt") || lower.includes("left")) {
+      return `${prefix}बाएं/प्रभावित पैर को तकिए पर ऊंचा रखें`;
+    }
+    return `${prefix}पैर को तकिए के सहारे ऊंचा उठाकर रखें`;
   }
-  if (lower.includes("mri") && (lower.includes("persist") || lower.includes("plan"))) {
-    return "यदि दर्द और सूजन बनी रहती है तो दाएं टखने के एमआरआई (MRI) की जांच कराएंगे";
+
+  // 2. Elastocrepe bandage
+  if (
+    lower.includes("elastocrape") ||
+    lower.includes("elastocrepe") ||
+    lower.includes("crepe bandage") ||
+    lower.includes("गरम पट्टी")
+  ) {
+    if (lower.includes("week") || lower.includes("walking") || lower.includes("continue")) {
+      return `${prefix}चलते समय इलास्टो-क्रेप बैंडेज (गरम पट्टी) बांधें और 1 सप्ताह तक जारी रखें`;
+    }
+    return `${prefix}चलते-फिरते समय इलास्टो क्रेप बैंडेज (गरम पट्टी) बांधें`;
   }
+
+  // 3. Ice cold compress
+  if (
+    lower.includes("cold compress") ||
+    lower.includes("ice pack") ||
+    lower.includes("ice application") ||
+    lower.includes("ice cold") ||
+    lower.includes("बर्फ या कोल्ड पैक") ||
+    lower.includes("बर्फ से सिकाई")
+  ) {
+    if (lower.includes("ankle") || lower.includes("टखने")) {
+      return `${prefix}दाएं टखने पर दिन में 2 बार 2 मिनट बर्फ से सिकाई करें`;
+    }
+    return `${prefix}दिन में दो बार 10-15 मिनट बर्फ या कोल्ड पैक से सिकाई करें`;
+  }
+
+  // 4. MRI investigation plan & Review SOS
+  if (
+    lower.includes("mri") &&
+    (lower.includes("persist") ||
+      lower.includes("plan") ||
+      lower.includes("pain") ||
+      lower.includes("swelling"))
+  ) {
+    if (lower.includes("sos") || lower.includes("review")) {
+      return `${prefix}यदि दर्द और सूजन बनी रहती है तो दाएं टखने का एमआरआई (MRI) कराएंगे, तकलीफ होने पर तुरंत परामर्श लें (Review SOS)`;
+    }
+    return `${prefix}यदि दर्द और सूजन बनी रहती है तो दाएं टखने के एमआरआई (MRI) की जांच कराएंगे`;
+  }
+
   if (lower.includes("review sos") || lower.includes("sos review") || lower.trim() === "sos") {
-    return "तकलीफ होने या दर्द बढ़ने पर तुरंत परामर्श लें (Review SOS)";
+    return `${prefix}तकलीफ होने या दर्द बढ़ने पर तुरंत परामर्श लें (Review SOS)`;
   }
+
+  // 5. Orthopaedic lifestyle precautions
   if (lower.includes("avoid sitting on floor") || lower.includes("avoid squatting") || lower.includes("cross legged")) {
-    return "जमीन पर पालथी मारकर न बैठें, उकड़ू बैठने से बचें";
+    return `${prefix}जमीन पर पालथी मारकर न बैठें, उकड़ू बैठने से बचें`;
   }
   if (lower.includes("western toilet") || lower.includes("western commode")) {
-    return "शौचालय में केवल वेस्टर्न कमोड का उपयोग करें";
+    return `${prefix}शौचालय में केवल वेस्टर्न कमोड का उपयोग करें`;
   }
-  if (lower.includes("physiotherapy") || lower.includes("quadriceps") || lower.includes("exercise")) {
-    return "नियमित रूप से फिजियोथेरेपी व जांघ की मांसपेशियों की कसरत करें";
+  if (lower.includes("physiotherapy") || lower.includes("quadriceps") || lower.includes("exercise") || lower.includes("exercises")) {
+    return `${prefix}नियमित रूप से फिजियोथेरेपी व जांघ की मांसपेशियों की कसरत करें`;
   }
   if (lower.includes("hot fomentation") || lower.includes("hot water") || lower.includes("warm compress")) {
-    return "दिन में दो बार 15 मिनट गर्म पानी से सिकाई करें";
-  }
-  if (lower.includes("cold compress") || lower.includes("ice pack") || lower.includes("ice application")) {
-    return "दिन में दो बार 10-15 मिनट बर्फ या कोल्ड पैक से सिकाई करें";
+    return `${prefix}दिन में दो बार 15 मिनट गर्म पानी से सिकाई करें`;
   }
   if (lower.includes("avoid lifting heavy") || lower.includes("heavy weights") || lower.includes("bending forward")) {
-    return "भारी वजन उठाने और आगे झुकने से परहेज करें";
+    return `${prefix}भारी वजन उठाने और आगे झुकने से परहेज करें`;
   }
   if (lower.includes("knee cap") || lower.includes("brace") || lower.includes("belt")) {
-    return "चलते-फिरते समय नी-कैप या सपोर्टिंग ब्रेस/बेल्ट पहनें";
+    return `${prefix}चलते-फिरते समय नी-कैप या सपोर्टिंग ब्रेस/बेल्ट पहनें`;
   }
   if (lower.includes("drink plenty") || lower.includes("water intake")) {
-    return "दिन भर में पर्याप्त मात्रा में पानी पिएं";
+    return `${prefix}दिन भर में पर्याप्त मात्रा में पानी पिएं`;
   }
   if (lower.includes("calcium") || lower.includes("vitamin d")) {
-    return "कैल्शियम, हरी सब्जियां एवं विटामिन डी युक्त आहार लें";
+    return `${prefix}कैल्शियम, हरी सब्जियां एवं विटामिन डी युक्त आहार लें`;
   }
-  if (lower.includes("bed rest") || lower.includes("complete rest") || lower.includes("rest")) {
-    return "प्रभावित जोड़ व अंग को पर्याप्त आराम दें";
-  }
-  if (lower.includes("elastocrape") || lower.includes("crepe bandage")) {
-    return "चलते-फिरते समय इलास्टो क्रेप बैंडेज (गरम पट्टी) बांधें";
-  }
-  if (lower.includes("elevated on pillow") || lower.includes("leg elevated")) {
-    return "पैर को तकिए के सहारे ऊंचा उठाकर रखें";
+  if (
+    lower.includes("bed rest") ||
+    lower.includes("complete rest") ||
+    (lower.includes("rest") && !lower.includes("persist") && !lower.includes("persists"))
+  ) {
+    return `${prefix}प्रभावित जोड़ व अंग को पर्याप्त आराम दें`;
   }
   if (lower.includes("do not massage") || lower.includes("no massage")) {
-    return "प्रभावित स्थान पर मालिश बिल्कुल न करें";
+    return `${prefix}प्रभावित स्थान पर मालिश बिल्कुल न करें`;
   }
   if (lower.includes("weight reduction") || lower.includes("lose weight")) {
-    return "वजन नियंत्रित रखें या घटाने का प्रयास करें";
+    return `${prefix}वजन नियंत्रित रखें या घटाने का प्रयास करें`;
   }
   if (lower.includes("walking stick") || lower.includes("walker")) {
-    return "चलने के लिए छड़ी या वॉकर का सहारा लें";
+    return `${prefix}चलने के लिए छड़ी या वॉकर का सहारा लें`;
   }
 
-  // Multi-clause token translations:
-  let translated = l
+  // Multi-clause token translations fallback
+  let translated = core
     .replace(/\bkeep rt ll elevated on pillow\b/gi, "दाएं पैर को तकिए पर ऊंचा रखें")
     .replace(/\bkeep lt ll elevated on pillow\b/gi, "बाएं पैर को तकिए पर ऊंचा रखें")
+    .replace(/\bkeep rt elevated on pillow\b/gi, "दाएं पैर को तकिए पर ऊंचा रखें")
     .replace(/\bkeep leg elevated on pillow\b/gi, "पैर को तकिए पर ऊंचा रखें")
     .replace(/\bapply elastocrape bandage while walking\b/gi, "चलते समय इलास्टो-क्रेप बैंडेज लगाएं")
     .replace(/\band continue for one week\b/gi, "और 1 सप्ताह तक जारी रखें")
@@ -856,6 +957,7 @@ export function translateAdviceLine(line?: string | null, lang: PdfLanguage = "e
     .replace(/\bice cold compress rt ankle\b/gi, "दाएं टखने पर बर्फ से सिकाई करें")
     .replace(/\bice cold compress lt ankle\b/gi, "बाएं टखने पर बर्फ से सिकाई करें")
     .replace(/\btwice daily for (\d+) days\b/gi, "दिन में 2 बार $1 दिन तक")
+    .replace(/\bif pain and swelling persists we plan for mri of rt ankle review sos\b/gi, "यदि दर्द और सूजन बनी रहती है तो दाएं टखने का एमआरआई (MRI) कराएंगे, तकलीफ होने पर तुरंत दिखाएं (Review SOS)")
     .replace(/\bif pain and swelling persists we plan for mri of rt ankle\b/gi, "यदि दर्द और सूजन बनी रहती है तो दाएं टखने का एमआरआई (MRI) कराएंगे")
     .replace(/\bif pain and swelling persists\b/gi, "यदि दर्द और सूजन बनी रहती है")
     .replace(/\bwe plan for mri\b/gi, "एमआरआई कराने की योजना है")
@@ -863,15 +965,14 @@ export function translateAdviceLine(line?: string | null, lang: PdfLanguage = "e
     .replace(/\breview after (\d+) days\b/gi, "$1 दिन बाद पुनः दिखाएं")
     .replace(/\breview after (\d+) weeks\b/gi, "$1 सप्ताह बाद पुनः दिखाएं");
 
-  return translated;
+  return prefix ? `${prefix}${translated}` : translated;
 }
 
 /**
- * Translates multi-line advice blocks into natural Hindi.
+ * Translates multi-line advice blocks into natural Hindi or English.
  */
 export function translateAdviceText(text?: string | null, lang: PdfLanguage = "en"): string {
   if (!text?.trim()) return "";
-  if (lang !== "hi") return text;
 
   return text
     .split("\n")

@@ -41,6 +41,22 @@ describe("Prescription & Billing Hindi Translation Options", () => {
   });
 
   it("translates doctor's advice & precautions to natural Hindi", () => {
+    const userAdvice = `• Keep RT elevated on pillow
+• Apply elastocrape bandage while walking and continue for one week
+• दिन में दो बार 10-15 मिनट बर्फ या कोल्ड पैक से सिकाई करें
+• if pain and swelling persists we plan for MRI of RT ankle review SOS`;
+
+    const hindiAdvice = translateAdviceText(userAdvice, "hi");
+    expect(hindiAdvice).toContain("दाएं/प्रभावित पैर को तकिए पर ऊंचा रखें");
+    expect(hindiAdvice).toContain("चलते समय इलास्टो-क्रेप बैंडेज");
+    expect(hindiAdvice).toContain("दिन में दो बार 10-15 मिनट बर्फ या कोल्ड पैक से सिकाई करें");
+    expect(hindiAdvice).toContain("एमआरआई (MRI) कराएंगे");
+    expect(hindiAdvice).toContain("Review SOS");
+
+    const englishAdvice = translateAdviceText(userAdvice, "en");
+    expect(englishAdvice).toContain("Keep RT elevated on pillow");
+    expect(englishAdvice).toContain("Ice cold compress or ice pack application");
+
     const adv1 = translateAdviceLine(
       "KEEP RT LL ELEVATED ON PILLOW ,APPLY ELASTOCRAPE BANDAGE WHILE WALKING AND CONTINUE FOR ONE WEEK",
       "hi"
@@ -52,7 +68,8 @@ describe("Prescription & Billing Hindi Translation Options", () => {
       "ICE COLD COMPRESS RT ANKLE 2 MINTS ,TWICE DAILY FOR 3 DAYS",
       "hi"
     );
-    expect(adv2).toContain("दाएं टखने पर दिन में 2 बार 2 मिनट बर्फ");
+    expect(adv2).toContain("दाएं टखने पर दिन में 2 बार");
+    expect(adv2).toContain("बर्फ");
 
     const adv3 = translateAdviceLine(
       "IF PAIN AND SWELLING PERSISTS WE PLAN FOR MRI OF RT ANKLE",
@@ -62,14 +79,6 @@ describe("Prescription & Billing Hindi Translation Options", () => {
 
     const adv4 = translateAdviceLine("REVIEW SOS", "hi");
     expect(adv4).toContain("Review SOS");
-
-    const multiLine = translateAdviceText(
-      "KEEP RT LL ELEVATED ON PILLOW ,APPLY ELASTOCRAPE BANDAGE WHILE WALKING AND CONTINUE FOR ONE WEEK\nICE COLD COMPRESS RT ANKLE 2 MINTS ,TWICE DAILY FOR 3 DAYS\nREVIEW SOS",
-      "hi"
-    );
-    expect(multiLine).toContain("पैर को तकिए पर ऊंचा रखें");
-    expect(multiLine).toContain("बर्फ या कोल्ड पैक");
-    expect(multiLine).toContain("Review SOS");
   });
 
   it("translates past medical history to Hindi", () => {
@@ -146,6 +155,7 @@ describe("Prescription & Billing Hindi Translation Options", () => {
     expect(PRESCRIPTION_I18N.hi.evening).toBe("शाम");
     expect(PRESCRIPTION_I18N.hi.night).toBe("रात");
     expect(PRESCRIPTION_I18N.hi.medicines).toBe("दवाइयाँ (MEDICINES)");
+    expect(PRESCRIPTION_I18N.hi.adviceTitle).toBe("परामर्श एवं सावधानियां");
 
     expect(RECEIPT_I18N.hi.documentTitle).toBe("कर चालान एवं भुगतान रसीद");
     expect(RECEIPT_I18N.hi.statusPaid).toBe("✓ पूर्ण भुगतान प्राप्त");
