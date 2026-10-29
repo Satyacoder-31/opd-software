@@ -48,6 +48,7 @@ import {
   applyDrugDefaults,
   type DrugSuggestion,
   findDrugSuggestion,
+  getAlternativeBrandsForDrug,
 } from "@/lib/drug-catalog";
 import {
   loadFavoriteMedicines,
@@ -706,6 +707,36 @@ export function PrescriptionBuilder({
                           · MRP: ₹{matchedDrug.unitPrice}
                         </span>
                       ) : null}
+                    </div>
+                  );
+                })()}
+
+                {/* 1-Tap Alternative Brand Switcher */}
+                {med.name?.trim() && (() => {
+                  const alts = getAlternativeBrandsForDrug(med.name, 6);
+                  if (alts.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] font-bold text-teal-800 dark:text-teal-300 uppercase">⚡ Brands:</span>
+                      {alts.map((altDrug, altIdx) => (
+                        <button
+                          key={altIdx}
+                          type="button"
+                          onClick={() => {
+                            updateMedicine(index, "name", altDrug.name);
+                            if (altDrug.genericName) updateMedicine(index, "genericName", altDrug.genericName);
+                            if (altDrug.dosage) updateMedicine(index, "dosage", altDrug.dosage);
+                            if (altDrug.route) updateMedicine(index, "route", altDrug.route);
+                            if (altDrug.frequency) updateMedicine(index, "frequency", altDrug.frequency);
+                            if (altDrug.duration) updateMedicine(index, "duration", altDrug.duration);
+                            if (altDrug.instructions) updateMedicine(index, "instructions", altDrug.instructions);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-teal-200 dark:border-teal-800 bg-white dark:bg-card px-2 py-0.5 text-[10px] font-bold text-teal-900 dark:text-teal-200 hover:bg-teal-50 dark:hover:bg-teal-950/60 cursor-pointer transition-all active:scale-95 shadow-2xs"
+                          title={`Switch to ${altDrug.name} (${altDrug.dosage} · ${altDrug.frequency})`}
+                        >
+                          <span>{altDrug.name.replace(/\s+(tablet|capsule|syrup|gel|injection|suspension)/i, "")}</span>
+                        </button>
+                      ))}
                     </div>
                   );
                 })()}

@@ -5,6 +5,8 @@ import {
   filterDrugSuggestions,
   findDrugSuggestion,
   formatDrugDefaultsSummary,
+  getAlternativeBrandsForDrug,
+  getBrandVariantsForGeneric,
   getGenericCompositionForDrug,
   normalizeDrugName,
 } from "@/lib/drug-catalog";
@@ -262,5 +264,45 @@ describe("drug catalog", () => {
     expect(med.name).toBe("Hifenac Tablet");
     expect(med.genericName).toBe("Aceclofenac (100 mg)");
     expect(med.instructions).toContain("TAKE SOS FOR PAIN");
+  });
+
+  it("retrieves all brand variants for a generic salt or brand name with their custom doses and advice", () => {
+    const brands = getBrandVariantsForGeneric("Paracetamol");
+    expect(brands.length).toBeGreaterThanOrEqual(8);
+
+    const brandNames = brands.map((b) => b.name);
+    expect(brandNames.some((n) => n.includes("Calpol"))).toBe(true);
+    expect(brandNames.some((n) => n.includes("Crocin"))).toBe(true);
+    expect(brandNames.some((n) => n.includes("Dolo 650"))).toBe(true);
+    expect(brandNames.some((n) => n.includes("P 650") || n.includes("P-650"))).toBe(true);
+    expect(brandNames.some((n) => n.includes("Pacimol"))).toBe(true);
+    expect(brandNames.some((n) => n.includes("Metacin"))).toBe(true);
+
+    // Each brand has distinct advice and dose
+    const calpol = brands.find((b) => b.name.includes("Calpol 650"));
+    const dolo = brands.find((b) => b.name.includes("Dolo 650"));
+    expect(calpol?.dosage).toBe("1 tablet");
+    expect(calpol?.instructions).toContain("6 hours gap");
+    expect(dolo?.instructions).toContain("SOS");
+  });
+
+  it("retrieves alternative brands for a given brand name excluding the current brand", () => {
+    const alts = getAlternativeBrandsForDrug("Dolo 650 mg tablet", 10);
+    expect(alts.length).toBeGreaterThan(0);
+    // Should NOT include Dolo 650 itself
+    expect(alts.some((a) => a.name === "Dolo 650 mg tablet")).toBe(false);
+    // Should include other Paracetamol brands
+    expect(alts.some((a) => a.name.includes("Calpol"))).toBe(true);
+    expect(alts.some((a) => a.name.includes("Crocin"))).toBe(true);
+
+    // Test for Pantoprazole brands
+    const pantoAlts = getAlternativeBrandsForDrug("Pan 40 tablet", 10);
+    expect(pantoAlts.some((a) => a.name.includes("Pantocid"))).toBe(true);
+    expect(pantoAlts.some((a) => a.name.includes("Pantodac"))).toBe(true);
+
+    // Test for Montelukast + Levocetirizine brands
+    const montAlts = getAlternativeBrandsForDrug("Montair-LC Tablet", 10);
+    expect(montAlts.some((a) => a.name.includes("Monticope"))).toBe(true);
+    expect(montAlts.some((a) => a.name.includes("Telekast-L"))).toBe(true);
   });
 });

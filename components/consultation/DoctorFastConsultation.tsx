@@ -59,6 +59,7 @@ import {
   applyDrugDefaults,
   type DrugSuggestion,
   findDrugSuggestion,
+  getAlternativeBrandsForDrug,
 } from "@/lib/drug-catalog";
 import { expandFrequencyInput } from "@/lib/prescription-dosing";
 import type {
@@ -1695,6 +1696,38 @@ export function DoctorFastConsultation({
                     )}
                   </div>
                 )}
+
+                {/* 1-Tap Alternative Brand Switcher */}
+                {med.name?.trim() && (() => {
+                  const alts = getAlternativeBrandsForDrug(med.name, 6);
+                  if (alts.length === 0) return null;
+                  return (
+                    <div className="mb-2 pl-8 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-teal-800 uppercase">⚡ Brands:</span>
+                      {alts.map((altDrug, altIdx) => (
+                        <button
+                          key={altIdx}
+                          type="button"
+                          onClick={() => {
+                            handleUpdateMedicine(index, {
+                              name: altDrug.name,
+                              genericName: altDrug.genericName || med.genericName,
+                              dosage: altDrug.dosage || med.dosage,
+                              frequency: altDrug.frequency || med.frequency,
+                              duration: altDrug.duration || med.duration,
+                              instructions: altDrug.instructions || med.instructions,
+                              route: altDrug.route || med.route,
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-teal-200/90 bg-white px-2 py-0.5 text-[10px] font-bold text-teal-900 hover:bg-teal-100 hover:border-teal-400 cursor-pointer transition-all active:scale-95 shadow-2xs"
+                          title={`Switch to ${altDrug.name} (${altDrug.dosage} · ${altDrug.frequency})`}
+                        >
+                          <span>{altDrug.name.replace(/\s+(tablet|capsule|syrup|gel|injection|suspension)/i, "")}</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 {/* 1-CLICK RAPID DOSING PRESETS (1 TAP FILLS DOSE, FREQ, DUR, INSTRUCTIONS) */}
                 <div className="mb-2 pl-8 flex flex-wrap items-center gap-1.5">

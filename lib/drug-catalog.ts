@@ -393,6 +393,54 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "3 Days",
     instructions: "Take 1 tablet - after meal as needed for fever and pain relief",
   }),
+  oral("P 650 Tablet", {
+    genericName: "Paracetamol (650 mg)",
+    strength: "650 mg",
+    therapeuticClass: "Analgesic / Antipyretic",
+    frequency: "Three times daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - after meal for fever and joint ache. SOS (max 3 tablets in 24 hours)",
+  }),
+  oral("P-650 Tablet", {
+    genericName: "Paracetamol (650 mg)",
+    strength: "650 mg",
+    therapeuticClass: "Analgesic / Antipyretic",
+    frequency: "Three times daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - after meal for fever and joint ache. SOS (max 3 tablets in 24 hours)",
+  }),
+  oral("Metacin 500 mg tablet", {
+    genericName: "Paracetamol (500 mg)",
+    strength: "500 mg",
+    therapeuticClass: "Analgesic / Antipyretic",
+    frequency: "Three times daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - after food for fever control and mild pain",
+  }),
+  oral("Paracip 650 tablet", {
+    genericName: "Paracetamol (650 mg)",
+    strength: "650 mg",
+    therapeuticClass: "Analgesic / Antipyretic",
+    frequency: "Three times daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - strictly after food for body pain and temperature reduction",
+  }),
+  oral("Febrex Plus tablet", {
+    genericName: "Paracetamol (500 mg) + Phenylephrine (10 mg) + Chlorpheniramine (2 mg)",
+    strength: "500 mg / 10 mg / 2 mg",
+    therapeuticClass: "Cold, Congestion & Analgesic Formulation",
+    frequency: "Twice daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - after meal for cold, headache, nasal congestion and fever",
+  }),
+  oral("Zytee-P tablet", {
+    genericName: "Paracetamol (650 mg)",
+    strength: "650 mg",
+    therapeuticClass: "Analgesic / Antipyretic",
+    frequency: "Three times daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - after food for pain relief and fever",
+  }),
   oral("Sumo L 650 tablet", {
     genericName: "Paracetamol (650 mg)",
     strength: "650 mg",
@@ -402,28 +450,85 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     instructions: "Take 1 tablet - SOS after meal for fever / joint ache",
   }),
   oral("Ibuprofen 400 mg tablet", {
-    genericName: "Ibuprofen",
+    genericName: "Ibuprofen (400 mg)",
     strength: "400 mg",
     therapeuticClass: "NSAID / Anti-inflammatory",
     frequency: "Three times daily",
     duration: "3 Days",
-    instructions: "Strictly after meals",
+    instructions: "Strictly after meals with water",
+  }),
+  oral("Brufen 400 mg tablet", {
+    genericName: "Ibuprofen (400 mg)",
+    strength: "400 mg",
+    therapeuticClass: "NSAID / Anti-inflammatory",
+    frequency: "Three times daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - strictly after meals with water for swelling and joint inflammation",
   }),
   oral("Combiflam tablet", {
-    genericName: "Ibuprofen 400 mg + Paracetamol 325 mg",
+    genericName: "Ibuprofen (400 mg) + Paracetamol (325 mg)",
     strength: "400 mg / 325 mg",
     therapeuticClass: "NSAID / Analgesic Combination",
     frequency: "Twice daily",
     duration: "3 Days",
-    instructions: "After meals with water",
+    instructions: "Take 1 tablet - after meals with water for muscle ache, fever and pain",
+  }),
+  oral("Ibugesic Plus tablet", {
+    genericName: "Ibuprofen (400 mg) + Paracetamol (325 mg)",
+    strength: "400 mg / 325 mg",
+    therapeuticClass: "NSAID / Analgesic Combination",
+    frequency: "Twice daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - twice daily after food for joint pain and swelling",
+  }),
+  oral("Flexon tablet", {
+    genericName: "Ibuprofen (400 mg) + Paracetamol (325 mg)",
+    strength: "400 mg / 325 mg",
+    therapeuticClass: "NSAID / Analgesic Combination",
+    frequency: "Twice daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet - after food for musculoskeletal pain and spasm",
   }),
   oral("Diclofenac 50 mg tablet", {
-    genericName: "Diclofenac Sodium",
+    genericName: "Diclofenac Sodium (50 mg)",
     strength: "50 mg",
     therapeuticClass: "NSAID / Analgesic",
     frequency: "Twice daily",
     duration: "5 Days",
     instructions: "After meals",
+  }),
+  oral("Voveran 50 mg tablet", {
+    genericName: "Diclofenac Sodium (50 mg)",
+    strength: "50 mg",
+    therapeuticClass: "NSAID / Potent Analgesic",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - strictly after food to relieve acute joint and tendon pain",
+  }),
+  oral("Voveran SR 100 mg tablet", {
+    genericName: "Diclofenac Sodium (100 mg SR)",
+    strength: "100 mg SR",
+    therapeuticClass: "Sustained Release NSAID",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - once daily after dinner swallowed whole without chewing",
+  }),
+  oral("Dynapar Tablet", {
+    genericName: "Diclofenac Sodium (50 mg) + Paracetamol (325 mg)",
+    strength: "50 mg / 325 mg",
+    therapeuticClass: "NSAID / Analgesic Combination",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - after meals for acute orthopedic pain and inflammation",
+  }),
+  oral("Diclogesic tablet", {
+    genericName: "Diclofenac (50 mg) + Paracetamol (325 mg)",
+    strength: "50 mg / 325 mg",
+    therapeuticClass: "NSAID / Analgesic Combination",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - twice daily with water after meals",
   }),
   oral("Aceclofenac 100 mg tablet", {
     genericName: "Aceclofenac (100 mg)",
@@ -535,6 +640,46 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "5 Days",
     instructions: "Take 1 tablet - twice daily after food for pain and fever",
   }),
+  oral("Dolokind 100 mg tablet", {
+    genericName: "Aceclofenac (100 mg)",
+    strength: "100 mg",
+    therapeuticClass: "NSAID / Anti-inflammatory",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - twice daily after food for joint aches",
+  }),
+  oral("Aroff 100 mg tablet", {
+    genericName: "Aceclofenac (100 mg)",
+    strength: "100 mg",
+    therapeuticClass: "NSAID / Anti-inflammatory",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - twice daily after food for arthritis and joint inflammation",
+  }),
+  oral("Aroff-Plus tablet", {
+    genericName: "Aceclofenac (100 mg) + Paracetamol (325 mg)",
+    strength: "100 mg / 325 mg",
+    therapeuticClass: "NSAID / Analgesic Combination",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - after meals for pain relief",
+  }),
+  oral("Aceclo 100 mg tablet", {
+    genericName: "Aceclofenac (100 mg)",
+    strength: "100 mg",
+    therapeuticClass: "NSAID / Anti-inflammatory",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - after meals with water",
+  }),
+  oral("Aceclo-Plus tablet", {
+    genericName: "Aceclofenac (100 mg) + Paracetamol (325 mg)",
+    strength: "100 mg / 325 mg",
+    therapeuticClass: "NSAID / Analgesic Combination",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet - twice daily after food. TAKE SOS FOR PAIN",
+  }),
   capsule("Thiocolchicoside 4 mg + Aceclofenac 100 mg", {
     genericName: "Thiocolchicoside (4 mg) + Aceclofenac (100 mg)",
     strength: "4 mg / 100 mg",
@@ -562,12 +707,40 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     instructions: "Take for severe pain only; may cause drowsiness",
   }),
   oral("Ultracet tablet", {
-    genericName: "Tramadol 37.5 mg + Paracetamol 325 mg",
+    genericName: "Tramadol (37.5 mg) + Paracetamol (325 mg)",
     strength: "37.5 mg / 325 mg",
     therapeuticClass: "Moderate-to-Severe Pain Analgesic",
+    dosage: "1 tablet",
     frequency: "Twice daily as needed",
     duration: "3 Days",
-    instructions: "After food; avoid driving",
+    instructions: "Take 1 tablet after food as needed for moderate to severe pain. Avoid driving",
+  }),
+  oral("Tramazac Plus Tablet", {
+    genericName: "Tramadol (37.5 mg) + Paracetamol (325 mg)",
+    strength: "37.5 mg / 325 mg",
+    therapeuticClass: "Moderate-to-Severe Pain Analgesic",
+    dosage: "1 tablet",
+    frequency: "Twice daily as needed",
+    duration: "3 Days",
+    instructions: "Take 1 tablet after meals for severe pain. SOS only; avoid machinery/driving",
+  }),
+  oral("Ultracet Semi Tablet", {
+    genericName: "Tramadol (18.75 mg) + Paracetamol (162.5 mg)",
+    strength: "18.75 mg / 162.5 mg",
+    therapeuticClass: "Low-Dose Opioid / Analgesic Combo",
+    dosage: "1 tablet",
+    frequency: "Twice daily as needed",
+    duration: "3 Days",
+    instructions: "Take 1 tablet after food for moderate orthopedic pain",
+  }),
+  oral("Calpol T Tablet", {
+    genericName: "Tramadol (37.5 mg) + Paracetamol (325 mg)",
+    strength: "37.5 mg / 325 mg",
+    therapeuticClass: "Moderate-to-Severe Pain Analgesic",
+    dosage: "1 tablet",
+    frequency: "Twice daily as needed",
+    duration: "3 Days",
+    instructions: "Take 1 tablet after food for acute musculoskeletal pain",
   }),
   oral("Etoricoxib 90 mg tablet", {
     genericName: "Etoricoxib (90 mg)",
@@ -605,6 +778,24 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "5 Days",
     instructions: "Take 1 tablet daily after meal for arthritis pain relief",
   }),
+  oral("Torcoxia 90 Tablet", {
+    genericName: "Etoricoxib (90 mg)",
+    strength: "90 mg",
+    therapeuticClass: "Selective COX-2 Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet once daily after food for joint pain and acute inflammation",
+  }),
+  oral("Brutaflam 90 Tablet", {
+    genericName: "Etoricoxib (90 mg)",
+    strength: "90 mg",
+    therapeuticClass: "Selective COX-2 Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet once daily after dinner for swelling and arthritis flare",
+  }),
   oral("Etoricoxib 60 mg tablet", {
     genericName: "Etoricoxib (60 mg)",
     strength: "60 mg",
@@ -613,6 +804,24 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Once daily",
     duration: "10 Days",
     instructions: "After food for chronic osteoarthritis flare",
+  }),
+  oral("Etoshine 60 Tablet", {
+    genericName: "Etoricoxib (60 mg)",
+    strength: "60 mg",
+    therapeuticClass: "Selective COX-2 Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "10 Days",
+    instructions: "Take 1 tablet once daily after dinner for osteoarthritis flare",
+  }),
+  oral("Nucoxia 60 Tablet", {
+    genericName: "Etoricoxib (60 mg)",
+    strength: "60 mg",
+    therapeuticClass: "Selective COX-2 Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "10 Days",
+    instructions: "Take 1 tablet once daily after meals for joint pain",
   }),
   oral("Naproxen 500 mg tablet", {
     genericName: "Naproxen",
@@ -658,9 +867,28 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     genericName: "Trypsin-Chymotrypsin 100,000 Armour Units",
     strength: "100,000 AU",
     therapeuticClass: "Proteolytic Anti-inflammatory Enzyme",
+    dosage: "1 tablet",
     frequency: "Three times daily",
     duration: "5 Days",
-    instructions: "Strictly 30 minutes before meals on empty stomach",
+    instructions: "Strictly 30 minutes before meals on empty stomach to reduce swelling & hematoma",
+  }),
+  oral("Chymorax Forte Tablet", {
+    genericName: "Trypsin-Chymotrypsin 100,000 Armour Units",
+    strength: "100,000 AU",
+    therapeuticClass: "Proteolytic Anti-inflammatory Enzyme",
+    dosage: "1 tablet",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet 30 minutes before food on empty stomach for edema and hematoma resolution",
+  }),
+  oral("Chymoheal Forte Tablet", {
+    genericName: "Trypsin-Chymotrypsin 100,000 Armour Units",
+    strength: "100,000 AU",
+    therapeuticClass: "Proteolytic Anti-inflammatory Enzyme",
+    dosage: "1 tablet",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet 30 minutes before meals on empty stomach for post-traumatic swelling",
   }),
   oral("Serratiopeptidase 10 mg tablet", {
     genericName: "Serratiopeptidase",
@@ -690,6 +918,15 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "30 Days",
     instructions: "Take 1 tablet - once daily after dinner with water for bone strength",
   }),
+  oral("Shelcal HD Tablet", {
+    genericName: "Calcium Carbonate (1250 mg) + Vitamin D3 (500 IU)",
+    strength: "500 mg elemental Ca / 500 IU D3",
+    therapeuticClass: "High-Dose Calcium & Vitamin D3",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "30 Days",
+    instructions: "Take 1 tablet once daily post-dinner with water for bone mineral density",
+  }),
   oral("Cipcal 500 Tablet", {
     genericName: "Calcium Carbonate (1250 mg) + Vitamin D3 (250 IU)",
     strength: "500 mg elemental Ca / 250 IU D3",
@@ -697,6 +934,15 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Once daily",
     duration: "30 Days",
     instructions: "Take 1 tablet daily after meal with water",
+  }),
+  oral("Cipcal HD Tablet", {
+    genericName: "Calcium Carbonate (1250 mg) + Vitamin D3 (500 IU)",
+    strength: "500 mg elemental Ca / 500 IU D3",
+    therapeuticClass: "High-Dose Calcium & Vitamin D3",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "30 Days",
+    instructions: "Take 1 tablet once daily after dinner with water for osteopenia and bone health",
   }),
   oral("Supracal Pro Tablet", {
     genericName: "Calcium Citrate Malate (1200 mg) + Vitamin D3 (400 IU) + Magnesium (100 mg) + Zinc (4 mg)",
@@ -777,6 +1023,24 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "8 Weeks",
     instructions: "Dissolve 1 sachet in a warm glass of milk once weekly after dinner",
   }),
+  capsule("Lupisun 60K Capsule", {
+    genericName: "Vitamin D3 (Cholecalciferol 60000 IU)",
+    strength: "60,000 IU",
+    therapeuticClass: "Vitamin D3 Supplement",
+    dosage: "1 capsule",
+    frequency: "Once weekly",
+    duration: "8 Weeks",
+    instructions: "Take 1 capsule once weekly after Sunday lunch with warm milk",
+  }),
+  syrup("Depura 60K Oral Solution", {
+    genericName: "Cholecalciferol (Vitamin D3) 60,000 IU / 5 ml",
+    strength: "60,000 IU / 5 ml",
+    therapeuticClass: "Vitamin D3 Oral Liquid Shot",
+    dosage: "5 ml",
+    frequency: "Once weekly",
+    duration: "4 Weeks",
+    instructions: "Drink entire 5 ml solution once weekly with milk after breakfast",
+  }),
   oral("Diacerein 50 mg + Glucosamine 750 mg", {
     genericName: "Diacerein + Glucosamine Sulphate",
     strength: "50 mg / 750 mg",
@@ -838,6 +1102,15 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "30 Days",
     instructions: "Take 1 tablet daily after food for muscle cramps and radiating nerve pain",
   }),
+  capsule("Nurokind Plus RF Capsule", {
+    genericName: "Mecobalamin (1500 mcg) + Alpha Lipoic Acid (100 mg) + Pyridoxine (3 mg) + Folic Acid (1.5 mg)",
+    strength: "1500 mcg / 100 mg / 3 mg / 1.5 mg",
+    therapeuticClass: "Neurotropic & Neuropathy Relief",
+    dosage: "1 capsule",
+    frequency: "Once daily",
+    duration: "30 Days",
+    instructions: "Take 1 capsule daily after food for peripheral neuropathy, tingling and numbness",
+  }),
   capsule("Pregabalin 75 mg + Methylcobalamin 1500 mcg", {
     genericName: "Pregabalin (75 mg) + Methylcobalamin (1500 mcg)",
     strength: "75 mg / 1500 mcg",
@@ -855,6 +1128,15 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Once daily at bedtime",
     duration: "15 Days",
     instructions: "Take at night before sleep",
+  }),
+  capsule("Pregeb 75 capsule", {
+    genericName: "Pregabalin (75 mg)",
+    strength: "75 mg",
+    therapeuticClass: "Neuropathic Pain Agent",
+    dosage: "1 capsule",
+    frequency: "Once daily at bedtime",
+    duration: "14 Days",
+    instructions: "Take 1 capsule at night before sleep for nerve pain and fibromyalgia",
   }),
   capsule("Prebaxe M 75 Capsule", {
     genericName: "Pregabalin (75 mg) + Methylcobalamin (750 mcg)",
@@ -881,6 +1163,15 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Once daily at bedtime",
     duration: "15 Days",
     instructions: "At bedtime",
+  }),
+  oral("Gabapin-NT Tablet", {
+    genericName: "Gabapentin (400 mg) + Nortriptyline (10 mg)",
+    strength: "400 mg / 10 mg",
+    therapeuticClass: "Neuropathic Pain & Radiculopathy Agent",
+    dosage: "1 tablet",
+    frequency: "Once daily at bedtime",
+    duration: "15 Days",
+    instructions: "Take 1 tablet at bedtime for severe neuropathic pain and nerve root compression",
   }),
   oral("Febuxostat 40 mg tablet", {
     genericName: "Febuxostat",
@@ -928,51 +1219,148 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     instructions: "After meals to avoid gastric irritation",
   }),
   oral("Augmentin 625 Duo tablet", {
-    genericName: "Amoxicillin 500 mg + Clavulanic Acid 125 mg",
+    genericName: "Amoxicillin (500 mg) + Clavulanic Acid (125 mg)",
     strength: "625 mg",
     therapeuticClass: "Broad Spectrum Antibiotic",
+    dosage: "1 tablet",
     frequency: "Twice daily",
     duration: "5 Days",
-    instructions: "Strictly after meals with plenty of water",
+    instructions: "Strictly after meals with plenty of water. Complete full course",
+  }),
+  oral("Moxikind-CV 625 Tablet", {
+    genericName: "Amoxicillin (500 mg) + Clavulanic Acid (125 mg)",
+    strength: "625 mg",
+    therapeuticClass: "Broad Spectrum Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily strictly after meals with water. Complete 5 days course",
+  }),
+  oral("Clavam 625 Tablet", {
+    genericName: "Amoxicillin (500 mg) + Clavulanic Acid (125 mg)",
+    strength: "625 mg",
+    therapeuticClass: "Broad Spectrum Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily after breakfast & dinner. Complete full 5-day course",
+  }),
+  oral("Advent 625 Tablet", {
+    genericName: "Amoxicillin (500 mg) + Clavulanic Acid (125 mg)",
+    strength: "625 mg",
+    therapeuticClass: "Broad Spectrum Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily after meals with water for respiratory and skin infection",
+  }),
+  oral("Polyclav 625 Tablet", {
+    genericName: "Amoxicillin (500 mg) + Clavulanic Acid (125 mg)",
+    strength: "625 mg",
+    therapeuticClass: "Broad Spectrum Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily after food with water",
   }),
   oral("Azithromycin 500 mg tablet", {
-    genericName: "Azithromycin",
+    genericName: "Azithromycin (500 mg)",
     strength: "500 mg",
     therapeuticClass: "Macrolide Antibiotic",
+    dosage: "1 tablet",
     frequency: "Once daily",
     duration: "3 Days",
     instructions: "1 hour before or 2 hours after meals",
   }),
   oral("Azee 500 tablet", {
-    genericName: "Azithromycin 500 mg",
+    genericName: "Azithromycin (500 mg)",
     strength: "500 mg",
     therapeuticClass: "Macrolide Antibiotic",
+    dosage: "1 tablet",
     frequency: "Once daily",
     duration: "3 Days",
-    instructions: "Once daily at the same time each day",
+    instructions: "Take 1 tablet once daily at the same time each day, 1 hour before or 2 hours after food",
+  }),
+  oral("Azithral 500 Tablet", {
+    genericName: "Azithromycin (500 mg)",
+    strength: "500 mg",
+    therapeuticClass: "Macrolide Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet once daily for 3 days at bedtime or 1 hr before meals with water",
+  }),
+  oral("Zithrox 500 Tablet", {
+    genericName: "Azithromycin (500 mg)",
+    strength: "500 mg",
+    therapeuticClass: "Macrolide Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet once daily for 3 days for bacterial ENT / respiratory infection",
+  }),
+  oral("Azax 500 Tablet", {
+    genericName: "Azithromycin (500 mg)",
+    strength: "500 mg",
+    therapeuticClass: "Macrolide Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Once daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet once daily with plenty of water for 3 consecutive days",
   }),
   oral("Cefixime 200 mg tablet", {
-    genericName: "Cefixime",
+    genericName: "Cefixime (200 mg)",
     strength: "200 mg",
     therapeuticClass: "Cephalosporin (3rd Gen) Antibiotic",
+    dosage: "1 tablet",
     frequency: "Twice daily",
     duration: "5 Days",
     instructions: "After meals",
   }),
   oral("Taxim-O 200 tablet", {
-    genericName: "Cefixime 200 mg",
+    genericName: "Cefixime (200 mg)",
     strength: "200 mg",
     therapeuticClass: "Cephalosporin Antibiotic",
+    dosage: "1 tablet",
     frequency: "Twice daily",
     duration: "5 Days",
-    instructions: "After meals",
+    instructions: "Take 1 tablet twice daily after meals for 5 days. Complete the course",
   }),
   oral("Zifi 200 tablet", {
-    genericName: "Cefixime 200 mg",
+    genericName: "Cefixime (200 mg)",
     strength: "200 mg",
     therapeuticClass: "Cephalosporin Antibiotic",
+    dosage: "1 tablet",
     frequency: "Twice daily",
     duration: "5 Days",
+    instructions: "Take 1 tablet twice daily after meals for ENT and soft tissue infections",
+  }),
+  oral("Cefolac 200 Tablet", {
+    genericName: "Cefixime (200 mg)",
+    strength: "200 mg",
+    therapeuticClass: "Cephalosporin Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily after food with water for 5 days",
+  }),
+  oral("Mahacef 200 Tablet", {
+    genericName: "Cefixime (200 mg)",
+    strength: "200 mg",
+    therapeuticClass: "Cephalosporin Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily after food. Complete full 5-day course",
+  }),
+  oral("Omnix 200 Tablet", {
+    genericName: "Cefixime (200 mg)",
+    strength: "200 mg",
+    therapeuticClass: "Cephalosporin Antibiotic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "5 Days",
+    instructions: "Take 1 tablet twice daily with water after meals",
   }),
   oral("Cefuroxime 500 mg tablet", {
     genericName: "Cefuroxime Axetil",
@@ -1149,6 +1537,24 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "10 Days",
     instructions: "Take 1 tablet once daily early morning empty stomach to protect against acidity",
   }),
+  oral("Pantodac 40 tablet", {
+    genericName: "Pantoprazole (40 mg)",
+    strength: "40 mg",
+    therapeuticClass: "Proton Pump Inhibitor (PPI)",
+    dosage: "1 tablet",
+    frequency: "Once daily (1-0-0)",
+    duration: "10 Days",
+    instructions: "Take 1 tablet once daily 30 minutes before breakfast on empty stomach",
+  }),
+  oral("Pantop 40 tablet", {
+    genericName: "Pantoprazole (40 mg)",
+    strength: "40 mg",
+    therapeuticClass: "Proton Pump Inhibitor (PPI)",
+    dosage: "1 tablet",
+    frequency: "Once daily (1-0-0)",
+    duration: "10 Days",
+    instructions: "Take 1 tablet empty stomach in the morning before food",
+  }),
   capsule("Pantoprazole 40 mg + Domperidone 30 mg SR", {
     genericName: "Pantoprazole (40 mg) + Domperidone (30 mg SR)",
     strength: "40 mg / 30 mg",
@@ -1166,6 +1572,33 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Once daily (1-0-0)",
     duration: "7 Days",
     instructions: "Take 1 capsule empty stomach 30 mins before breakfast for GERD & acidity",
+  }),
+  capsule("Pantocid-DSR Capsule", {
+    genericName: "Pantoprazole (40 mg) + Domperidone (30 mg SR)",
+    strength: "40 mg / 30 mg",
+    therapeuticClass: "PPI + Antiemetic / Prokinetic",
+    dosage: "1 capsule",
+    frequency: "Once daily (1-0-0)",
+    duration: "7 Days",
+    instructions: "Take 1 capsule 30 minutes before breakfast on empty stomach for reflux and acidity",
+  }),
+  capsule("Pantodac-DSR Capsule", {
+    genericName: "Pantoprazole (40 mg) + Domperidone (30 mg SR)",
+    strength: "40 mg / 30 mg",
+    therapeuticClass: "PPI + Antiemetic / Prokinetic",
+    dosage: "1 capsule",
+    frequency: "Once daily (1-0-0)",
+    duration: "7 Days",
+    instructions: "Take 1 capsule in morning on empty stomach 30 mins before meals",
+  }),
+  capsule("Pantop-DSR Capsule", {
+    genericName: "Pantoprazole (40 mg) + Domperidone (30 mg SR)",
+    strength: "40 mg / 30 mg",
+    therapeuticClass: "PPI + Antiemetic / Prokinetic",
+    dosage: "1 capsule",
+    frequency: "Once daily (1-0-0)",
+    duration: "7 Days",
+    instructions: "Take 1 capsule before breakfast on empty stomach for heartburn relief",
   }),
   capsule("Omeprazole 20 mg capsule", {
     genericName: "Omeprazole (20 mg)",
@@ -1203,6 +1636,33 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "10 Days",
     instructions: "Take 1 tablet once daily before breakfast on an empty stomach",
   }),
+  oral("Rabium 20 Tablet", {
+    genericName: "Rabeprazole Sodium (20 mg)",
+    strength: "20 mg",
+    therapeuticClass: "Proton Pump Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily (1-0-0)",
+    duration: "10 Days",
+    instructions: "Take 1 tablet once daily early morning on an empty stomach",
+  }),
+  oral("Rablet 20 tablet", {
+    genericName: "Rabeprazole Sodium (20 mg)",
+    strength: "20 mg",
+    therapeuticClass: "Proton Pump Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily (1-0-0)",
+    duration: "10 Days",
+    instructions: "Take 1 tablet empty stomach in the morning before food",
+  }),
+  oral("Happi 20 tablet", {
+    genericName: "Rabeprazole Sodium (20 mg)",
+    strength: "20 mg",
+    therapeuticClass: "Proton Pump Inhibitor",
+    dosage: "1 tablet",
+    frequency: "Once daily (1-0-0)",
+    duration: "10 Days",
+    instructions: "Take 1 tablet once daily before breakfast for stomach acid reduction",
+  }),
   capsule("Rabeprazole 20 mg + Domperidone 30 mg SR", {
     genericName: "Rabeprazole (20 mg) + Domperidone (30 mg SR)",
     strength: "20 mg / 30 mg",
@@ -1229,6 +1689,24 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Once daily",
     duration: "14 Days",
     instructions: "Take 1 capsule in the morning before food",
+  }),
+  capsule("Razo-D Capsule", {
+    genericName: "Rabeprazole (20 mg) + Domperidone (30 mg SR)",
+    strength: "20 mg / 30 mg",
+    therapeuticClass: "PPI + Prokinetic",
+    dosage: "1 capsule",
+    frequency: "Once daily (1-0-0)",
+    duration: "7 Days",
+    instructions: "Take 1 capsule 30 minutes before breakfast for reflux and dyspepsia",
+  }),
+  capsule("Happi-D Capsule", {
+    genericName: "Rabeprazole (20 mg) + Domperidone (30 mg SR)",
+    strength: "20 mg / 30 mg",
+    therapeuticClass: "PPI + Prokinetic",
+    dosage: "1 capsule",
+    frequency: "Once daily (1-0-0)",
+    duration: "7 Days",
+    instructions: "Take 1 capsule in morning on empty stomach before breakfast",
   }),
   oral("Esomeprazole 40 mg tablet", {
     genericName: "Esomeprazole Magnesium",
@@ -1287,20 +1765,67 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     instructions: "For spasmodic intestinal / abdominal cramps",
   }),
   oral("Cyclopam tablet", {
-    genericName: "Dicyclomine 20 mg + Paracetamol 500 mg",
+    genericName: "Dicyclomine (20 mg) + Paracetamol (500 mg)",
     strength: "20 mg / 500 mg",
     therapeuticClass: "Antispasmodic Analgesic",
-    frequency: "As needed",
+    dosage: "1 tablet",
+    frequency: "As needed (SOS)",
     duration: "3 Days",
-    instructions: "For abdominal pain or cramps",
+    instructions: "Take 1 tablet as needed (SOS) for abdominal spasmodic pain / cramps",
+  }),
+  oral("Cyclopam Plus tablet", {
+    genericName: "Dicyclomine (20 mg) + Paracetamol (500 mg)",
+    strength: "20 mg / 500 mg",
+    therapeuticClass: "Antispasmodic Analgesic",
+    dosage: "1 tablet",
+    frequency: "Twice daily as needed",
+    duration: "3 Days",
+    instructions: "Take 1 tablet after food for acute colic and intestinal cramps",
+  }),
+  oral("Spasmonil tablet", {
+    genericName: "Dicyclomine (20 mg) + Paracetamol (500 mg)",
+    strength: "20 mg / 500 mg",
+    therapeuticClass: "Antispasmodic Analgesic",
+    dosage: "1 tablet",
+    frequency: "Twice daily as needed",
+    duration: "3 Days",
+    instructions: "Take 1 tablet after food for spasmodic pain and abdominal cramps",
+  }),
+  oral("Baralgan-M tablet", {
+    genericName: "Dicyclomine (10 mg) + Paracetamol (500 mg)",
+    strength: "10 mg / 500 mg",
+    therapeuticClass: "Antispasmodic Analgesic",
+    dosage: "1 tablet",
+    frequency: "As needed (SOS)",
+    duration: "3 Days",
+    instructions: "Take 1 tablet for acute spasmodic pain or abdominal colic",
+  }),
+  oral("Colimex tablet", {
+    genericName: "Dicyclomine (20 mg) + Paracetamol (500 mg)",
+    strength: "20 mg / 500 mg",
+    therapeuticClass: "Antispasmodic Analgesic",
+    dosage: "1 tablet",
+    frequency: "Twice daily as needed",
+    duration: "3 Days",
+    instructions: "Take 1 tablet after food for smooth muscle cramps",
   }),
   oral("Drotaverine 80 mg tablet", {
     genericName: "Drotaverine HCl",
     strength: "80 mg",
     therapeuticClass: "Smooth Muscle Antispasmodic",
+    dosage: "1 tablet",
     frequency: "Twice daily",
     duration: "3 Days",
     instructions: "For biliary, renal, or GI smooth muscle colic",
+  }),
+  oral("Drotikind 80 tablet", {
+    genericName: "Drotaverine HCl (80 mg)",
+    strength: "80 mg",
+    therapeuticClass: "Smooth Muscle Antispasmodic",
+    dosage: "1 tablet",
+    frequency: "Twice daily",
+    duration: "3 Days",
+    instructions: "Take 1 tablet twice daily after food for smooth muscle spasm and colic",
   }),
   capsule("Loperamide 2 mg capsule", {
     genericName: "Loperamide HCl",
@@ -1399,6 +1924,51 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     frequency: "Three times daily",
     duration: "5 Days",
     instructions: "After meals for dry, hacking cough",
+  }),
+  syrup("Chericof syrup 100 ml", {
+    genericName: "Dextromethorphan (10 mg) + Chlorpheniramine (2 mg) + Phenylephrine (5 mg) / 5 ml",
+    strength: "100 ml",
+    therapeuticClass: "Antitussive / Cold & Dry Cough",
+    dosage: "5 ml",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 5 ml three times daily after food for dry cough, cold and throat irritation",
+  }),
+  syrup("Ascoril-D Plus syrup 100 ml", {
+    genericName: "Dextromethorphan (10 mg) + Chlorpheniramine (2 mg) + Phenylephrine (5 mg) / 5 ml",
+    strength: "100 ml",
+    therapeuticClass: "Antitussive & Nasal Decongestant",
+    dosage: "5 ml",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 5 ml after meals for dry cough, runny nose and throat tickle",
+  }),
+  syrup("Alex syrup 100 ml", {
+    genericName: "Dextromethorphan (10 mg) + Chlorpheniramine (2 mg) + Phenylephrine (5 mg) / 5 ml",
+    strength: "100 ml",
+    therapeuticClass: "Dry Cough & Anti-allergic Syrup",
+    dosage: "5 ml",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 5 ml three times daily after food for allergic dry cough",
+  }),
+  syrup("Grilinctus syrup 100 ml", {
+    genericName: "Dextromethorphan (5 mg) + Chlorpheniramine (2.5 mg) + Ammonium Chloride (60 mg) / 5 ml",
+    strength: "100 ml",
+    therapeuticClass: "Cough Relief & Soothing Expectorant",
+    dosage: "5 ml",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 1 teaspoon (5 ml) after meals for cough relief and soothing throat",
+  }),
+  syrup("Benadryl Cough syrup 100 ml", {
+    genericName: "Diphenhydramine (14.08 mg) + Ammonium Chloride (138 mg) / 5 ml",
+    strength: "100 ml",
+    therapeuticClass: "Antitussive / Expectorant",
+    dosage: "5 ml",
+    frequency: "Three times daily",
+    duration: "5 Days",
+    instructions: "Take 5 ml after food for throat tickle, allergy and nighttime cough relief",
   }),
   syrup("Expectorant Ambroxol + Guaifenesin + Terbutaline", {
     genericName: "Ambroxol + Guaifenesin + Terbutaline",
@@ -2017,13 +2587,50 @@ export const COMMON_DRUGS: readonly CommonDrug[] = [
     duration: "10 Days",
     instructions: "At bedtime",
   }),
+  oral("Montair-LC Tablet", {
+    genericName: "Montelukast (10 mg) + Levocetirizine (5 mg)",
+    strength: "10 mg / 5 mg",
+    therapeuticClass: "Antiallergic & Anti-asthma Combination",
+    dosage: "1 tablet",
+    frequency: "Once daily at bedtime",
+    duration: "10 Days",
+    instructions: "Take 1 tablet at night before bedtime for allergic rhinitis, sneezing and asthma",
+  }),
   oral("Monticope tablet", {
-    genericName: "Montelukast 10 mg + Levocetirizine 5 mg",
+    genericName: "Montelukast (10 mg) + Levocetirizine (5 mg)",
     strength: "10 mg / 5 mg",
     therapeuticClass: "Antiallergic Combination",
-    frequency: "Once daily",
+    dosage: "1 tablet",
+    frequency: "Once daily at bedtime",
     duration: "10 Days",
-    instructions: "Take 1 tablet at night for allergic sneezing / rhinitis",
+    instructions: "Take 1 tablet at night for allergic sneezing, runny nose & rhinitis",
+  }),
+  oral("Telekast-L Tablet", {
+    genericName: "Montelukast (10 mg) + Levocetirizine (5 mg)",
+    strength: "10 mg / 5 mg",
+    therapeuticClass: "Antiallergic Combination",
+    dosage: "1 tablet",
+    frequency: "Once daily at bedtime",
+    duration: "10 Days",
+    instructions: "Take 1 tablet at bedtime for allergy symptoms and airway clearance",
+  }),
+  oral("Montek-LC Tablet", {
+    genericName: "Montelukast (10 mg) + Levocetirizine (5 mg)",
+    strength: "10 mg / 5 mg",
+    therapeuticClass: "Antiallergic Combination",
+    dosage: "1 tablet",
+    frequency: "Once daily at bedtime",
+    duration: "10 Days",
+    instructions: "Take 1 tablet at night for running nose, allergic cough and sneezing",
+  }),
+  oral("Levocet-M Tablet", {
+    genericName: "Montelukast (10 mg) + Levocetirizine (5 mg)",
+    strength: "10 mg / 5 mg",
+    therapeuticClass: "Antiallergic Combination",
+    dosage: "1 tablet",
+    frequency: "Once daily at bedtime",
+    duration: "10 Days",
+    instructions: "Take 1 tablet at bedtime for allergic congestion and sinus relief",
   }),
   oral("Fexofenadine 120 mg tablet", {
     genericName: "Fexofenadine HCl",
@@ -2910,6 +3517,64 @@ export function getGenericCompositionForDrug(
     return key.startsWith(dName) || dName.startsWith(key);
   });
   return partial?.genericName;
+}
+
+/**
+ * Return all popular brand variants in the catalog for a given generic salt or brand name.
+ */
+export function getBrandVariantsForGeneric(
+  genericOrBrandName?: string | null
+): CommonDrug[] {
+  if (!genericOrBrandName) return [];
+  const key = normalizeDrugName(genericOrBrandName);
+  if (!key) return [];
+
+  const genericSalt = getGenericCompositionForDrug(genericOrBrandName) || genericOrBrandName;
+  const normalizedSalt = normalizeDrugName(genericSalt);
+
+  const coreKeywords = normalizedSalt
+    .replace(/[()+]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !/^\d+(?:mg|mcg|iu|g|ml)?$/i.test(w));
+
+  const seen = new Set<string>();
+  const results: CommonDrug[] = [];
+
+  for (const drug of COMMON_DRUGS) {
+    const dNorm = normalizeDrugName(drug.name);
+    if (seen.has(dNorm)) continue;
+
+    const dGeneric = drug.genericName ? normalizeDrugName(drug.genericName) : "";
+
+    let isMatch = false;
+    if (dGeneric && (dGeneric === normalizedSalt || dGeneric.includes(normalizedSalt) || normalizedSalt.includes(dGeneric))) {
+      isMatch = true;
+    } else if (coreKeywords.length > 0 && coreKeywords.some((kw) => dGeneric.includes(kw) || dNorm.includes(kw))) {
+      isMatch = true;
+    }
+
+    if (isMatch) {
+      seen.add(dNorm);
+      results.push(drug);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Return alternative brands for a given drug (excluding the current brand).
+ */
+export function getAlternativeBrandsForDrug(
+  drugName?: string | null,
+  limit = 8
+): CommonDrug[] {
+  if (!drugName) return [];
+  const currentNorm = normalizeDrugName(drugName);
+  const variants = getBrandVariantsForGeneric(drugName);
+  return variants
+    .filter((drug) => normalizeDrugName(drug.name) !== currentNorm)
+    .slice(0, limit);
 }
 
 /**

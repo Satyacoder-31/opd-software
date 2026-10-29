@@ -12,24 +12,24 @@ import { normalizeDrugName, COMMON_DRUGS } from "@/lib/drug-catalog";
 import type { ActionResult, VoidActionResult } from "@/lib/types";
 
 const medicineFormSchema = z.object({
-  name: z.string().trim().min(2, "Enter a medicine name.").max(160),
-  genericName: z.string().trim().max(160).optional().nullable(),
-  category: z.string().trim().max(50).optional().nullable(),
-  strength: z.string().trim().max(60).optional().nullable(),
-  manufacturer: z.string().trim().max(120).optional().nullable(),
-  batchNumber: z.string().trim().max(60).optional().nullable(),
+  name: z.string().trim().min(2, "Enter a medicine name.").max(200),
+  genericName: z.string().trim().max(400).optional().nullable(),
+  category: z.string().trim().max(60).optional().nullable(),
+  strength: z.string().trim().max(100).optional().nullable(),
+  manufacturer: z.string().trim().max(150).optional().nullable(),
+  batchNumber: z.string().trim().max(80).optional().nullable(),
   expiryDate: z.string().optional().nullable(),
   stockQuantity: z.number().int().min(0).default(0),
   reorderLevel: z.number().int().min(0).default(10),
   unitPrice: z.number().min(0).optional().nullable(),
   purchasePrice: z.number().min(0).optional().nullable(),
-  rackLocation: z.string().trim().max(60).optional().nullable(),
-  dosage: z.string().trim().max(120).optional().nullable(),
-  route: z.string().trim().max(60).optional().nullable(),
-  frequency: z.string().trim().max(60).optional().nullable(),
-  duration: z.string().trim().max(60).optional().nullable(),
-  quantity: z.string().trim().max(60).optional().nullable(),
-  instructions: z.string().trim().max(160).optional().nullable(),
+  rackLocation: z.string().trim().max(80).optional().nullable(),
+  dosage: z.string().trim().max(150).optional().nullable(),
+  route: z.string().trim().max(80).optional().nullable(),
+  frequency: z.string().trim().max(80).optional().nullable(),
+  duration: z.string().trim().max(80).optional().nullable(),
+  quantity: z.string().trim().max(80).optional().nullable(),
+  instructions: z.string().trim().max(500).optional().nullable(),
   isActive: z.boolean().default(true),
 });
 
@@ -713,10 +713,12 @@ export async function seedCommonMedicinesWithStock(): Promise<ActionResult<{ add
 
       addedCount++;
     } else {
-      // Upgrade existing rows with genericName, category, and strength if missing
+      // Upgrade existing rows with genericName, category, strength, dosage, and instructions if missing
       const needsUpdate =
         !existing.genericName ||
         existing.category !== category ||
+        !existing.instructions ||
+        !existing.dosage ||
         existing.stockQuantity === 0;
 
       if (needsUpdate) {
@@ -724,6 +726,11 @@ export async function seedCommonMedicinesWithStock(): Promise<ActionResult<{ add
           genericName: genericName || existing.genericName,
           category: category || existing.category,
           strength: strength || existing.strength,
+          dosage: existing.dosage || drug.dosage || null,
+          route: existing.route || drug.route || null,
+          frequency: existing.frequency || drug.frequency || null,
+          duration: existing.duration || drug.duration || null,
+          instructions: existing.instructions || drug.instructions || null,
         };
 
         if (existing.stockQuantity === 0) {

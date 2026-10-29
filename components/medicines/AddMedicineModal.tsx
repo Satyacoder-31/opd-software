@@ -6,6 +6,7 @@ import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { COMMON_DRUGS, normalizeDrugName, getGenericCompositionForDrug } from "@/lib/drug-catalog";
 
 type AddMedicineModalProps = {
   open: boolean;
@@ -52,6 +53,33 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
+
+  function handleNameBlur() {
+    if (!form.name.trim()) return;
+    const match = COMMON_DRUGS.find(
+      (d) =>
+        normalizeDrugName(d.name) === normalizeDrugName(form.name) ||
+        normalizeDrugName(d.name).startsWith(normalizeDrugName(form.name))
+    );
+    if (match) {
+      setForm((prev) => ({
+        ...prev,
+        genericName: prev.genericName || match.genericName || "",
+        category: prev.category === "Tablet" && match.category ? match.category : prev.category,
+        strength: prev.strength || match.strength || "",
+        dosage: prev.dosage === "1 tablet" && match.dosage ? match.dosage : prev.dosage,
+        route: prev.route === "Oral" && match.route ? match.route : prev.route,
+        frequency: prev.frequency === "Twice daily" && match.frequency ? match.frequency : prev.frequency,
+        duration: prev.duration === "5 Days" && match.duration ? match.duration : prev.duration,
+        instructions: prev.instructions === "After meals" && match.instructions ? match.instructions : prev.instructions,
+      }));
+    } else if (!form.genericName) {
+      const salt = getGenericCompositionForDrug(form.name);
+      if (salt) {
+        setForm((prev) => ({ ...prev, genericName: salt }));
+      }
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -124,6 +152,7 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
                 required
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onBlur={handleNameBlur}
                 placeholder="e.g. Augmentin 625 Duo"
               />
               <Input
@@ -222,41 +251,50 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
           </div>
 
           <div className="space-y-3 pt-3 border-t border-border">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Prescription Defaults (for Doctor Auto-fill)
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Prescription Defaults (Auto-fills in Doctor Consultation)
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Set the specific dosage, frequency, duration, and tailored advice for this brand.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Input
-                label="Default Dose"
+                label="Dose"
                 value={form.dosage}
                 onChange={(e) => setForm({ ...form, dosage: e.target.value })}
-                placeholder="1 tablet"
+                placeholder="e.g. 1 tablet / 1 capsule"
               />
               <Input
                 label="Route"
                 value={form.route}
                 onChange={(e) => setForm({ ...form, route: e.target.value })}
-                placeholder="Oral"
+                placeholder="Oral / Topical"
               />
               <Input
                 label="Frequency"
                 value={form.frequency}
                 onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-                placeholder="Twice daily"
+                placeholder="e.g. 1-0-1 After Meal"
               />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Duration"
                 value={form.duration}
                 onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                placeholder="5 Days"
+                placeholder="e.g. 5 Days"
               />
-              <Input
-                label="Instructions"
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">
+                Doctor&apos;s Advice & Remarks (Instructions)
+              </label>
+              <textarea
                 value={form.instructions}
                 onChange={(e) => setForm({ ...form, instructions: e.target.value })}
-                placeholder="After meals with water"
+                rows={2}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-ink placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary"
+                placeholder="e.g. Take 1 tablet - after meal for fever and severe body pain. SOS"
               />
             </div>
           </div>

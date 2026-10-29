@@ -189,20 +189,16 @@ export function DrugDictionaryEdit({ initialItems }: DrugDictionaryEditProps) {
             error={fieldError("quantity")}
             placeholder="Optional"
           />
-          <Select
-            label="Default instructions"
-            name="instructions"
-            value={values.instructions ?? ""}
-            onChange={(event) => setValue("instructions", event.target.value)}
-            error={fieldError("instructions")}
-            options={[
-              { value: "", label: "—" },
-              ...INSTRUCTION_OPTIONS.map((instruction) => ({
-                value: instruction,
-                label: instruction,
-              })),
-            ]}
-          />
+          <div className="sm:col-span-2">
+            <Input
+              label="Default instructions & advice"
+              name="instructions"
+              value={values.instructions ?? ""}
+              onChange={(event) => setValue("instructions", event.target.value)}
+              error={fieldError("instructions")}
+              placeholder="e.g. Take 1 tablet - after meal for fever / pain. SOS"
+            />
+          </div>
         </div>
         <div className="flex justify-end">
           <Button type="submit" loading={pending}>
@@ -300,21 +296,17 @@ export function DrugDictionaryEdit({ initialItems }: DrugDictionaryEditProps) {
                         editForm.setValue("quantity", event.target.value)
                       }
                     />
-                    <Select
-                      label="Instructions"
-                      name="instructions"
-                      value={editForm.values.instructions ?? ""}
-                      onChange={(event) =>
-                        editForm.setValue("instructions", event.target.value)
-                      }
-                      options={[
-                        { value: "", label: "—" },
-                        ...INSTRUCTION_OPTIONS.map((instruction) => ({
-                          value: instruction,
-                          label: instruction,
-                        })),
-                      ]}
-                    />
+                    <div className="sm:col-span-2">
+                      <Input
+                        label="Instructions & advice"
+                        name="instructions"
+                        value={editForm.values.instructions ?? ""}
+                        onChange={(event) =>
+                          editForm.setValue("instructions", event.target.value)
+                        }
+                        placeholder="e.g. Take 1 tablet - after meal for fever / pain. SOS"
+                      />
+                    </div>
                   </div>
                   <div className="flex flex-wrap justify-end gap-2">
                     <Button

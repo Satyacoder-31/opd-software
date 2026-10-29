@@ -216,36 +216,50 @@ export function EditMedicineModal({
           </div>
 
           <div className="space-y-3 pt-3 border-t border-border">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Prescription Defaults
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Prescription Defaults (Auto-fills in Doctor Consultation)
+              </h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Set or update the specific dose, frequency, duration, and tailored clinical advice for this brand.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Input
-                label="Dosage"
+                label="Dose"
                 value={form.dosage}
                 onChange={(e) => setForm({ ...form, dosage: e.target.value })}
+                placeholder="e.g. 1 tablet / 1 capsule"
               />
               <Input
                 label="Route"
                 value={form.route}
                 onChange={(e) => setForm({ ...form, route: e.target.value })}
+                placeholder="Oral / Topical"
               />
               <Input
                 label="Frequency"
                 value={form.frequency}
                 onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+                placeholder="e.g. 1-0-1 After Meal"
               />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Duration"
                 value={form.duration}
                 onChange={(e) => setForm({ ...form, duration: e.target.value })}
+                placeholder="e.g. 5 Days"
               />
-              <Input
-                label="Instructions"
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">
+                Doctor&apos;s Advice & Remarks (Instructions)
+              </label>
+              <textarea
                 value={form.instructions}
                 onChange={(e) => setForm({ ...form, instructions: e.target.value })}
+                rows={2}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-ink placeholder:text-muted-foreground focus:border-primary focus:outline-hidden focus:ring-1 focus:ring-primary"
+                placeholder="e.g. Take 1 tablet - after meal for fever and severe body pain. SOS"
               />
             </div>
           </div>

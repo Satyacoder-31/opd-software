@@ -19,18 +19,25 @@ import type { ActionResult, VoidActionResult } from "@/lib/types";
 const optionalText = z
   .string()
   .trim()
-  .max(120)
+  .max(150)
+  .optional()
+  .transform((value) => (value ? value : undefined));
+
+const optionalInstructions = z
+  .string()
+  .trim()
+  .max(500)
   .optional()
   .transform((value) => (value ? value : undefined));
 
 const drugSchema = z.object({
-  name: z.string().trim().min(2, "Enter a medicine name.").max(160),
+  name: z.string().trim().min(2, "Enter a medicine name.").max(200),
   dosage: optionalText,
   route: optionalText,
   frequency: optionalText,
   duration: optionalText,
   quantity: optionalText,
-  instructions: optionalText,
+  instructions: optionalInstructions,
 });
 
 const DRUG_DEFAULT_SELECT = {

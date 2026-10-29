@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import type { MedicineRecord } from "@/actions/medicines";
 import { deleteMedicine } from "@/actions/medicines";
+import { getAlternativeBrandsForDrug } from "@/lib/drug-catalog";
 import { AddStockModal } from "./AddStockModal";
 import { AdjustStockModal } from "./AdjustStockModal";
 import { EditMedicineModal } from "./EditMedicineModal";
@@ -86,15 +87,44 @@ export function MedicineTable({
                       {med.name}
                     </div>
                     {med.genericName ? (
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-xs">
-                        {med.genericName}
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-sm">
+                        <span className="font-medium text-teal-700 dark:text-teal-400">Salt:</span> {med.genericName}
                       </div>
                     ) : null}
                     {med.strength ? (
-                      <span className="inline-block text-[11px] font-medium text-muted-foreground">
+                      <span className="inline-block text-[11px] font-medium text-muted-foreground mr-2">
                         {med.strength}
                       </span>
                     ) : null}
+                    {(med.dosage || med.frequency || med.duration) && (
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-primary font-medium">
+                        <span className="rounded bg-primary/10 px-1.5 py-0.5">
+                          {[med.dosage, med.frequency, med.duration].filter(Boolean).join(" · ")}
+                        </span>
+                      </div>
+                    )}
+                    {med.instructions && (
+                      <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 italic" title={med.instructions}>
+                        Advice: &ldquo;{med.instructions}&rdquo;
+                      </div>
+                    )}
+                    {(() => {
+                      const alts = getAlternativeBrandsForDrug(med.name, 4);
+                      if (alts.length === 0) return null;
+                      return (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+                          <span className="font-semibold text-slate-500">Related brands:</span>
+                          {alts.map((alt, aIdx) => (
+                            <span
+                              key={aIdx}
+                              className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.2 font-medium text-slate-700 dark:text-slate-300"
+                            >
+                              {alt.name.replace(/\s+(tablet|capsule|syrup|gel|injection|suspension)/i, "")}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
