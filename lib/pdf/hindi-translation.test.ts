@@ -79,6 +79,19 @@ describe("Prescription & Billing Hindi Translation Options", () => {
 
     const adv4 = translateAdviceLine("REVIEW SOS", "hi");
     expect(adv4).toContain("Review SOS");
+
+    const gerdAdvice = `• Avoid spicy, fried, sour, and excessively greasy food.
+• Avoid tea, coffee, carbonated drinks, and smoking.
+• Take smaller, more frequent meals; do not skip breakfast.
+• Do not lie down within 2 hours of eating dinner.
+• Warm saline water gargles.`;
+
+    const translatedGerd = translateAdviceText(gerdAdvice, "hi");
+    expect(translatedGerd).toContain("मसालेदार, तला-भुना, खट्टा एवं अत्यधिक तैलीय भोजन करने से बचें");
+    expect(translatedGerd).toContain("चाय, कॉफी, कोल्ड ड्रिंक्स");
+    expect(translatedGerd).toContain("एक बार में ज्यादा न खाएं");
+    expect(translatedGerd).toContain("रात के भोजन के तुरंत बाद न लेटें");
+    expect(translatedGerd).toContain("गुनगुने नमक पानी से गरारे करें");
   });
 
   it("translates past medical history to Hindi", () => {
@@ -114,6 +127,10 @@ describe("Prescription & Billing Hindi Translation Options", () => {
     expect(complexInst2).toContain("नाश्ते के बाद");
     expect(complexInst2).toContain("रात के भोजन के बाद");
     expect(complexInst2).toContain("दर्द होने पर आवश्यकतानुसार (SOS) लें");
+
+    expect(
+      translateInstructions("1 hour before principal meals and at bedtime", "hi")
+    ).toBe("मुख्य भोजन से 1 घंटा पहले और रात को सोते समय");
   });
 
   it("translates billing service items and payment modes into Hindi", () => {

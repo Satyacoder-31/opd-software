@@ -338,14 +338,85 @@ export function PrescriptionViewModal({
                 </Button>
               </div>
             </div>
-          ) : !prescriptionData ? null : viewMode === "pdf" && pdfBlobUrl ? (
-            /* EMBEDDED PDF VIEWER */
-            <div className="h-[70vh] w-full rounded-xl border border-slate-300 bg-slate-800 shadow-inner overflow-hidden">
-              <iframe
-                src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
-                className="w-full h-full border-0"
-                title="Prescription PDF Preview"
-              />
+          ) : !prescriptionData ? null : viewMode === "pdf" ? (
+            /* EMBEDDED PDF VIEWER CONTAINER */
+            <div className="h-[75vh] w-full flex flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+              {/* TOP PDF BAR */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800 border-b border-slate-700 text-xs text-white">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-teal-300">
+                    {lang === "hi" ? "अधिकृत डिजिटल पर्चा (PDF)" : "Official Digital Rx (PDF)"}
+                  </span>
+                  <span className="text-[11px] text-slate-400">· A4 Print Standard</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white px-3 py-1 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Icon icon={faDownload} className="size-3" />
+                    <span>{i18n.downloadPrescription}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    <Icon icon={faPrint} className="size-3" />
+                    <span>{i18n.printPrescription}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* VIEWER AREA */}
+              <div className="flex-1 w-full h-full relative bg-slate-950 min-h-[500px]">
+                {isGeneratingPdf || !pdfBlobUrl ? (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-300 p-6 min-h-[400px]">
+                    <Icon icon={faSpinner} className="size-9 animate-spin text-teal-400 mb-3" />
+                    <p className="text-sm font-semibold text-white">
+                      {lang === "hi"
+                        ? "पीडीएफ पर्चा तैयार किया जा रहा है..."
+                        : "Preparing high-resolution PDF..."}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {lang === "hi"
+                        ? "वेक्टर फॉन्ट एवं क्लिनिक लेआउट लोड हो रहा है"
+                        : "Formatting vector fonts and letterhead"}
+                    </p>
+                  </div>
+                ) : (
+                  <object
+                    data={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
+                    type="application/pdf"
+                    className="w-full h-full border-0"
+                  >
+                    <iframe
+                      src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
+                      className="w-full h-full border-0"
+                      title="Prescription PDF Preview"
+                    >
+                      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-200">
+                        <p className="font-semibold text-base mb-3">
+                          {lang === "hi"
+                            ? "पीडीएफ दस्तावेज़ तैयार है"
+                            : "PDF Document is ready"}
+                        </p>
+                        <div className="flex gap-3">
+                          <Button onClick={handleDownload} variant="primary">
+                            <Icon icon={faDownload} className="mr-1.5" />
+                            {i18n.downloadPrescription}
+                          </Button>
+                          <Button onClick={handlePrint} variant="secondary">
+                            <Icon icon={faPrint} className="mr-1.5" />
+                            {i18n.printPrescription}
+                          </Button>
+                        </div>
+                      </div>
+                    </iframe>
+                  </object>
+                )}
+              </div>
             </div>
           ) : (
             /* PAPER RX VIEW */

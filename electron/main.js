@@ -78,6 +78,7 @@ async function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      plugins: true,
     },
     show: false,
   });

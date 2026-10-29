@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon as Icon } from "@fortawesome/react-fontawesome";
 import {
   faReceipt,
@@ -57,11 +57,18 @@ export function ReceiptViewModal({
   const [lang, setLang] = useState<PdfLanguage>(initialLang);
   const [viewMode, setViewMode] = useState<"paper" | "pdf">("paper");
   const [loading, setLoading] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receiptData, setReceiptData] = useState<ReceiptViewData | null>(null);
   const [patientReceipts, setPatientReceipts] = useState<PatientReceiptSummary[]>([]);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [isPendingLang, startTransition] = useTransition();
+
+  // Sync initial language when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLang(initialLang);
+    }
+  }, [isOpen, initialLang]);
 
   // Keep activeConsultationId synced when prop changes
   useEffect(() => {
@@ -82,12 +89,17 @@ export function ReceiptViewModal({
     if (!isOpen || !activeConsultationId) return;
 
     let isSubscribed = true;
-    setLoading(true);
+    if (!receiptData) {
+      setLoading(true);
+    } else {
+      setIsGeneratingPdf(true);
+    }
     setError(null);
 
     void getReceiptViewData(activeConsultationId, lang).then((res) => {
       if (!isSubscribed) return;
       setLoading(false);
+      setIsGeneratingPdf(false);
 
       if (!res.success) {
         setError(res.error);
@@ -122,6 +134,11 @@ export function ReceiptViewModal({
           }
         });
       }
+    }).catch((err) => {
+      if (!isSubscribed) return;
+      setLoading(false);
+      setIsGeneratingPdf(false);
+      setError(err instanceof Error ? err.message : "Failed to load receipt.");
     });
 
     return () => {
@@ -237,9 +254,7 @@ export function ReceiptViewModal({
             <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
               <button
                 type="button"
-                onClick={() => {
-                  startTransition(() => setLang("en"));
-                }}
+                onClick={() => setLang("en")}
                 className={cn(
                   "rounded-md px-2.5 py-1 font-semibold transition-all",
                   lang === "en"
@@ -251,9 +266,7 @@ export function ReceiptViewModal({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  startTransition(() => setLang("hi"));
-                }}
+                onClick={() => setLang("hi")}
                 className={cn(
                   "rounded-md px-2.5 py-1 font-semibold transition-all",
                   lang === "hi"
@@ -367,14 +380,85 @@ export function ReceiptViewModal({
                 </Button>
               </div>
             </div>
-          ) : !receiptData ? null : viewMode === "pdf" && pdfBlobUrl ? (
-            /* EMBEDDED PDF VIEWER */
-            <div className="h-[70vh] w-full rounded-xl border border-slate-300 bg-slate-800 shadow-inner overflow-hidden">
-              <iframe
-                src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
-                className="w-full h-full border-0"
-                title="Tax Invoice PDF Preview"
-              />
+          ) : !receiptData ? null : viewMode === "pdf" ? (
+            /* EMBEDDED PDF VIEWER CONTAINER */
+            <div className="h-[75vh] w-full flex flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+              {/* TOP PDF BAR */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800 border-b border-slate-700 text-xs text-white">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-teal-300">
+                    {lang === "hi" ? "अधिकृत कर चालान एवं रसीद (PDF)" : "Official Tax Invoice & Receipt (PDF)"}
+                  </span>
+                  <span className="text-[11px] text-slate-400">· A4 Print Standard</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white px-3 py-1 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Icon icon={faDownload} className="size-3" />
+                    <span>{i18n.downloadReceipt}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrint}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 font-semibold text-xs transition-colors cursor-pointer"
+                  >
+                    <Icon icon={faPrint} className="size-3" />
+                    <span>{i18n.printReceipt}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* VIEWER AREA */}
+              <div className="flex-1 w-full h-full relative bg-slate-950 min-h-[500px]">
+                {isGeneratingPdf || !pdfBlobUrl ? (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-300 p-6 min-h-[400px]">
+                    <Icon icon={faSpinner} className="size-9 animate-spin text-teal-400 mb-3" />
+                    <p className="text-sm font-semibold text-white">
+                      {lang === "hi"
+                        ? "पीडीएफ रसीद तैयार की जा रही है..."
+                        : "Preparing high-resolution Receipt PDF..."}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {lang === "hi"
+                        ? "भुगतान विवरण एवं जीएसटी चालान लोड हो रहा है"
+                        : "Formatting billing breakdown and authorized invoice"}
+                    </p>
+                  </div>
+                ) : (
+                  <object
+                    data={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
+                    type="application/pdf"
+                    className="w-full h-full border-0"
+                  >
+                    <iframe
+                      src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
+                      className="w-full h-full border-0"
+                      title="Tax Invoice PDF Preview"
+                    >
+                      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-200">
+                        <p className="font-semibold text-base mb-3">
+                          {lang === "hi"
+                            ? "पीडीएफ रसीद दस्तावेज़ तैयार है"
+                            : "PDF Receipt is ready"}
+                        </p>
+                        <div className="flex gap-3">
+                          <Button onClick={handleDownload} variant="primary">
+                            <Icon icon={faDownload} className="mr-1.5" />
+                            {i18n.downloadReceipt}
+                          </Button>
+                          <Button onClick={handlePrint} variant="secondary">
+                            <Icon icon={faPrint} className="mr-1.5" />
+                            {i18n.printReceipt}
+                          </Button>
+                        </div>
+                      </div>
+                    </iframe>
+                  </object>
+                )}
+              </div>
             </div>
           ) : (
             /* PAPER RECEIPT CARD VIEW */

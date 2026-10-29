@@ -446,6 +446,33 @@ export function translateInstructions(inst?: string | null, lang: PdfLanguage = 
 
   // Complex multi-part instruction translation:
   let res = t
+    .replace(/\b1\s+hour\s+before\s+principal\s+meals?\s+and\s+(?:at\s+)?bedtime\b/gi, "मुख्य भोजन से 1 घंटा पहले और रात को सोते समय")
+    .replace(/\b1\s+hour\s+before\s+principal\s+meals?\b/gi, "मुख्य भोजन से 1 घंटा पहले")
+    .replace(/\bbefore\s+principal\s+meals?\b/gi, "मुख्य भोजन से पहले")
+    .replace(/\b30\s+minutes\s+before\s+breakfast\s+on\s+empty\s+stomach\b/gi, "नाश्ते से 30 मिनट पहले खाली पेट")
+    .replace(/\b30\s+minutes\s+before\s+breakfast\b/gi, "नाश्ते से 30 मिनट पहले")
+    .replace(/\b30\s+minutes\s+before\s+meals?\b/gi, "भोजन से 30 मिनट पहले")
+    .replace(/\bon\s+empty\s+stomach\b/gi, "खाली पेट")
+    .replace(/\bempty\s+stomach\s+in\s+the\s+morning\b/gi, "सुबह खाली पेट")
+    .replace(/\balways\s+after\s+food\b/gi, "हमेशा भोजन के बाद")
+    .replace(/\bat\s+bedtime\b/gi, "रात को सोते समय")
+    .replace(/\band\s+at\s+bedtime\b/gi, "और रात को सोते समय")
+    .replace(/\band\s+सोते\s+समय\b/gi, "और रात को सोते समय")
+    .replace(/\band\s+रात\s+को\s+सोते\s+समय\b/gi, "और रात को सोते समय")
+    .replace(/\s+and\s+/gi, " और ")
+    .replace(/\bchew\s+after\s+breakfast\b/gi, "नाश्ते के बाद चबाकर लें")
+    .replace(/\bfor\s+immune\s+support\b/gi, "(प्रतिरोधक क्षमता हेतु)")
+    .replace(/\bfor\s+muscle\s+spasm\s+relief\b/gi, "(मांसपेशियों के आराम हेतु)")
+    .replace(/\bfor\s+neck\s+muscle\s+relaxation\b/gi, "(गर्दन के आराम हेतु)")
+    .replace(/\bfor\s+nerve\s+support\b/gi, "(नसों के पोषण हेतु)")
+    .replace(/\bapply\s+gently\s+over\s+knee\s+joint[;,]?\s*do\s+not\s+rub\s+vigorously\b/gi, "घुटने पर हल्के हाथ से लगाएं; जोर से न रगड़ें")
+    .replace(/\bapply\s+over\s+shoulder\s+joint\s+gently\s+without\s+vigorous\s+rubbing\b/gi, "कंधे पर हल्के हाथ से लगाएं; जोर से न रगड़ें")
+    .replace(/\bdo\s+not\s+rub\s+vigorously\b/gi, "जोर से न रगड़ें")
+    .replace(/\bspray\s+over\s+affected\s+joint\s+from\s+5\s+cm\s+distance[;,]?\s*do\s+not\s+rub\b/gi, "जोड़ पर 5 सेमी दूरी से स्प्रे करें; मालिश न करें")
+    .replace(/\bdilute\s+in\s+a\s+full\s+glass\s+of\s+water[;,]?\s*drink\s+after\s+meals\b/gi, "पूरे गिलास पानी में घोलकर भोजन के बाद पिएं")
+    .replace(/\bsip\s+continuously\s+after\s+every\s+loose\s+stool\b/gi, "दस्त होने के बाद घूंट-घूंट कर पिएं")
+    .replace(/\bfor\s+sinus\s+headache\s+or\s+facial\s+heaviness\b/gi, "(सिरदर्द व चेहरे के भारीपन हेतु)")
+    .replace(/\bfor\s+swelling\s+reduction\b/gi, "(सूजन कम करने हेतु)")
     .replace(/\btake\s+1\s+tablet\b/gi, "1 गोली लें")
     .replace(/\btake\s+1\s+capsule\b/gi, "1 कैप्सूल लें")
     .replace(/\btake\s+2\s+tablets?\b/gi, "2 गोली लें")
@@ -793,6 +820,63 @@ export function translateAdviceLine(line?: string | null, lang: PdfLanguage = "e
   // If target language is ENGLISH and text contains Hindi/Devanagari, translate to English
   if (lang === "en") {
     if (/[\u0900-\u097F]/.test(core)) {
+      if (lower.includes("मसालेदार") || lower.includes("तला-भुना") || lower.includes("तैलीय")) {
+        return `${prefix}Avoid spicy, fried, sour, and excessively greasy food`;
+      }
+      if (lower.includes("चाय") || lower.includes("कॉफी") || lower.includes("धूम्रपान") || lower.includes("कोल्ड ड्रिंक्स")) {
+        return `${prefix}Avoid tea, coffee, carbonated drinks, and smoking`;
+      }
+      if (lower.includes("हल्का भोजन") || lower.includes("थोड़ी-थोड़ी देर") || lower.includes("नाश्ता कभी न छोड़ें")) {
+        return `${prefix}Take smaller, more frequent meals; do not skip breakfast`;
+      }
+      if (lower.includes("तुरंत बाद न लेटें") || lower.includes("2 घंटे बाद सोएं")) {
+        return `${prefix}Do not lie down within 2 hours of eating dinner`;
+      }
+      if (lower.includes("सिरहाने") || lower.includes("6 इंच")) {
+        return `${prefix}Elevate the head end of your bed by 6 inches`;
+      }
+      if (lower.includes("गरारे") || lower.includes("गुनगुने नमक")) {
+        return `${prefix}Warm saline water gargles twice daily`;
+      }
+      if (lower.includes("भाप") || lower.includes("स्टीम")) {
+        return `${prefix}Steam inhalation 2-3 times daily`;
+      }
+      if (lower.includes("गर्म तरल")) {
+        return `${prefix}Drink plenty of warm fluids (soups, warm water)`;
+      }
+      if (lower.includes("उबला हुआ") || lower.includes("फिल्टर किया हुआ")) {
+        return `${prefix}Drink only boiled or filtered water`;
+      }
+      if (lower.includes("सुपाच्य आहार") || lower.includes("खिचड़ी")) {
+        return `${prefix}Consume bland diet: curd rice, bananas, soft khichdi`;
+      }
+      if (lower.includes("नमक की मात्रा") || lower.includes("5 ग्राम")) {
+        return `${prefix}Restrict dietary salt to less than 5 g/day (avoid pickles, papad)`;
+      }
+      if (lower.includes("तेज गति से टहलें") || lower.includes("30 मिनट")) {
+        return `${prefix}30 minutes of brisk walking or moderate exercise daily`;
+      }
+      if (lower.includes("रक्तचाप") && lower.includes("डायरी")) {
+        return `${prefix}Monitor and log blood pressure once a week`;
+      }
+      if (lower.includes("ग्लाइसेमिक") || lower.includes("मिठाई, चीनी")) {
+        return `${prefix}Low glycemic index diet: avoid sweets, table sugar, potatoes, and refined flour`;
+      }
+      if (lower.includes("पैरों की अच्छी तरह सफाई")) {
+        return `${prefix}Proper daily foot care and inspection`;
+      }
+      if (lower.includes("3 लीटर पानी")) {
+        return `${prefix}Drink at least 3 liters of water per day`;
+      }
+      if (lower.includes("पेशाब न रोकें")) {
+        return `${prefix}Do not hold urine; empty bladder completely`;
+      }
+      if (lower.includes("एंटीबायोटिक की पूरी")) {
+        return `${prefix}Complete the full 5-day antibiotic course even if symptoms subside`;
+      }
+      if (lower.includes("पानी पिएं")) {
+        return `${prefix}Drink plenty of water throughout the day`;
+      }
       if (lower.includes("तकिए") || lower.includes("ऊंचा")) {
         return `${prefix}Keep affected leg elevated on pillow`;
       }
@@ -942,6 +1026,121 @@ export function translateAdviceLine(line?: string | null, lang: PdfLanguage = "e
   }
   if (lower.includes("walking stick") || lower.includes("walker")) {
     return `${prefix}चलने के लिए छड़ी या वॉकर का सहारा लें`;
+  }
+
+  // 6. Gastrointestinal, Gastric & Acidity Advice
+  if (lower.includes("spicy") || lower.includes("greasy food") || (lower.includes("fried") && lower.includes("sour"))) {
+    return `${prefix}मसालेदार, तला-भुना, खट्टा एवं अत्यधिक तैलीय भोजन करने से बचें`;
+  }
+  if (lower.includes("tea, coffee") || (lower.includes("coffee") && lower.includes("smoking")) || lower.includes("carbonated drinks")) {
+    return `${prefix}चाय, कॉफी, कोल्ड ड्रिंक्स (कार्बोनेटेड पेय) और धूम्रपान से पूरी तरह परहेज करें`;
+  }
+  if (lower.includes("smaller, more frequent meals") || lower.includes("frequent meals") || lower.includes("skip breakfast")) {
+    return `${prefix}एक बार में ज्यादा न खाएं, थोड़ी-थोड़ी देर में हल्का भोजन लें; नाश्ता कभी न छोड़ें`;
+  }
+  if (lower.includes("do not lie down") || lower.includes("hours of eating dinner") || lower.includes("after eating dinner")) {
+    return `${prefix}रात के भोजन के तुरंत बाद न लेटें, खाने के कम से कम 2 घंटे बाद सोएं`;
+  }
+  if (lower.includes("head end of your bed") || lower.includes("elevate the head end") || lower.includes("by 6 inches")) {
+    return `${prefix}सोते समय सिरहाने को 6 इंच ऊंचा रखें`;
+  }
+
+  // 7. Respiratory, ENT & Throat Care
+  if (lower.includes("saline water gargles") || lower.includes("warm saline") || lower.includes("saline gargles") || lower.includes("water gargles")) {
+    return `${prefix}दिन में 2 बार गुनगुने नमक पानी से गरारे करें`;
+  }
+  if (lower.includes("steam inhalation")) {
+    return `${prefix}दिन में 2 से 3 बार भाप (स्टीम) लें`;
+  }
+  if (lower.includes("warm fluids") || (lower.includes("fluids") && lower.includes("soups"))) {
+    return `${prefix}पर्याप्त मात्रा में गर्म तरल पदार्थ (सूप, हर्बल चाय, गुनगुना पानी) पिएं`;
+  }
+  if (lower.includes("known allergens") || (lower.includes("dust") && lower.includes("pollen"))) {
+    return `${prefix}धूल, परागकण, पालतू जानवरों के रोएं और अचानक एसी के संपर्क में आने से बचें`;
+  }
+  if (lower.includes("face mask") || lower.includes("protective face mask")) {
+    return `${prefix}धूल भरे वातावरण में सुरक्षात्मक फेस मास्क का उपयोग करें`;
+  }
+
+  // 8. Gastroenteritis, Dehydration & Diet
+  if (lower.includes("boiled or filtered water") || lower.includes("boiled water")) {
+    return `${prefix}केवल उबला हुआ या फिल्टर किया हुआ पानी ही पिएं`;
+  }
+  if (lower.includes("bland diet") || lower.includes("curd rice") || lower.includes("khichdi")) {
+    return `${prefix}हल्का एवं सुपाच्य आहार लें: दही-चावल, केला, पतली खिचड़ी एवं नारियल पानी`;
+  }
+  if (lower.includes("avoid milk, dairy") || (lower.includes("dairy products") && lower.includes("street food"))) {
+    return `${prefix}दूध, डेयरी उत्पाद (ताजे दही को छोड़कर), मसालेदार भोजन और बाहर के खाने से पूरी तरह परहेज करें`;
+  }
+
+  // 9. Spine, Neck & Shoulder
+  if (lower.includes("firm mattress") || lower.includes("under your knees")) {
+    return `${prefix}सख्त गद्दे पर सोएं और घुटनों के नीचे तकिया रखें`;
+  }
+  if (lower.includes("lumbar support cushion") || lower.includes("lumbar cushion")) {
+    return `${prefix}कुर्सी पर बैठते समय पीठ के पीछे लंबर सपोर्ट कुशन का प्रयोग करें`;
+  }
+  if (lower.includes("core stability exercises") || lower.includes("core stability")) {
+    return `${prefix}तेज दर्द कम होने पर कमर व पेट की मांसपेशियों की हल्की कसरत करें`;
+  }
+  if (lower.includes("ergonomic posture")) {
+    return `${prefix}कंप्यूटर या मोबाइल पर काम करते समय गर्दन की सही मुद्रा (पोस्चर) बनाए रखें`;
+  }
+  if (lower.includes("cervical contour pillow") || lower.includes("cervical pillow")) {
+    return `${prefix}सोते समय सर्वाइकल कंटूर तकिए का उपयोग करें`;
+  }
+  if (lower.includes("neck isometric") || (lower.includes("neck") && lower.includes("range of motion"))) {
+    return `${prefix}गर्दन की मांसपेशियों की हल्की कसरत और घुमाने वाले व्यायाम करें`;
+  }
+  if (lower.includes("sudden jerking") || lower.includes("heavy weights on shoulders")) {
+    return `${prefix}गर्दन को अचानक झटका न दें और कंधों पर भारी वजन न उठाएं`;
+  }
+  if (lower.includes("pendulum") || lower.includes("finger-ladder")) {
+    return `${prefix}दिन में 3 बार पेंडुलम और दीवार पर उंगलियों से चढ़ने वाली कसरत करें`;
+  }
+  if (lower.includes("sleeping on the affected shoulder") || lower.includes("avoid sleeping on the affected")) {
+    return `${prefix}प्रभावित कंधे की तरफ करवट लेकर सोने से बचें`;
+  }
+  if (lower.includes("cushioned footwear")) {
+    return `${prefix}आरामदायक, कुशन वाले जूते/चप्पल पहनें`;
+  }
+
+  // 10. Chronic Care, Diabetes, Hypertension & UTI
+  if (lower.includes("3 liters of water") || lower.includes("at least 3 liters")) {
+    return `${prefix}प्रतिदिन कम से कम 3 लीटर पानी पिएं`;
+  }
+  if (lower.includes("empty bladder") || lower.includes("hold urine")) {
+    return `${prefix}पेशाब न रोकें; मूत्राशय को पूरी तरह खाली करें`;
+  }
+  if (lower.includes("antibiotic course")) {
+    return `${prefix}जलन कम होने पर भी एंटीबायोटिक की पूरी खुराक अवश्य लें`;
+  }
+  if (lower.includes("restrict dietary salt") || lower.includes("less than 5 g")) {
+    return `${prefix}भोजन में नमक की मात्रा 5 ग्राम/दिन से कम रखें (अचार, पापड़ से परहेज करें)`;
+  }
+  if (lower.includes("brisk walking")) {
+    return `${prefix}प्रतिदिन 30 मिनट तेज गति से टहलें या हल्का व्यायाम करें`;
+  }
+  if (lower.includes("log blood pressure") || lower.includes("blood pressure log") || lower.includes("monitor and log")) {
+    return `${prefix}सप्ताह में एक बार रक्तचाप (BP) मापें और डायरी में दर्ज करें`;
+  }
+  if (lower.includes("low glycemic index") || lower.includes("avoid sweets")) {
+    return `${prefix}कम ग्लाइसेमिक आहार लें: मिठाई, चीनी, आलू और मैदा से परहेज करें`;
+  }
+  if (lower.includes("foot care and inspection") || lower.includes("daily foot care")) {
+    return `${prefix}प्रतिदिन पैरों की अच्छी तरह सफाई और देखभाल करें`;
+  }
+  if (lower.includes("fasting & post-meal") || lower.includes("blood sugar log")) {
+    return `${prefix}सप्ताह में दो बार खाली पेट एवं भोजन के बाद शुगर की जांच दर्ज करें`;
+  }
+  if (lower.includes("r.i.c.e.") || lower.includes("rice protocol")) {
+    return `${prefix}राइस (R.I.C.E.) प्रोटोकॉल: विश्राम, बर्फ से सिकाई, इलास्टो-क्रेप पट्टी एवं पैर को तकिए पर ऊंचा रखना`;
+  }
+  if (lower.includes("minimize weight bearing")) {
+    return `${prefix}विश्राम: प्रभावित पैर पर वजन कम से कम डालें`;
+  }
+  if (lower.includes("above hip level")) {
+    return `${prefix}ऊंचाई: लेटते समय पैर को तकिए के सहारे ऊंचा रखें`;
   }
 
   // Multi-clause token translations fallback
