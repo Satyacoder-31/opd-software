@@ -9,6 +9,8 @@ import {
   Role,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { generateUniqueMrn } from "@/actions/patients";
+import { resolvePrescriptionPastHistory } from "@/lib/consultation-utils";
 import { logger } from "@/lib/logger";
 import { sendClinicNotification } from "@/lib/integrations/messaging";
 import { planAllows } from "@/lib/plan-features";
@@ -52,10 +54,8 @@ function dateOnly(date: Date): Date {
   return d;
 }
 
-async function generateMrn(clinicId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const count = await prisma.patient.count({ where: { clinicId } });
-  return `MRN-${year}-${String(count + 1).padStart(4, "0")}`;
+async function generateMrn(clinicId: string, offset = 0): Promise<string> {
+  return generateUniqueMrn(clinicId, offset);
 }
 
 /** Ensure portal account is linked to a clinic Patient record (create if needed). */
@@ -127,7 +127,7 @@ async function ensureClinicPatient(args: {
   }
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const mrn = await generateMrn(args.clinicId);
+    const mrn = await generateMrn(args.clinicId, attempt);
     try {
       const patient = await prisma.patient.create({
         data: {
@@ -949,7 +949,10 @@ export async function downloadPortalPrescription(
     patientPhone: consultation.patient.phone,
     patientAddress: consultation.patient.address ?? undefined,
     patientAllergies: consultation.patient.allergies ?? undefined,
-    patientChronicConditions: consultation.patient.chronicConditions ?? undefined,
+    patientChronicConditions: resolvePrescriptionPastHistory(
+      consultation.patient.chronicConditions,
+      consultation.patientHistory
+    ),
     vitals: (consultation.vitals as any) ?? null,
     chiefComplaint: consultation.chiefComplaint ?? undefined,
     abhaNumber: consultation.patient.abhaNumber ?? undefined,

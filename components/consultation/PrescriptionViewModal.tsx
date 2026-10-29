@@ -407,14 +407,12 @@ export function PrescriptionViewModal({
                       Allergies: No Known Drug Allergies
                     </span>
                   )}
-                  {prescriptionData.patient.chronicConditions && (
-                    <span className="text-slate-600">
-                      Medical History:{" "}
-                      <strong className="text-slate-800">
-                        {prescriptionData.patient.chronicConditions}
-                      </strong>
-                    </span>
-                  )}
+                  <span className="text-slate-600">
+                    Past History:{" "}
+                    <strong className="text-slate-800">
+                      {prescriptionData.patient.chronicConditions?.trim() || "No DM, No HTN, No surgery"}
+                    </strong>
+                  </span>
                 </div>
               </div>
 

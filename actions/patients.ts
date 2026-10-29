@@ -57,7 +57,25 @@ function resolveAgeAndDob(data: z.infer<typeof patientSchema>): {
   return { age: data.age, dateOfBirth: null };
 }
 
-const MAX_MRN_RETRIES = 3;
+const MAX_MRN_RETRIES = 5;
+
+function getUniqueConstraintTargets(error: unknown): string[] {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: string }).code === "P2002"
+  ) {
+    const meta = (error as { meta?: { target?: string[] | string } }).meta;
+    if (Array.isArray(meta?.target)) {
+      return meta.target;
+    }
+    if (typeof meta?.target === "string") {
+      return [meta.target];
+    }
+  }
+  return [];
+}
 
 function isUniqueConstraintError(error: unknown): boolean {
   return (
@@ -68,10 +86,40 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
-async function generateMrn(clinicId: string): Promise<string> {
+export async function generateUniqueMrn(clinicId: string, offset = 0): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await prisma.patient.count({ where: { clinicId } });
-  return `MRN-${year}-${String(count + 1).padStart(4, "0")}`;
+  const prefix = `MRN-${year}-`;
+
+  const existingPatients = await prisma.patient.findMany({
+    where: {
+      clinicId,
+      mrn: { startsWith: prefix },
+    },
+    select: { mrn: true },
+  });
+
+  let maxSeq = 0;
+  for (const p of existingPatients) {
+    const numPart = p.mrn.slice(prefix.length);
+    const parsed = parseInt(numPart, 10);
+    if (!isNaN(parsed) && parsed > maxSeq) {
+      maxSeq = parsed;
+    }
+  }
+
+  let candidateSeq = Math.max(maxSeq + 1, existingPatients.length + 1) + offset;
+
+  while (true) {
+    const candidate = `${prefix}${String(candidateSeq).padStart(4, "0")}`;
+    const exists = await prisma.patient.findFirst({
+      where: { clinicId, mrn: candidate },
+      select: { id: true },
+    });
+    if (!exists) {
+      return candidate;
+    }
+    candidateSeq++;
+  }
 }
 
 export async function createPatient(
@@ -93,7 +141,7 @@ export async function createPatient(
   const { age, dateOfBirth } = resolveAgeAndDob(parsed.data);
 
   for (let attempt = 0; attempt < MAX_MRN_RETRIES; attempt++) {
-    const mrn = await generateMrn(session.clinicId);
+    const mrn = await generateUniqueMrn(session.clinicId, attempt);
 
     try {
       const patient = await prisma.patient.create({
@@ -122,20 +170,39 @@ export async function createPatient(
       revalidatePath("/patients");
       return { success: true, data: { id: patient.id } };
     } catch (error) {
-      if (isUniqueConstraintError(error) && attempt < MAX_MRN_RETRIES - 1) {
+      const targets = getUniqueConstraintTargets(error);
+      const isMrnCollision = targets.some((t) => t.toLowerCase().includes("mrn"));
+      const isPhoneCollision = targets.some((t) => t.toLowerCase().includes("phone"));
+
+      if (isMrnCollision && attempt < MAX_MRN_RETRIES - 1) {
         continue;
       }
 
       logger.warn("create_patient_failed", {
         clinicId: session.clinicId,
         attempt,
+        targets,
         error: error instanceof Error ? error.message : String(error),
       });
+
+      if (isPhoneCollision) {
+        return {
+          success: false,
+          error: "Patient with this phone number may already exist.",
+        };
+      }
+
+      if (isMrnCollision) {
+        return {
+          success: false,
+          error: "Could not generate a unique MRN. Please try again.",
+        };
+      }
 
       if (isUniqueConstraintError(error)) {
         return {
           success: false,
-          error: "Patient with this phone number may already exist.",
+          error: "Patient with this phone number or details may already exist.",
         };
       }
 

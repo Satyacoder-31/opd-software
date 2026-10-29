@@ -136,14 +136,44 @@ function PatientFields({
         placeholder="e.g. Penicillin, sulfa drugs"
         rows={2}
       />
-      <Textarea
-        label="Chronic conditions"
-        name="chronicConditions"
-        value={values.chronicConditions ?? ""}
-        onChange={(e) => setValue("chronicConditions", e.target.value)}
-        placeholder="e.g. Hypertension, Type 2 diabetes"
-        rows={2}
-      />
+      <div>
+        <Textarea
+          label="Chronic conditions / Past History"
+          name="chronicConditions"
+          value={values.chronicConditions ?? ""}
+          onChange={(e) => setValue("chronicConditions", e.target.value)}
+          placeholder="e.g. No DM, No HTN, No surgery (or Hypertension, Type 2 diabetes)"
+          rows={2}
+        />
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <span className="text-[11px] font-semibold text-slate-500">Quick fill:</span>
+          {[
+            "No DM, No HTN, No surgery",
+            "Hypertension (HTN)",
+            "Diabetes Mellitus (DM)",
+            "Hypothyroidism",
+            "Asthma",
+            "No past surgery",
+            "Prior spine/joint surgery",
+          ].map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => {
+                const cur = values.chronicConditions?.trim() ?? "";
+                if (!cur) {
+                  setValue("chronicConditions", tag);
+                } else if (!cur.includes(tag)) {
+                  setValue("chronicConditions", `${cur}, ${tag}`);
+                }
+              }}
+              className="text-[11px] font-medium bg-slate-100 hover:bg-sky-50 hover:text-sky-800 hover:border-sky-300 text-slate-700 px-2 py-0.5 rounded border border-slate-200 transition-colors cursor-pointer"
+            >
+              + {tag}
+            </button>
+          ))}
+        </div>
+      </div>
       {!isEdit && showQueueOption && (
         <label className="flex items-center gap-2 text-sm text-ink">
           <input

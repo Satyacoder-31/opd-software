@@ -10,7 +10,7 @@ import { logAudit } from "@/lib/audit";
 import { renderPrescriptionPdf } from "@/lib/pdf";
 import type { PrescriptionPdfProps } from "@/lib/pdf/prescription";
 import { formatPatientAge } from "@/lib/date-utils";
-import { isConsultationEditable } from "@/lib/consultation-utils";
+import { isConsultationEditable, resolvePrescriptionPastHistory } from "@/lib/consultation-utils";
 import { validatePrescriptionDraft } from "@/lib/prescription-validation";
 import { validateReason } from "@/lib/validation";
 import { isPrescriptionLayoutId } from "@/lib/prescription-layouts";
@@ -260,7 +260,10 @@ export async function generatePrescriptionPdf(
     patientPhone: consultation.patient.phone,
     patientAddress: consultation.patient.address ?? undefined,
     patientAllergies: consultation.patient.allergies ?? undefined,
-    patientChronicConditions: consultation.patient.chronicConditions ?? undefined,
+    patientChronicConditions: resolvePrescriptionPastHistory(
+      consultation.patient.chronicConditions,
+      consultation.patientHistory
+    ),
     vitals,
     chiefComplaint: consultation.chiefComplaint ?? undefined,
     tokenNumber: consultation.appointment?.tokenNumber ?? undefined,
@@ -381,7 +384,10 @@ export async function getPrescriptionViewData(
     patientPhone: consultation.patient.phone,
     patientAddress: consultation.patient.address ?? undefined,
     patientAllergies: consultation.patient.allergies ?? undefined,
-    patientChronicConditions: consultation.patient.chronicConditions ?? undefined,
+    patientChronicConditions: resolvePrescriptionPastHistory(
+      consultation.patient.chronicConditions,
+      consultation.patientHistory
+    ),
     vitals,
     chiefComplaint: consultation.chiefComplaint ?? undefined,
     tokenNumber: consultation.appointment?.tokenNumber ?? undefined,
@@ -435,7 +441,10 @@ export async function getPrescriptionViewData(
         phone: consultation.patient.phone,
         address: consultation.patient.address,
         allergies: consultation.patient.allergies,
-        chronicConditions: consultation.patient.chronicConditions,
+        chronicConditions: resolvePrescriptionPastHistory(
+          consultation.patient.chronicConditions,
+          consultation.patientHistory
+        ),
         abhaNumber: consultation.patient.abhaNumber,
       },
       tokenNumber: consultation.appointment?.tokenNumber ?? null,

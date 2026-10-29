@@ -127,3 +127,22 @@ export function hasPatientSafetyAlerts(patient: {
       patient.chronicConditions?.trim()
   );
 }
+
+export function resolvePrescriptionPastHistory(
+  chronicConditions?: string | null,
+  patientHistory?: any
+): string {
+  const parts: string[] = [];
+  if (chronicConditions?.trim()) {
+    parts.push(chronicConditions.trim());
+  }
+  if (patientHistory && typeof patientHistory === "object") {
+    if (patientHistory.pastMedical?.trim() && !parts.includes(patientHistory.pastMedical.trim())) {
+      parts.push(patientHistory.pastMedical.trim());
+    }
+    if (patientHistory.pastSurgical?.trim() && !parts.includes(patientHistory.pastSurgical.trim())) {
+      parts.push(`Surgery: ${patientHistory.pastSurgical.trim()}`);
+    }
+  }
+  return parts.length > 0 ? parts.join("; ") : "No DM, No HTN, No surgery";
+}

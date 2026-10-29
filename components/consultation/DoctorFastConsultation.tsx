@@ -771,6 +771,63 @@ export function DoctorFastConsultation({
             />
           </div>
         </div>
+
+        {/* PAST MEDICAL & SURGICAL HISTORY */}
+        <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+              Past History:
+            </span>
+            <span className="text-xs font-semibold text-slate-800">
+              {clinical.patientHistory?.pastMedical?.trim() || "No DM, No HTN, No surgery"}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {[
+              "No DM, No HTN, No surgery",
+              "Known HTN",
+              "Known DM",
+              "No past surgery",
+              "Prior surgery",
+              "Asthma / Allergy",
+            ].map((tag) => {
+              const current = clinical.patientHistory?.pastMedical ?? "";
+              const isActive = current === tag || (current.includes(tag) && tag !== "No DM, No HTN, No surgery");
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    let next = "";
+                    if (tag === "No DM, No HTN, No surgery") {
+                      next = tag;
+                    } else if (!current || current === "No DM, No HTN, No surgery") {
+                      next = tag;
+                    } else if (current.includes(tag)) {
+                      next = current.replace(new RegExp(`;?\\s*${tag}`, "g"), "").replace(/^;\s*/, "").trim();
+                    } else {
+                      next = `${current}; ${tag}`;
+                    }
+                    onClinicalChange({
+                      ...clinical,
+                      patientHistory: {
+                        ...(clinical.patientHistory ?? {}),
+                        pastMedical: next,
+                      },
+                    });
+                  }}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-2xs font-bold"
+                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* TWO COLUMN GRID: CHIEF COMPLAINTS & DIAGNOSIS */}
