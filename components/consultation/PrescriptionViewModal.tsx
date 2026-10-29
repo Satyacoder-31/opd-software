@@ -26,6 +26,7 @@ import {
 } from "@/actions/prescriptions";
 import { downloadBase64Pdf, cn } from "@/lib/utils";
 import { getGenericCompositionForDrug } from "@/lib/drug-catalog";
+import { parseDoseSchedule } from "@/lib/pdf/prescription";
 import { Button } from "@/components/ui/Button";
 
 export type PrescriptionViewModalProps = {
@@ -471,117 +472,101 @@ export function PrescriptionViewModal({
                 </div>
               </div>
 
-              {/* MEDICATIONS Rx TABLE */}
+              {/* OUTPATIENT PRESCRIPTION & MEDICINES TABLE */}
               <div>
-                <div className="flex items-center gap-2 mb-2 pb-1 border-b border-slate-200">
-                  <span className="font-serif italic font-bold text-2xl text-teal-800">℞</span>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Prescribed Medications ({prescriptionData.medicines.length})
+                <div className="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="font-serif italic font-bold text-2xl text-teal-800">℞</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                      OUTPATIENT PRESCRIPTION & MEDICINES ({prescriptionData.medicines.length})
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-normal text-slate-500">
+                    Daily Timing Schedule
                   </span>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-slate-200">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                <div className="overflow-hidden rounded-xl border border-slate-200 shadow-xs">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 text-[11px] uppercase tracking-wider">
                       <tr>
-                        <th className="py-2.5 px-3 w-8 text-center">#</th>
-                        <th className="py-2.5 px-3">Medications & Composition</th>
-                        <th className="py-2.5 px-3 w-28">Dose</th>
-                        <th className="py-2.5 px-3 w-36">Frequency</th>
-                        <th className="py-2.5 px-3 w-24">Duration</th>
-                        <th className="py-2.5 px-3">Remarks / Advice</th>
+                        <th className="py-2.5 px-3">MEDICINES</th>
+                        <th className="py-2.5 px-3 text-center w-24">MORNING</th>
+                        <th className="py-2.5 px-3 text-center w-24">AFTERNOON</th>
+                        <th className="py-2.5 px-3 text-center w-24">EVENING</th>
+                        <th className="py-2.5 px-3 text-center w-24">NIGHT</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {prescriptionData.medicines.map((med, idx) => {
-                        const freq = (med.frequency || "").toLowerCase();
-                        const isMorning = freq.includes("1-0-") || freq.includes("1-1-") || freq.includes("morning") || freq.includes("once daily");
-                        const isAfternoon = freq.includes("-1-") || freq.includes("afternoon") || freq.includes("thrice");
-                        const isEvening = freq.includes("evening");
-                        const isNight = freq.includes("-0-1") || freq.includes("-1-1") || freq.includes("night") || freq.includes("bedtime");
-                        const isSos = freq.includes("sos") || freq.includes("as needed");
                         const genericSalt =
                           med.genericName?.trim() || getGenericCompositionForDrug(med.name);
+                        const sched = parseDoseSchedule(med.frequency);
+                        const subDetails = [
+                          med.dosage || "1 tablet",
+                          med.route || "Oral",
+                          med.duration || "5 days",
+                          med.instructions,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ");
 
                         return (
-                          <tr key={idx} className="hover:bg-slate-50/50">
-                            <td className="py-2.5 px-3 text-center text-slate-400 font-mono">
-                              {idx + 1}
-                            </td>
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                             <td className="py-2.5 px-3">
                               <div className="font-bold text-slate-900 text-sm">
-                                {med.name}
-                                {med.route && med.route.toLowerCase() !== "oral" ? (
-                                  <span className="ml-1 text-xs font-normal text-slate-500">
-                                    ({med.route})
-                                  </span>
-                                ) : null}
+                                {idx + 1}. {med.name}
                               </div>
                               {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
                                 <div className="text-[11px] font-medium text-teal-700 mt-0.5">
                                   {genericSalt}
                                 </div>
                               ) : null}
-                            </td>
-                            <td className="py-2.5 px-3 text-slate-700 font-medium">
-                              {med.dosage || "1 tablet"}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <div className="text-slate-800 font-medium">{med.frequency || "As advised"}</div>
-                              {!isSos && (
-                                <div className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] font-bold text-slate-600">
-                                  <span
-                                    className={cn(
-                                      "size-4 rounded flex items-center justify-center text-[9px]",
-                                      isMorning ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
-                                    )}
-                                    title="Morning"
-                                  >
-                                    {isMorning ? "1" : "0"}
-                                  </span>
-                                  <span>-</span>
-                                  <span
-                                    className={cn(
-                                      "size-4 rounded flex items-center justify-center text-[9px]",
-                                      isAfternoon ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
-                                    )}
-                                    title="Afternoon"
-                                  >
-                                    {isAfternoon ? "1" : "0"}
-                                  </span>
-                                  <span>-</span>
-                                  <span
-                                    className={cn(
-                                      "size-4 rounded flex items-center justify-center text-[9px]",
-                                      isEvening ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
-                                    )}
-                                    title="Evening"
-                                  >
-                                    {isEvening ? "1" : "0"}
-                                  </span>
-                                  <span>-</span>
-                                  <span
-                                    className={cn(
-                                      "size-4 rounded flex items-center justify-center text-[9px]",
-                                      isNight ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
-                                    )}
-                                    title="Night"
-                                  >
-                                    {isNight ? "1" : "0"}
-                                  </span>
+                              {subDetails ? (
+                                <div className="text-xs text-slate-600 mt-1">
+                                  {subDetails}
                                 </div>
-                              )}
-                              {isSos && (
-                                <span className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
-                                  SOS
-                                </span>
-                              )}
+                              ) : null}
                             </td>
-                            <td className="py-2.5 px-3 font-semibold text-slate-800">
-                              {med.duration || "5 days"}
+                            <td className="py-2.5 px-3 text-center">
+                              <span
+                                className={cn(
+                                  "font-bold font-mono text-sm",
+                                  sched.morning !== "—" ? "text-sky-600" : "text-slate-400"
+                                )}
+                              >
+                                {sched.morning}
+                              </span>
                             </td>
-                            <td className="py-2.5 px-3 text-[11px] text-slate-600">
-                              {med.instructions || "—"}
+                            <td className="py-2.5 px-3 text-center">
+                              <span
+                                className={cn(
+                                  "font-bold font-mono text-sm",
+                                  sched.afternoon !== "—" ? "text-sky-600" : "text-slate-400"
+                                )}
+                              >
+                                {sched.afternoon}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span
+                                className={cn(
+                                  "font-bold font-mono text-sm",
+                                  sched.evening !== "—" ? "text-sky-600" : "text-slate-400"
+                                )}
+                              >
+                                {sched.evening}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span
+                                className={cn(
+                                  "font-bold font-mono text-sm",
+                                  sched.night !== "—" ? "text-sky-600" : "text-slate-400"
+                                )}
+                              >
+                                {sched.night}
+                              </span>
                             </td>
                           </tr>
                         );

@@ -1081,6 +1081,283 @@ function MedicinesCards({
   );
 }
 
+export function parseDoseSchedule(frequency?: string | null): {
+  morning: string;
+  afternoon: string;
+  evening: string;
+  night: string;
+} {
+  const empty = { morning: "—", afternoon: "—", evening: "—", night: "—" };
+  if (!frequency || !frequency.trim()) return empty;
+
+  const raw = frequency.trim();
+  const lower = raw.toLowerCase();
+
+  if (lower.includes("sos") || lower.includes("as needed") || lower.includes("prn")) {
+    return { morning: "SOS", afternoon: "—", evening: "—", night: "—" };
+  }
+
+  const dashMatch = raw.match(
+    /(\d+(?:\/\d+)?|\b\d+\.5\b)\s*[-/]\s*(\d+(?:\/\d+)?|\b\d+\.5\b)\s*[-/]\s*(\d+(?:\/\d+)?|\b\d+\.5\b)(?:\s*[-/]\s*(\d+(?:\/\d+)?|\b\d+\.5\b))?/
+  );
+  if (dashMatch) {
+    const [, m, a, n, optNight] = dashMatch;
+    if (optNight !== undefined) {
+      return {
+        morning: m === "0" ? "—" : m,
+        afternoon: a === "0" ? "—" : a,
+        evening: n === "0" ? "—" : n,
+        night: optNight === "0" ? "—" : optNight,
+      };
+    }
+    return {
+      morning: m === "0" ? "—" : m,
+      afternoon: a === "0" ? "—" : a,
+      evening: "—",
+      night: n === "0" ? "—" : n,
+    };
+  }
+
+  if (lower.includes("four times") || lower.includes("qid")) {
+    return { morning: "1", afternoon: "1", evening: "1", night: "1" };
+  }
+  if (
+    lower.includes("three times") ||
+    lower.includes("thrice") ||
+    lower.includes("tds") ||
+    lower.includes("tid")
+  ) {
+    return { morning: "1", afternoon: "1", evening: "—", night: "1" };
+  }
+  if (
+    lower.includes("twice daily") ||
+    lower.includes("bd") ||
+    lower.includes("bid")
+  ) {
+    return { morning: "1", afternoon: "—", evening: "—", night: "1" };
+  }
+  if (
+    lower.includes("bedtime") ||
+    lower.includes("at night") ||
+    lower.includes("night") ||
+    lower.includes("hs")
+  ) {
+    return { morning: "—", afternoon: "—", evening: "—", night: "1" };
+  }
+  if (
+    lower.includes("once daily") ||
+    lower.includes("od") ||
+    lower.includes("morning") ||
+    lower.includes("breakfast") ||
+    lower.includes("daily")
+  ) {
+    return { morning: "1", afternoon: "—", evening: "—", night: "—" };
+  }
+
+  return empty;
+}
+
+function MedicinesScheduleTable({
+  theme,
+  medicines,
+  lang,
+}: {
+  theme: Theme;
+  medicines: Medicine[];
+  lang: PdfLanguage;
+}) {
+  const { colors } = theme.layout;
+  const isHi = lang === "hi";
+
+  const headCell: Style = {
+    fontSize: 7.5,
+    fontFamily: theme.bold,
+    color: colors.ink || "#0f172a",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  };
+
+  return (
+    <View style={{ marginTop: 2 }}>
+      {/* Table Section Header matching Image 2 */}
+      <View
+        style={{
+          borderBottomWidth: 1,
+          borderBottomColor: colors.rule || "#cbd5e1",
+          paddingBottom: 4,
+          marginBottom: 6,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 9,
+            fontFamily: theme.bold,
+            color: colors.accent || "#0a192f",
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+          }}
+        >
+          {isHi ? "आउटपेशेंट प्रिस्क्रिप्शन एवं दवाइयाँ" : "OUTPATIENT PRESCRIPTION & MEDICINES"}
+        </Text>
+      </View>
+
+      {/* Structured Table Container matching Image 2 */}
+      <View
+        style={{
+          borderWidth: 0.5,
+          borderColor: colors.rule || "#cbd5e1",
+          borderRadius: 3,
+          overflow: "hidden",
+          marginBottom: 6,
+        }}
+      >
+        {/* Table Header Row */}
+        <View
+          style={{
+            flexDirection: "row",
+            backgroundColor: colors.soft || "#f1f5f9",
+            borderBottomWidth: 0.5,
+            borderBottomColor: colors.rule || "#cbd5e1",
+            paddingVertical: 4,
+            paddingHorizontal: 6,
+          }}
+        >
+          <Text style={[headCell, { flex: 4 }]}>
+            {isHi ? "दवाइयाँ" : "MEDICINES"}
+          </Text>
+          <Text style={[headCell, { flex: 1.2, textAlign: "center" }]}>
+            {isHi ? "सुबह" : "MORNING"}
+          </Text>
+          <Text style={[headCell, { flex: 1.2, textAlign: "center" }]}>
+            {isHi ? "दोपहर" : "AFTERNOON"}
+          </Text>
+          <Text style={[headCell, { flex: 1.2, textAlign: "center" }]}>
+            {isHi ? "शाम" : "EVENING"}
+          </Text>
+          <Text style={[headCell, { flex: 1.2, textAlign: "center" }]}>
+            {isHi ? "रात" : "NIGHT"}
+          </Text>
+        </View>
+
+        {/* Data Rows */}
+        {medicines.map((med, i) => {
+          const genericSalt =
+            med.genericName?.trim() || getGenericCompositionForDrug(med.name);
+          const sched = parseDoseSchedule(med.frequency);
+          const subDetails = [
+            translateDosage(med.dosage, lang),
+            translateRoute(med.route, lang),
+            translateDuration(med.duration, lang),
+            translateInstructions(med.instructions, lang),
+          ]
+            .filter(Boolean)
+            .join("  ·  ");
+
+          return (
+            <View
+              key={i}
+              wrap={false}
+              style={{
+                flexDirection: "row",
+                borderBottomWidth: i < medicines.length - 1 ? 0.5 : 0,
+                borderBottomColor: colors.rule || "#e2e8f0",
+                paddingVertical: 5,
+                paddingHorizontal: 6,
+                backgroundColor: i % 2 === 1 ? "#fafcff" : "#ffffff",
+              }}
+            >
+              <View style={{ flex: 4, paddingRight: 6 }}>
+                <Text
+                  style={{
+                    fontSize: 8.5,
+                    fontFamily: theme.bold,
+                    color: colors.ink || "#0a192f",
+                  }}
+                >
+                  {i + 1}. {med.name}
+                </Text>
+                {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
+                  <Text
+                    style={{
+                      fontSize: 7.2,
+                      color: "#0f766e",
+                      marginTop: 1.5,
+                    }}
+                  >
+                    {genericSalt}
+                  </Text>
+                ) : null}
+                {subDetails ? (
+                  <Text
+                    style={{
+                      fontSize: 7.2,
+                      color: "#475569",
+                      marginTop: 1.5,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {subDetails}
+                  </Text>
+                ) : null}
+              </View>
+
+              {/* Schedule Timing Columns with Blue Accent Values and Slate Dashes */}
+              <Text
+                style={{
+                  flex: 1.2,
+                  fontSize: 8,
+                  fontFamily: sched.morning !== "—" ? theme.bold : theme.body,
+                  color: sched.morning !== "—" ? "#0284c7" : "#94a3b8",
+                  textAlign: "center",
+                  paddingTop: 1,
+                }}
+              >
+                {sched.morning}
+              </Text>
+              <Text
+                style={{
+                  flex: 1.2,
+                  fontSize: 8,
+                  fontFamily: sched.afternoon !== "—" ? theme.bold : theme.body,
+                  color: sched.afternoon !== "—" ? "#0284c7" : "#94a3b8",
+                  textAlign: "center",
+                  paddingTop: 1,
+                }}
+              >
+                {sched.afternoon}
+              </Text>
+              <Text
+                style={{
+                  flex: 1.2,
+                  fontSize: 8,
+                  fontFamily: sched.evening !== "—" ? theme.bold : theme.body,
+                  color: sched.evening !== "—" ? "#0284c7" : "#94a3b8",
+                  textAlign: "center",
+                  paddingTop: 1,
+                }}
+              >
+                {sched.evening}
+              </Text>
+              <Text
+                style={{
+                  flex: 1.2,
+                  fontSize: 8,
+                  fontFamily: sched.night !== "—" ? theme.bold : theme.body,
+                  color: sched.night !== "—" ? "#0284c7" : "#94a3b8",
+                  textAlign: "center",
+                  paddingTop: 1,
+                }}
+              >
+                {sched.night}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function Medicines({
   theme,
   medicines,
@@ -1090,15 +1367,7 @@ function Medicines({
   medicines: Medicine[];
   lang: PdfLanguage;
 }) {
-  switch (theme.layout.medicines) {
-    case "table":
-      return <MedicinesTable theme={theme} medicines={medicines} lang={lang} />;
-    case "cards":
-      return <MedicinesCards theme={theme} medicines={medicines} lang={lang} />;
-    case "list":
-    default:
-      return <MedicinesList theme={theme} medicines={medicines} lang={lang} />;
-  }
+  return <MedicinesScheduleTable theme={theme} medicines={medicines} lang={lang} />;
 }
 
 /* ------------------------------ Document ------------------------------ */
@@ -1170,9 +1439,8 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
             </Text>
           </View>
 
-          {/* Rx - Medicines */}
-          <View style={{ marginTop: 14 }}>
-            <RxMark theme={theme} />
+          {/* Outpatient Prescription & Medicines */}
+          <View style={{ marginTop: 12 }}>
             <Medicines theme={theme} medicines={props.medicines} lang={lang} />
           </View>
 
