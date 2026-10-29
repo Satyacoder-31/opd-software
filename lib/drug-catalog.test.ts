@@ -5,6 +5,7 @@ import {
   filterDrugSuggestions,
   findDrugSuggestion,
   formatDrugDefaultsSummary,
+  getGenericCompositionForDrug,
   normalizeDrugName,
 } from "@/lib/drug-catalog";
 import type { Medicine } from "@/lib/types";
@@ -218,5 +219,48 @@ describe("drug catalog", () => {
     expect(suggestions.some((item) => item.category === "Sachet")).toBe(true);
     expect(suggestions.some((item) => item.category === "IV Fluid")).toBe(true);
     expect(suggestions.some((item) => item.category === "Suppository")).toBe(true);
+  });
+
+  it("retrieves generic composition for branded medicines", () => {
+    expect(getGenericCompositionForDrug("Hifenac Tablet")).toContain("Aceclofenac");
+    expect(getGenericCompositionForDrug("D3 Must 60K Tablet Orange Sugar Free (Strip)")).toContain("Vitamin D3");
+    expect(getGenericCompositionForDrug("Meganeuron OD Plus Capsule")).toContain("Methylcobalamin");
+    expect(getGenericCompositionForDrug("Dolo 650 mg tablet")).toContain("Paracetamol");
+  });
+
+  it("returns multiple brands when searching by generic name, each with specific advice", () => {
+    const suggestions = buildDrugSuggestions([]);
+    const matches = filterDrugSuggestions(suggestions, "paracetamol", 15);
+
+    expect(matches.length).toBeGreaterThanOrEqual(4);
+    const dolo = matches.find((m) => m.name.includes("Dolo 650"));
+    const calpol = matches.find((m) => m.name.includes("Calpol 650"));
+    const crocin = matches.find((m) => m.name.includes("Crocin 650"));
+
+    expect(dolo).toBeDefined();
+    expect(calpol).toBeDefined();
+    expect(crocin).toBeDefined();
+
+    expect(dolo?.defaults.instructions).toContain("fever and severe body pain");
+    expect(calpol?.defaults.instructions).toContain("Keep minimum 6 hours gap");
+    expect(crocin?.defaults.instructions).toContain("as needed (SOS)");
+  });
+
+  it("assigns genericName to the medicine row in applyDrugDefaults", () => {
+    const med = applyDrugDefaults(
+      blankMedicine(),
+      "Hifenac Tablet",
+      {
+        dosage: "1 tablet",
+        frequency: "1-0-1 After Meal",
+        duration: "5 Days",
+        instructions: "Take 1 tablet - Twice a day, after breakfast and after dinner, for 5 days. TAKE SOS FOR PAIN",
+      },
+      "Aceclofenac (100 mg)"
+    );
+
+    expect(med.name).toBe("Hifenac Tablet");
+    expect(med.genericName).toBe("Aceclofenac (100 mg)");
+    expect(med.instructions).toContain("TAKE SOS FOR PAIN");
   });
 });

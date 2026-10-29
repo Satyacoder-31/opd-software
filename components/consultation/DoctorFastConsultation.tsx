@@ -512,7 +512,12 @@ export function DoctorFastConsultation({
   function handleSelectDrugSuggestion(index: number, suggestion: DrugSuggestion) {
     rememberRecentMedicine(suggestion.name);
     const current = medicines[index] ?? emptyMedicine();
-    const updated = applyDrugDefaults(current, suggestion.name, suggestion.defaults);
+    const updated = applyDrugDefaults(
+      current,
+      suggestion.name,
+      suggestion.defaults,
+      suggestion.genericName
+    );
     handleUpdateMedicine(index, updated);
   }
 
@@ -1657,6 +1662,16 @@ export function DoctorFastConsultation({
                     </button>
                   )}
                 </div>
+
+                {/* Generic Salt Indicator */}
+                {(med.genericName || matchedDrug?.genericName) && (
+                  <div className="mb-1.5 pl-8 flex items-center gap-1.5 text-[11px] text-teal-800">
+                    <span className="font-semibold text-teal-900">Generic:</span>
+                    <span className="bg-teal-50 text-teal-900 border border-teal-200/80 rounded px-1.5 py-0.5 font-medium">
+                      {med.genericName || matchedDrug?.genericName}
+                    </span>
+                  </div>
+                )}
 
                 {/* Stock Indicator if matched */}
                 {matchedDrug && stock !== undefined && (

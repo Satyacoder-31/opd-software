@@ -25,6 +25,7 @@ import {
   type PrescriptionViewData,
 } from "@/actions/prescriptions";
 import { downloadBase64Pdf, cn } from "@/lib/utils";
+import { getGenericCompositionForDrug } from "@/lib/drug-catalog";
 import { Button } from "@/components/ui/Button";
 
 export type PrescriptionViewModalProps = {
@@ -484,10 +485,11 @@ export function PrescriptionViewModal({
                     <thead className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-3 w-8 text-center">#</th>
-                        <th className="py-2.5 px-3">Medicine & Strength</th>
-                        <th className="py-2.5 px-3 w-32">Dosage & Timing</th>
-                        <th className="py-2.5 px-3 w-40 text-center">Schedule (M-A-E-N)</th>
-                        <th className="py-2.5 px-3 w-28">Duration</th>
+                        <th className="py-2.5 px-3">Medications & Composition</th>
+                        <th className="py-2.5 px-3 w-28">Dose</th>
+                        <th className="py-2.5 px-3 w-36">Frequency</th>
+                        <th className="py-2.5 px-3 w-24">Duration</th>
+                        <th className="py-2.5 px-3">Remarks / Advice</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -498,6 +500,8 @@ export function PrescriptionViewModal({
                         const isEvening = freq.includes("evening");
                         const isNight = freq.includes("-0-1") || freq.includes("-1-1") || freq.includes("night") || freq.includes("bedtime");
                         const isSos = freq.includes("sos") || freq.includes("as needed");
+                        const genericSalt =
+                          med.genericName?.trim() || getGenericCompositionForDrug(med.name);
 
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50">
@@ -507,25 +511,28 @@ export function PrescriptionViewModal({
                             <td className="py-2.5 px-3">
                               <div className="font-bold text-slate-900 text-sm">
                                 {med.name}
+                                {med.route && med.route.toLowerCase() !== "oral" ? (
+                                  <span className="ml-1 text-xs font-normal text-slate-500">
+                                    ({med.route})
+                                  </span>
+                                ) : null}
                               </div>
-                              <div className="text-[11px] text-slate-500">
-                                {med.dosage || "1 tab"} · {med.route || "Oral"}
-                                {med.instructions ? ` · ${med.instructions}` : ""}
-                              </div>
+                              {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
+                                <div className="text-[11px] font-medium text-teal-700 mt-0.5">
+                                  {genericSalt}
+                                </div>
+                              ) : null}
                             </td>
                             <td className="py-2.5 px-3 text-slate-700 font-medium">
-                              {med.frequency || "As advised"}
+                              {med.dosage || "1 tablet"}
                             </td>
-                            <td className="py-2.5 px-3 text-center">
-                              {isSos ? (
-                                <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                                  SOS (When Needed)
-                                </span>
-                              ) : (
-                                <div className="inline-flex items-center gap-1.5 font-mono text-xs font-bold">
+                            <td className="py-2.5 px-3">
+                              <div className="text-slate-800 font-medium">{med.frequency || "As advised"}</div>
+                              {!isSos && (
+                                <div className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] font-bold text-slate-600">
                                   <span
                                     className={cn(
-                                      "size-5 rounded flex items-center justify-center text-[10px]",
+                                      "size-4 rounded flex items-center justify-center text-[9px]",
                                       isMorning ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
                                     )}
                                     title="Morning"
@@ -535,7 +542,7 @@ export function PrescriptionViewModal({
                                   <span>-</span>
                                   <span
                                     className={cn(
-                                      "size-5 rounded flex items-center justify-center text-[10px]",
+                                      "size-4 rounded flex items-center justify-center text-[9px]",
                                       isAfternoon ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
                                     )}
                                     title="Afternoon"
@@ -545,7 +552,7 @@ export function PrescriptionViewModal({
                                   <span>-</span>
                                   <span
                                     className={cn(
-                                      "size-5 rounded flex items-center justify-center text-[10px]",
+                                      "size-4 rounded flex items-center justify-center text-[9px]",
                                       isEvening ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
                                     )}
                                     title="Evening"
@@ -555,7 +562,7 @@ export function PrescriptionViewModal({
                                   <span>-</span>
                                   <span
                                     className={cn(
-                                      "size-5 rounded flex items-center justify-center text-[10px]",
+                                      "size-4 rounded flex items-center justify-center text-[9px]",
                                       isNight ? "bg-teal-100 text-teal-800" : "bg-slate-100 text-slate-300"
                                     )}
                                     title="Night"
@@ -564,9 +571,17 @@ export function PrescriptionViewModal({
                                   </span>
                                 </div>
                               )}
+                              {isSos && (
+                                <span className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                                  SOS
+                                </span>
+                              )}
                             </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-800">
                               {med.duration || "5 days"}
+                            </td>
+                            <td className="py-2.5 px-3 text-[11px] text-slate-600">
+                              {med.instructions || "—"}
                             </td>
                           </tr>
                         );

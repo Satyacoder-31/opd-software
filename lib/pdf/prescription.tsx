@@ -2,6 +2,7 @@ import React from "react";
 import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
 import type { Medicine, Vitals } from "@/lib/types";
+import { getGenericCompositionForDrug } from "@/lib/drug-catalog";
 import {
   resolvePrescriptionLayout,
   type PrescriptionLayoutConfig,
@@ -851,7 +852,7 @@ function MedicinesTable({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   };
-  const cell: Style = { fontSize: 9, color: colors.ink };
+  const cell: Style = { fontSize: 8.5, color: colors.ink };
 
   return (
     <View>
@@ -863,57 +864,65 @@ function MedicinesTable({
           marginBottom: 2,
         }}
       >
-        <Text style={[headCell, { width: 22 }]}>{i18n.medIndex}</Text>
-        <Text style={[headCell, { flex: 2.6 }]}>{i18n.medName}</Text>
-        <Text style={[headCell, { flex: 1.2 }]}>{i18n.dosage}</Text>
-        <Text style={[headCell, { flex: 1.0 }]}>{i18n.route}</Text>
-        <Text style={[headCell, { flex: 1.6 }]}>{i18n.frequency}</Text>
-        <Text style={[headCell, { flex: 1.1 }]}>{i18n.duration}</Text>
+        <Text style={[headCell, { width: 18 }]}>{i18n.medIndex}</Text>
+        <Text style={[headCell, { flex: 2.8 }]}>{i18n.medName}</Text>
+        <Text style={[headCell, { flex: 1.0 }]}>{i18n.dosage}</Text>
+        <Text style={[headCell, { flex: 1.4 }]}>{i18n.frequency}</Text>
+        <Text style={[headCell, { flex: 1.0 }]}>{i18n.duration}</Text>
+        <Text style={[headCell, { flex: 2.2 }]}>{i18n.instructions}</Text>
       </View>
-      {medicines.map((med, i) => (
-        <View
-          key={i}
-          wrap={false}
-          style={{
-            borderBottom:
-              i < medicines.length - 1 ? `0.75px solid ${colors.rule}` : undefined,
-            paddingVertical: 5,
-          }}
-        >
-          <View style={{ flexDirection: "row" }}>
-            <Text style={[cell, { width: 22, color: colors.muted }]}>
-              {i + 1}
-            </Text>
-            <Text style={[cell, { flex: 2.6, fontFamily: theme.bold }]}>
-              {med.name}
-            </Text>
-            <Text style={[cell, { flex: 1.2 }]}>
-              {translateDosage(med.dosage, lang) || "—"}
-            </Text>
-            <Text style={[cell, { flex: 1.0 }]}>
-              {translateRoute(med.route, lang) || "—"}
-            </Text>
-            <Text style={[cell, { flex: 1.6 }]}>
-              {translateFrequency(med.frequency, lang)}
-            </Text>
-            <Text style={[cell, { flex: 1.1 }]}>
-              {translateDuration(med.duration, lang) || "—"}
-            </Text>
+      {medicines.map((med, i) => {
+        const genericSalt =
+          med.genericName?.trim() || getGenericCompositionForDrug(med.name);
+        return (
+          <View
+            key={i}
+            wrap={false}
+            style={{
+              borderBottom:
+                i < medicines.length - 1 ? `0.75px solid ${colors.rule}` : undefined,
+              paddingVertical: 5,
+            }}
+          >
+            <View style={{ flexDirection: "row" }}>
+              <Text style={[cell, { width: 18, color: colors.muted }]}>
+                {i + 1}
+              </Text>
+              <View style={{ flex: 2.8, paddingRight: 4 }}>
+                <Text style={[cell, { fontFamily: theme.bold }]}>
+                  {med.name}
+                  {med.route && med.route.toLowerCase() !== "oral"
+                    ? ` (${med.route})`
+                    : ""}
+                </Text>
+                {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
+                  <Text
+                    style={{
+                      fontSize: 7.5,
+                      color: colors.muted,
+                      marginTop: 1.5,
+                    }}
+                  >
+                    {genericSalt}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={[cell, { flex: 1.0 }]}>
+                {translateDosage(med.dosage, lang) || "—"}
+              </Text>
+              <Text style={[cell, { flex: 1.4 }]}>
+                {translateFrequency(med.frequency, lang)}
+              </Text>
+              <Text style={[cell, { flex: 1.0 }]}>
+                {translateDuration(med.duration, lang) || "—"}
+              </Text>
+              <Text style={[cell, { flex: 2.2, color: colors.ink }]}>
+                {translateInstructions(med.instructions, lang) || "—"}
+              </Text>
+            </View>
           </View>
-          {med.instructions ? (
-            <Text
-              style={{
-                fontSize: 8,
-                color: colors.muted,
-                marginLeft: 22,
-                marginTop: 2,
-              }}
-            >
-              {translateInstructions(med.instructions, lang)}
-            </Text>
-          ) : null}
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -931,6 +940,8 @@ function MedicinesList({
   return (
     <View>
       {medicines.map((med, i) => {
+        const genericSalt =
+          med.genericName?.trim() || getGenericCompositionForDrug(med.name);
         const details = [
           translateDosage(med.dosage, lang),
           translateRoute(med.route, lang),
@@ -950,6 +961,18 @@ function MedicinesList({
             >
               {i + 1}.  {med.name}
             </Text>
+            {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
+              <Text
+                style={{
+                  fontSize: 8,
+                  color: colors.muted,
+                  marginLeft: 16,
+                  marginTop: 1,
+                }}
+              >
+                {genericSalt}
+              </Text>
+            ) : null}
             {details ? (
               <Text
                 style={{
@@ -994,6 +1017,8 @@ function MedicinesCards({
   return (
     <View>
       {medicines.map((med, i) => {
+        const genericSalt =
+          med.genericName?.trim() || getGenericCompositionForDrug(med.name);
         const details = [
           translateDosage(med.dosage, lang),
           translateRoute(med.route, lang),
@@ -1015,11 +1040,24 @@ function MedicinesCards({
             }}
           >
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text
-                style={{ fontSize: 9.5, fontFamily: theme.bold, color: colors.ink }}
-              >
-                {i + 1}.  {med.name}
-              </Text>
+              <View style={{ flex: 1, paddingRight: 4 }}>
+                <Text
+                  style={{ fontSize: 9.5, fontFamily: theme.bold, color: colors.ink }}
+                >
+                  {i + 1}.  {med.name}
+                </Text>
+                {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      color: colors.muted,
+                      marginTop: 1,
+                    }}
+                  >
+                    {genericSalt}
+                  </Text>
+                ) : null}
+              </View>
               {med.duration ? (
                 <Text style={{ fontSize: 8.5, color: colors.muted }}>
                   {translateDuration(med.duration, lang)}

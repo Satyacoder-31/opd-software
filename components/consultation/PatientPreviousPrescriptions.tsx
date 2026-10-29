@@ -233,6 +233,11 @@ export function PatientPreviousPrescriptions({
                                 <span className="font-semibold text-ink">
                                   {med.name}
                                 </span>
+                                {med.genericName && (
+                                  <span className="text-[11px] text-teal-700 italic">
+                                    ({med.genericName})
+                                  </span>
+                                )}
                                 {med.dosage && (
                                   <span className="rounded-sm bg-primary/10 px-1.5 py-0.2 font-medium text-primary">
                                     {med.dosage}

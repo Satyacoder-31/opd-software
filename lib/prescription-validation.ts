@@ -3,6 +3,7 @@ import type { Medicine } from "@/lib/types";
 
 export const medicineSchema = z.object({
   name: z.string().min(1),
+  genericName: z.string().optional(),
   dosage: z.string().min(1),
   route: z.string().optional(),
   frequency: z.string().min(1),
@@ -24,6 +25,7 @@ function trim(value?: string | null): string {
 export function isBlankMedicineRow(medicine: Medicine): boolean {
   return (
     !trim(medicine.name) &&
+    !trim(medicine.genericName) &&
     !trim(medicine.dosage) &&
     !trim(medicine.route) &&
     !trim(medicine.frequency) &&
@@ -50,6 +52,7 @@ export function normalizeMedicineRows(medicines: Medicine[]): Medicine[] {
     .filter((medicine) => !isBlankMedicineRow(medicine))
     .map((medicine) => ({
       name: trim(medicine.name),
+      genericName: trim(medicine.genericName) || undefined,
       dosage: trim(medicine.dosage),
       route: trim(medicine.route) || undefined,
       frequency: trim(medicine.frequency),

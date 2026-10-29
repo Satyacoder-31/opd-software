@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from "@react-pdf/renderer";
 import type { Medicine } from "@/lib/types";
+import { getGenericCompositionForDrug } from "@/lib/drug-catalog";
 
 const styles = StyleSheet.create({
   page: {
@@ -177,6 +178,11 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontFamily: "Helvetica-Bold",
     color: "#0a192f",
+  },
+  medGeneric: {
+    fontSize: 7,
+    color: "#0f766e",
+    marginTop: 1,
   },
   medSub: {
     fontSize: 7,
@@ -439,6 +445,8 @@ export function OutpatientSummaryDocument(props: OutpatientSummaryPdfProps) {
                 const isEvening = freq.includes("evening");
                 const isNight = freq.includes("-0-1") || freq.includes("-1-1") || freq.includes("night") || freq.includes("bedtime");
                 const isSos = freq.includes("sos") || freq.includes("as needed");
+                const genericSalt =
+                  med.genericName?.trim() || getGenericCompositionForDrug(med.name);
 
                 return (
                   <View key={idx} style={styles.tableRow} wrap={false}>
@@ -446,6 +454,12 @@ export function OutpatientSummaryDocument(props: OutpatientSummaryPdfProps) {
                       <Text style={styles.medName}>
                         {idx + 1}. {med.name}
                       </Text>
+                      {genericSalt &&
+                      genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
+                        <Text style={styles.medGeneric}>
+                          {genericSalt}
+                        </Text>
+                      ) : null}
                       <Text style={styles.medSub}>
                         {med.dosage || "1 tab"} · {med.route || "Oral"} · {med.duration || "5 days"}
                         {med.instructions ? ` · ${med.instructions}` : ""}

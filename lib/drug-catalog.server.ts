@@ -6,6 +6,7 @@ import {
   defaultsForClinicEntry,
   defaultsFromMedicine,
   findCommonDrugByName,
+  getGenericCompositionForDrug,
   normalizeDrugName,
 } from "@/lib/drug-catalog";
 import type { Medicine } from "@/lib/types";
@@ -13,6 +14,7 @@ import type { Medicine } from "@/lib/types";
 type PrescribedDrugInput = Pick<
   Medicine,
   | "name"
+  | "genericName"
   | "dosage"
   | "route"
   | "frequency"
@@ -153,6 +155,10 @@ export async function recordPrescribedDrugs(
           clinicId,
           name: medicine.name,
           normalizedName,
+          genericName:
+            medicine.genericName?.trim() ||
+            getGenericCompositionForDrug(medicine.name) ||
+            null,
           usageCount: 1,
           dosage: defaults.dosage ?? null,
           route: defaults.route ?? null,
@@ -165,6 +171,9 @@ export async function recordPrescribedDrugs(
           name: medicine.name,
           isActive: true,
           usageCount: { increment: 1 },
+          ...(medicine.genericName?.trim()
+            ? { genericName: medicine.genericName.trim() }
+            : {}),
           ...(defaults.dosage !== undefined ? { dosage: defaults.dosage } : {}),
           ...(defaults.route !== undefined ? { route: defaults.route } : {}),
           ...(defaults.frequency !== undefined

@@ -132,6 +132,8 @@ export type PreviousVisitData = {
 
 export type Medicine = {
   name: string;
+  /** Generic composition / salt name (e.g. Paracetamol 650mg, Aceclofenac 100mg). */
+  genericName?: string;
   dosage: string;
   /** Route of administration, e.g. Oral, Inhalation, Topical. */
   route?: string;

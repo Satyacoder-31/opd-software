@@ -77,7 +77,12 @@ function medicineFromSuggestion(
   current: Medicine,
   suggestion: DrugSuggestion
 ): Medicine {
-  return applyDrugDefaults(current, suggestion.name, suggestion.defaults);
+  return applyDrugDefaults(
+    current,
+    suggestion.name,
+    suggestion.defaults,
+    suggestion.genericName
+  );
 }
 
 type TemplateRow = Awaited<
@@ -654,6 +659,17 @@ export function PrescriptionBuilder({
                   favorites={favorites}
                   onFavoritesChange={setFavorites}
                 />
+
+                {(med.genericName ||
+                  findDrugSuggestion(drugSuggestions, med.name)?.genericName) && (
+                  <div className="flex items-center gap-1.5 text-xs text-teal-800 dark:text-teal-300">
+                    <span className="font-semibold">Generic composition:</span>
+                    <span className="rounded bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 px-1.5 py-0.5 font-medium">
+                      {med.genericName ||
+                        findDrugSuggestion(drugSuggestions, med.name)?.genericName}
+                    </span>
+                  </div>
+                )}
 
                 {(() => {
                   const matchedDrug = med.name?.trim()
