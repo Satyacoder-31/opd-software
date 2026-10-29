@@ -21,6 +21,8 @@ import {
   translateChiefComplaint,
   translateFollowUp,
   translateAdviceLine,
+  translatePastHistory,
+  translateDoctorSpecialty,
 } from "@/lib/pdf/translations";
 
 export type PrescriptionPdfProps = {
@@ -180,7 +182,8 @@ function DoctorLines({
     marginTop: 2,
     textAlign: align,
   };
-  const specialtyLine = [props.doctorSpecialization, props.doctorExperience]
+  const translatedSpecialty = translateDoctorSpecialty(props.doctorSpecialization, theme.lang);
+  const specialtyLine = [translatedSpecialty, props.doctorExperience]
     .filter(Boolean)
     .join("  ·  ");
   const displayName = props.doctorName.replace(/^Dr\.?\s+/i, "");
@@ -708,7 +711,7 @@ function PatientSafetyAndVitals({
           </Text>
           <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
             {hasChronic
-              ? translateDiagnosis(props.patientChronicConditions, theme.lang)
+              ? translatePastHistory(props.patientChronicConditions, theme.lang)
               : (theme.lang === "hi"
                   ? "कोई मधुमेह नहीं, कोई उच्च रक्तचाप नहीं, कोई पूर्व सर्जरी नहीं (No DM, No HTN, No surgery)"
                   : "No DM, No HTN, No surgery")}

@@ -27,6 +27,21 @@ import {
 import { downloadBase64Pdf, cn } from "@/lib/utils";
 import { getGenericCompositionForDrug } from "@/lib/drug-catalog";
 import { parseDoseSchedule } from "@/lib/pdf/prescription";
+import {
+  PRESCRIPTION_I18N,
+  translateAge,
+  translateGender,
+  translatePastHistory,
+  translateDoctorSpecialty,
+  translateChiefComplaint,
+  translateDiagnosis,
+  translateDosage,
+  translateRoute,
+  translateDuration,
+  translateInstructions,
+  translateAdviceText,
+  translateFollowUp,
+} from "@/lib/pdf/translations";
 import { Button } from "@/components/ui/Button";
 
 export type PrescriptionViewModalProps = {
@@ -135,6 +150,7 @@ export function PrescriptionViewModal({
   }
 
   const hasAllergies = Boolean(prescriptionData?.patient.allergies?.trim());
+  const i18n = PRESCRIPTION_I18N[lang];
 
   return (
     <div
@@ -158,12 +174,14 @@ export function PrescriptionViewModal({
                 {prescriptionData && (
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-700 border border-emerald-200">
                     <Icon icon={faCheck} className="size-2.5" />
-                    Doctor Verified
+                    {lang === "hi" ? "चिकित्सक द्वारा सत्यापित" : "Doctor Verified"}
                   </span>
                 )}
               </div>
               <p className="text-xs text-slate-500">
-                Official OPD medical prescription, dosing schedule, and precautions
+                {lang === "hi"
+                  ? "अधिकृत ओपीडी चिकित्सीय पर्चा, खुराक समय सारणी एवं सावधानियां"
+                  : "Official OPD medical prescription, dosing schedule, and precautions"}
               </p>
             </div>
           </div>
@@ -183,7 +201,7 @@ export function PrescriptionViewModal({
                 )}
               >
                 <Icon icon={faFileLines} className="size-3" />
-                <span>Paper Rx</span>
+                <span>{lang === "hi" ? "कागज़ प्रारूप" : "Paper Rx"}</span>
               </button>
               <button
                 type="button"
@@ -196,7 +214,7 @@ export function PrescriptionViewModal({
                 )}
               >
                 <Icon icon={faFilePdf} className="size-3" />
-                <span>PDF Document</span>
+                <span>{lang === "hi" ? "पीडीएफ प्रारूप" : "PDF Document"}</span>
               </button>
             </div>
 
@@ -238,7 +256,7 @@ export function PrescriptionViewModal({
               title="Print Prescription"
             >
               <Icon icon={faPrint} data-icon="inline-start" />
-              <span>Print Rx</span>
+              <span>{i18n.printPrescription}</span>
             </Button>
 
             <Button
@@ -250,7 +268,7 @@ export function PrescriptionViewModal({
               title="Download Prescription PDF"
             >
               <Icon icon={faDownload} data-icon="inline-start" />
-              <span>Download PDF</span>
+              <span>{i18n.downloadPrescription}</span>
             </Button>
 
             {/* Close */}
@@ -338,11 +356,12 @@ export function PrescriptionViewModal({
                 {/* Consulting Doctor Box */}
                 <div className="sm:text-right min-w-[200px]">
                   <h3 className="font-display text-base font-bold text-slate-900">
-                    Dr. {prescriptionData.doctor.name}
+                    {lang === "hi" ? "डॉ. " : "Dr. "}
+                    {prescriptionData.doctor.name.replace(/^Dr\.?\s+/i, "")}
                   </h3>
                   {prescriptionData.doctor.specialty && (
                     <p className="text-xs font-semibold text-teal-700">
-                      {prescriptionData.doctor.specialty}
+                      {translateDoctorSpecialty(prescriptionData.doctor.specialty, lang)}
                     </p>
                   )}
                   {prescriptionData.doctor.qualifications && (
@@ -352,7 +371,8 @@ export function PrescriptionViewModal({
                   )}
                   {prescriptionData.doctor.registrationNo && (
                     <p className="text-[11px] font-mono text-slate-500">
-                      Reg. No: {prescriptionData.doctor.registrationNo}
+                      {lang === "hi" ? "पंजीकरण संख्या: " : "Reg. No: "}
+                      {prescriptionData.doctor.registrationNo}
                     </p>
                   )}
                 </div>
@@ -362,34 +382,39 @@ export function PrescriptionViewModal({
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
-                    <span className="text-slate-500 block">Patient Name</span>
+                    <span className="text-slate-500 block">
+                      {lang === "hi" ? "मरीज़ का नाम" : "Patient Name"}
+                    </span>
                     <strong className="text-slate-900 font-semibold">
                       {prescriptionData.patient.name}
                     </strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">UHID / MRN</span>
+                    <span className="text-slate-500 block">
+                      {lang === "hi" ? "विशिष्ट पहचान (UHID)" : "UHID / MRN"}
+                    </span>
                     <span className="font-mono font-bold text-teal-800">
                       {prescriptionData.patient.mrn}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Age / Gender</span>
+                    <span className="text-slate-500 block">
+                      {lang === "hi" ? "उम्र / लिंग" : "Age / Gender"}
+                    </span>
                     <span>
-                      {prescriptionData.patient.age || "—"} /{" "}
-                      {prescriptionData.patient.gender
-                        ? prescriptionData.patient.gender.charAt(0).toUpperCase() +
-                          prescriptionData.patient.gender.slice(1)
-                        : "—"}
+                      {translateAge(prescriptionData.patient.age, lang)} /{" "}
+                      {translateGender(prescriptionData.patient.gender, lang)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">Date & Token</span>
+                    <span className="text-slate-500 block">
+                      {lang === "hi" ? "दिनांक व टोकन" : "Date & Token"}
+                    </span>
                     <span>
                       {prescriptionData.date}{" "}
                       {prescriptionData.tokenNumber && (
                         <strong className="text-teal-700">
-                          (Token #{prescriptionData.tokenNumber})
+                          ({lang === "hi" ? `टोकन #${prescriptionData.tokenNumber}` : `Token #${prescriptionData.tokenNumber}`})
                         </strong>
                       )}
                     </span>
@@ -401,18 +426,19 @@ export function PrescriptionViewModal({
                   {hasAllergies ? (
                     <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 font-bold text-rose-800">
                       <Icon icon={faTriangleExclamation} className="size-3 text-rose-600" />
-                      Known Allergies: {prescriptionData.patient.allergies}
+                      {lang === "hi" ? "दवा एलर्जी: " : "Known Allergies: "}
+                      {prescriptionData.patient.allergies}
                     </span>
                   ) : (
                     <span className="text-emerald-700 font-semibold flex items-center gap-1">
                       <Icon icon={faCheck} className="size-3 text-emerald-600" />
-                      Allergies: No Known Drug Allergies
+                      {lang === "hi" ? "कोई ज्ञात दवा एलर्जी नहीं (NKDA)" : "Allergies: No Known Drug Allergies"}
                     </span>
                   )}
                   <span className="text-slate-600">
-                    Past History:{" "}
+                    {lang === "hi" ? "पूर्व चिकित्सा इतिहास: " : "Past History: "}
                     <strong className="text-slate-800">
-                      {prescriptionData.patient.chronicConditions?.trim() || "No DM, No HTN, No surgery"}
+                      {translatePastHistory(prescriptionData.patient.chronicConditions, lang)}
                     </strong>
                   </span>
                 </div>
@@ -422,31 +448,36 @@ export function PrescriptionViewModal({
               {prescriptionData.vitals && (
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                    Vitals:
+                    {lang === "hi" ? "शारीरिक माप:" : "Vitals:"}
                   </span>
                   {prescriptionData.vitals.bp && (
                     <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      BP: {prescriptionData.vitals.bp} mmHg
+                      {lang === "hi" ? "रक्तचाप: " : "BP: "}
+                      {prescriptionData.vitals.bp} mmHg
                     </span>
                   )}
                   {prescriptionData.vitals.pulse && (
                     <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      Pulse: {prescriptionData.vitals.pulse} bpm
+                      {lang === "hi" ? "नाड़ी: " : "Pulse: "}
+                      {prescriptionData.vitals.pulse} bpm
                     </span>
                   )}
                   {prescriptionData.vitals.weight && (
                     <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      Weight: {prescriptionData.vitals.weight} kg
+                      {lang === "hi" ? "वजन: " : "Weight: "}
+                      {prescriptionData.vitals.weight} kg
                     </span>
                   )}
                   {prescriptionData.vitals.temp && (
                     <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      Temp: {prescriptionData.vitals.temp} °F
+                      {lang === "hi" ? "तापमान: " : "Temp: "}
+                      {prescriptionData.vitals.temp} °F
                     </span>
                   )}
                   {prescriptionData.vitals.spo2 && (
                     <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      SpO2: {prescriptionData.vitals.spo2} %
+                      {lang === "hi" ? "ऑक्सीजन: " : "SpO2: "}
+                      {prescriptionData.vitals.spo2} %
                     </span>
                   )}
                 </div>
@@ -457,17 +488,19 @@ export function PrescriptionViewModal({
                 {prescriptionData.chiefComplaint && (
                   <div>
                     <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
-                      Chief Complaints:{" "}
+                      {lang === "hi" ? "मुख्य समस्या व लक्षण: " : "Chief Complaints: "}
                     </span>
-                    <span className="text-slate-800">{prescriptionData.chiefComplaint}</span>
+                    <span className="text-slate-800">
+                      {translateChiefComplaint(prescriptionData.chiefComplaint, lang)}
+                    </span>
                   </div>
                 )}
                 <div>
                   <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
-                    Clinical Diagnosis:{" "}
+                    {lang === "hi" ? "चिकित्सीय निदान: " : "Clinical Diagnosis: "}
                   </span>
                   <strong className="text-slate-900 font-bold text-sm">
-                    {prescriptionData.diagnosis || "Clinical assessment recorded"}
+                    {translateDiagnosis(prescriptionData.diagnosis, lang) || (lang === "hi" ? "परीक्षण मूल्यांकन दर्ज" : "Clinical assessment recorded")}
                   </strong>
                 </div>
               </div>
@@ -478,11 +511,11 @@ export function PrescriptionViewModal({
                   <div className="flex items-center gap-2">
                     <span className="font-serif italic font-bold text-2xl text-teal-800">℞</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                      OUTPATIENT PRESCRIPTION & MEDICINES ({prescriptionData.medicines.length})
+                      {i18n.scheduleTitle} ({prescriptionData.medicines.length})
                     </span>
                   </div>
                   <span className="text-[11px] font-normal text-slate-500">
-                    Daily Timing Schedule
+                    {i18n.scheduleSubtitle}
                   </span>
                 </div>
 
@@ -490,11 +523,11 @@ export function PrescriptionViewModal({
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 text-[11px] uppercase tracking-wider">
                       <tr>
-                        <th className="py-2.5 px-3">MEDICINES</th>
-                        <th className="py-2.5 px-3 text-center w-24">MORNING</th>
-                        <th className="py-2.5 px-3 text-center w-24">AFTERNOON</th>
-                        <th className="py-2.5 px-3 text-center w-24">EVENING</th>
-                        <th className="py-2.5 px-3 text-center w-24">NIGHT</th>
+                        <th className="py-2.5 px-3">{i18n.medicines}</th>
+                        <th className="py-2.5 px-3 text-center w-24">{i18n.morning}</th>
+                        <th className="py-2.5 px-3 text-center w-24">{i18n.afternoon}</th>
+                        <th className="py-2.5 px-3 text-center w-24">{i18n.evening}</th>
+                        <th className="py-2.5 px-3 text-center w-24">{i18n.night}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -503,10 +536,10 @@ export function PrescriptionViewModal({
                           med.genericName?.trim() || getGenericCompositionForDrug(med.name);
                         const sched = parseDoseSchedule(med.frequency);
                         const subDetails = [
-                          med.dosage || "1 tablet",
-                          med.route || "Oral",
-                          med.duration || "5 days",
-                          med.instructions,
+                          translateDosage(med.dosage, lang),
+                          translateRoute(med.route, lang),
+                          translateDuration(med.duration, lang),
+                          translateInstructions(med.instructions, lang),
                         ]
                           .filter(Boolean)
                           .join(" · ");
@@ -581,10 +614,10 @@ export function PrescriptionViewModal({
                 <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
                     <Icon icon={faNotesMedical} className="size-3.5 text-teal-700" />
-                    <span>Doctor&apos;s Advice & Precautions</span>
+                    <span>{i18n.adviceTitle}</span>
                   </div>
                   <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-line pl-1">
-                    {prescriptionData.advice}
+                    {translateAdviceText(prescriptionData.advice, lang)}
                   </div>
                 </div>
               )}
@@ -594,33 +627,36 @@ export function PrescriptionViewModal({
                 <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs">
                   <div className="flex items-center gap-2">
                     <Icon icon={faCalendarCheck} className="size-3.5 text-sky-700" />
-                    <span className="font-semibold text-slate-700">Follow-Up Review:</span>
-                    <strong className="text-sky-900 font-bold">{prescriptionData.followUp}</strong>
+                    <span className="font-semibold text-slate-700">{i18n.followUpTitle}:</span>
+                    <strong className="text-sky-900 font-bold">
+                      {translateFollowUp(prescriptionData.followUp, lang)}
+                    </strong>
                   </div>
                   <span className="text-slate-500 text-[11px]">
-                    Bring this prescription on next visit
+                    {i18n.followUpBring}
                   </span>
                 </div>
               )}
 
               {/* FOOTER & DOCTOR SIGNATURE */}
               <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-end justify-between gap-6 text-xs text-slate-500">
-                <div>
-                  <p>Computer generated medical prescription.</p>
-                  <p>Take medicines strictly as prescribed by the doctor.</p>
+                <div className="max-w-md">
+                  <p>{i18n.disclaimer}</p>
                 </div>
                 <div className="text-center sm:text-right w-52 space-y-1">
                   <div className="h-10 border-b border-dashed border-slate-400"></div>
                   <div className="text-xs font-bold text-slate-900">
-                    Dr. {prescriptionData.doctor.name}
+                    {lang === "hi" ? "डॉ. " : "Dr. "}
+                    {prescriptionData.doctor.name.replace(/^Dr\.?\s+/i, "")}
                   </div>
                   {prescriptionData.doctor.registrationNo && (
                     <div className="text-[11px] font-mono text-slate-500">
-                      Reg. No: {prescriptionData.doctor.registrationNo}
+                      {lang === "hi" ? "पंजीकरण संख्या: " : "Reg. No: "}
+                      {prescriptionData.doctor.registrationNo}
                     </div>
                   )}
                   <div className="text-[10px] text-teal-800 font-semibold uppercase">
-                    Authorized Doctor Signature
+                    {i18n.doctorSignature}
                   </div>
                 </div>
               </div>
@@ -633,15 +669,26 @@ export function PrescriptionViewModal({
           <div className="text-xs text-slate-500">
             {prescriptionData ? (
               <span>
-                Prescribed by <strong className="text-slate-900">Dr. {prescriptionData.doctor.name}</strong> on{" "}
-                <span className="font-semibold">{prescriptionData.date}</span>
+                {lang === "hi" ? (
+                  <>
+                    <strong className="text-slate-900">
+                      डॉ. {prescriptionData.doctor.name.replace(/^Dr\.?\s+/i, "")}
+                    </strong>{" "}
+                    द्वारा <span className="font-semibold">{prescriptionData.date}</span> को जारी अधिकृत पर्चा
+                  </>
+                ) : (
+                  <>
+                    Prescribed by <strong className="text-slate-900">Dr. {prescriptionData.doctor.name}</strong> on{" "}
+                    <span className="font-semibold">{prescriptionData.date}</span>
+                  </>
+                )}
               </span>
             ) : null}
           </div>
 
           <div className="flex items-center gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-              Close
+              {i18n.close}
             </Button>
             <Button
               type="button"
@@ -651,7 +698,7 @@ export function PrescriptionViewModal({
               disabled={loading || !prescriptionData}
             >
               <Icon icon={faPrint} data-icon="inline-start" />
-              <span>Print Prescription</span>
+              <span>{i18n.printPrescription}</span>
             </Button>
             <Button
               type="button"
@@ -661,7 +708,7 @@ export function PrescriptionViewModal({
               disabled={loading || !prescriptionData}
             >
               <Icon icon={faDownload} data-icon="inline-start" />
-              <span>Download PDF</span>
+              <span>{i18n.downloadPrescription}</span>
             </Button>
           </div>
         </footer>

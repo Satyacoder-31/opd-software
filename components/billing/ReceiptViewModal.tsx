@@ -24,7 +24,17 @@ import {
   type ReceiptViewData,
   type PatientReceiptSummary,
 } from "@/actions/invoices";
-import { RECEIPT_I18N, type PdfLanguage } from "@/lib/pdf/translations";
+import {
+  RECEIPT_I18N,
+  type PdfLanguage,
+  translateAge,
+  translateGender,
+  translatePaymentMode,
+  translateDoctorSpecialty,
+  translateChiefComplaint,
+  translateDiagnosis,
+  translateLineItemDescription,
+} from "@/lib/pdf/translations";
 import { downloadBase64Pdf, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 
@@ -206,7 +216,7 @@ export function ReceiptViewModal({
                 )}
               >
                 <Icon icon={faFileInvoiceDollar} className="size-3" />
-                <span>Paper Receipt</span>
+                <span>{lang === "hi" ? "कागज़ रसीद" : "Paper Receipt"}</span>
               </button>
               <button
                 type="button"
@@ -219,7 +229,7 @@ export function ReceiptViewModal({
                 )}
               >
                 <Icon icon={faFilePdf} className="size-3" />
-                <span>PDF Document</span>
+                <span>{lang === "hi" ? "पीडीएफ रसीद" : "PDF Document"}</span>
               </button>
             </div>
 
@@ -265,7 +275,7 @@ export function ReceiptViewModal({
               title="Print Receipt"
             >
               <Icon icon={faPrint} data-icon="inline-start" />
-              <span>Print</span>
+              <span>{i18n.printReceipt}</span>
             </Button>
 
             <Button
@@ -277,7 +287,7 @@ export function ReceiptViewModal({
               title="Download Receipt PDF"
             >
               <Icon icon={faDownload} data-icon="inline-start" />
-              <span>Download PDF</span>
+              <span>{i18n.downloadReceipt}</span>
             </Button>
 
             {/* Close Button */}
@@ -453,8 +463,8 @@ export function ReceiptViewModal({
                     <div className="flex justify-between">
                       <span className="text-slate-500">{i18n.ageGender}</span>
                       <span>
-                        {receiptData.patient.age || "—"} /{" "}
-                        {receiptData.patient.gender || "—"}
+                        {translateAge(receiptData.patient.age, lang)} /{" "}
+                        {translateGender(receiptData.patient.gender, lang)}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -482,13 +492,14 @@ export function ReceiptViewModal({
                     <div className="flex justify-between">
                       <span className="text-slate-500">{i18n.doctorName}</span>
                       <strong className="text-slate-900 font-medium">
-                        {receiptData.doctor.name}
+                        {lang === "hi" ? "डॉ. " : "Dr. "}
+                        {receiptData.doctor.name.replace(/^Dr\.?\s+/i, "")}
                       </strong>
                     </div>
                     {receiptData.doctor.specialty && (
                       <div className="flex justify-between">
                         <span className="text-slate-500">{i18n.specialty}</span>
-                        <span>{receiptData.doctor.specialty}</span>
+                        <span>{translateDoctorSpecialty(receiptData.doctor.specialty, lang)}</span>
                       </div>
                     )}
                     {receiptData.doctor.registrationNo && (
@@ -501,7 +512,7 @@ export function ReceiptViewModal({
                     )}
                     {receiptData.queueDate && (
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Visit Date:</span>
+                        <span className="text-slate-500">{i18n.visitDate}</span>
                         <span>{receiptData.queueDate}</span>
                       </div>
                     )}
@@ -516,30 +527,30 @@ export function ReceiptViewModal({
                 <div className="rounded-xl border border-slate-100 bg-slate-50/40 p-3 text-xs space-y-2">
                   {receiptData.vitals && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-slate-600">Vitals:</span>
+                      <span className="font-semibold text-slate-600">{i18n.vitalsTitle}:</span>
                       {receiptData.vitals.bp && (
                         <span className="rounded bg-white px-2 py-0.5 border border-slate-200 text-slate-700">
-                          BP: {receiptData.vitals.bp}
+                          {i18n.bp}: {receiptData.vitals.bp} mmHg
                         </span>
                       )}
                       {receiptData.vitals.pulse && (
                         <span className="rounded bg-white px-2 py-0.5 border border-slate-200 text-slate-700">
-                          Pulse: {receiptData.vitals.pulse} bpm
+                          {i18n.pulse}: {receiptData.vitals.pulse} bpm
                         </span>
                       )}
                       {receiptData.vitals.weight && (
                         <span className="rounded bg-white px-2 py-0.5 border border-slate-200 text-slate-700">
-                          Wt: {receiptData.vitals.weight} kg
+                          {i18n.weight}: {receiptData.vitals.weight} kg
                         </span>
                       )}
                       {receiptData.vitals.temp && (
                         <span className="rounded bg-white px-2 py-0.5 border border-slate-200 text-slate-700">
-                          Temp: {receiptData.vitals.temp} °F
+                          {i18n.temp}: {receiptData.vitals.temp} °F
                         </span>
                       )}
                       {receiptData.vitals.spo2 && (
                         <span className="rounded bg-white px-2 py-0.5 border border-slate-200 text-slate-700">
-                          SpO2: {receiptData.vitals.spo2} %
+                          {i18n.spo2}: {receiptData.vitals.spo2} %
                         </span>
                       )}
                     </div>
@@ -553,7 +564,7 @@ export function ReceiptViewModal({
                             {i18n.chiefComplaint}{" "}
                           </span>
                           <span className="text-slate-800">
-                            {receiptData.chiefComplaint}
+                            {translateChiefComplaint(receiptData.chiefComplaint, lang)}
                           </span>
                         </div>
                       )}
@@ -563,7 +574,7 @@ export function ReceiptViewModal({
                             {i18n.diagnosis}{" "}
                           </span>
                           <span className="text-slate-800">
-                            {receiptData.diagnosis}
+                            {translateDiagnosis(receiptData.diagnosis, lang)}
                           </span>
                         </div>
                       )}
@@ -591,7 +602,7 @@ export function ReceiptViewModal({
                             {idx + 1}
                           </td>
                           <td className="py-2 px-3 font-medium text-slate-900">
-                            {item.description}
+                            {translateLineItemDescription(item.description, lang)}
                           </td>
                           <td className="py-2 px-3 text-center text-slate-500 font-mono text-[11px]">
                             999312
@@ -607,7 +618,9 @@ export function ReceiptViewModal({
                           1
                         </td>
                         <td className="py-2 px-3 font-medium text-slate-900">
-                          OPD Doctor Consultation & Clinical Assessment
+                          {lang === "hi"
+                            ? "ओपीडी डॉक्टर परामर्श एवं चिकित्सीय मूल्यांकन"
+                            : "OPD Doctor Consultation & Clinical Assessment"}
                         </td>
                         <td className="py-2 px-3 text-center text-slate-500 font-mono text-[11px]">
                           999312
@@ -632,11 +645,11 @@ export function ReceiptViewModal({
                   <div className="text-xs text-slate-700">
                     <span className="text-slate-500">{i18n.paymentMode} </span>
                     <strong className="uppercase font-semibold">
-                      {receiptData.paymentMode}
+                      {translatePaymentMode(receiptData.paymentMode, lang)}
                     </strong>
                   </div>
                   <div className="text-[11px] text-emerald-700">
-                    Verified digital receipt · Transaction settled
+                    {i18n.verifiedReceipt}
                   </div>
                 </div>
 
@@ -695,21 +708,33 @@ export function ReceiptViewModal({
           <div className="text-xs text-slate-500">
             {receiptData ? (
               <span>
-                Total Amount Paid:{" "}
-                <strong className="text-slate-900 font-mono">
-                  ₹{receiptData.amount.toFixed(2)}
-                </strong>{" "}
-                via{" "}
-                <span className="uppercase font-semibold text-slate-700">
-                  {receiptData.paymentMode}
-                </span>
+                {lang === "hi" ? (
+                  <>
+                    कुल भुगतान की गई राशि:{" "}
+                    <strong className="text-slate-900 font-mono">
+                      ₹{receiptData.amount.toFixed(2)}
+                    </strong>{" "}
+                    ({translatePaymentMode(receiptData.paymentMode, lang)} द्वारा)
+                  </>
+                ) : (
+                  <>
+                    Total Amount Paid:{" "}
+                    <strong className="text-slate-900 font-mono">
+                      ₹{receiptData.amount.toFixed(2)}
+                    </strong>{" "}
+                    via{" "}
+                    <span className="uppercase font-semibold text-slate-700">
+                      {receiptData.paymentMode}
+                    </span>
+                  </>
+                )}
               </span>
             ) : null}
           </div>
 
           <div className="flex items-center gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-              Close
+              {i18n.close}
             </Button>
             <Button
               type="button"
@@ -719,7 +744,7 @@ export function ReceiptViewModal({
               disabled={loading || !receiptData}
             >
               <Icon icon={faPrint} data-icon="inline-start" />
-              <span>Print Receipt</span>
+              <span>{i18n.printReceipt}</span>
             </Button>
             <Button
               type="button"
@@ -729,7 +754,7 @@ export function ReceiptViewModal({
               disabled={loading || !receiptData}
             >
               <Icon icon={faDownload} data-icon="inline-start" />
-              <span>Download Receipt</span>
+              <span>{i18n.downloadReceipt}</span>
             </Button>
           </div>
         </footer>

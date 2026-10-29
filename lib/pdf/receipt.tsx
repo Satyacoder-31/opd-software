@@ -13,6 +13,11 @@ import {
   RECEIPT_I18N,
   translatePaymentMode,
   translateGender,
+  translateAge,
+  translateDoctorSpecialty,
+  translateChiefComplaint,
+  translateDiagnosis,
+  translateLineItemDescription,
 } from "@/lib/pdf/translations";
 
 const styles = StyleSheet.create({
@@ -524,7 +529,7 @@ export function ReceiptDocument({
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{i18n.ageGender}</Text>
               <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
-                {patientAge ?? "—"}{" "}
+                {translateAge(patientAge, language) ?? "—"}{" "}
                 {patientGender ? `· ${translateGender(patientGender, language)}` : ""}
               </Text>
             </View>
@@ -562,7 +567,7 @@ export function ReceiptDocument({
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{i18n.specialty}</Text>
                 <Text style={[styles.infoValue, { fontFamily: boldFont }]}>
-                  {doctorSpecialty}
+                  {translateDoctorSpecialty(doctorSpecialty, language)}
                 </Text>
               </View>
             ) : null}
@@ -630,7 +635,9 @@ export function ReceiptDocument({
                 <Text style={[styles.clinicalItemLabel, { fontFamily: boldFont }]}>
                   {i18n.chiefComplaint}
                 </Text>
-                <Text style={styles.clinicalItemValue}>{chiefComplaint}</Text>
+                <Text style={[styles.clinicalItemValue, { fontFamily: baseFont }]}>
+                  {translateChiefComplaint(chiefComplaint, language)}
+                </Text>
               </View>
             ) : null}
             {diagnosis ? (
@@ -639,7 +646,7 @@ export function ReceiptDocument({
                   {i18n.diagnosis}
                 </Text>
                 <Text style={[styles.clinicalItemValue, { fontFamily: boldFont }]}>
-                  {diagnosis}
+                  {translateDiagnosis(diagnosis, language)}
                 </Text>
               </View>
             ) : null}
@@ -666,7 +673,9 @@ export function ReceiptDocument({
                 key={idx}
                 style={[styles.tableRow, idx % 2 === 1 ? styles.tableRowAlt : {}]}
               >
-                <Text style={styles.colDesc}>{item.description}</Text>
+                <Text style={[styles.colDesc, { fontFamily: baseFont }]}>
+                  {translateLineItemDescription(item.description, language)}
+                </Text>
                 <Text style={styles.colSac}>999312</Text>
                 <Text style={[styles.colAmount, { fontFamily: boldFont }]}>
                   ₹{item.amount.toFixed(2)}
@@ -675,7 +684,7 @@ export function ReceiptDocument({
             ))
           ) : (
             <View style={styles.tableRow}>
-              <Text style={styles.colDesc}>
+              <Text style={[styles.colDesc, { fontFamily: baseFont }]}>
                 {isHindi
                   ? "ओपीडी चिकित्सीय परामर्श एवं परीक्षण शुल्क"
                   : "Outpatient Consultation & Clinical Examination"}
