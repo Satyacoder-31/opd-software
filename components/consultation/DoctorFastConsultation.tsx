@@ -59,7 +59,6 @@ import {
   applyDrugDefaults,
   type DrugSuggestion,
   findDrugSuggestion,
-  getAlternativeBrandsForDrug,
 } from "@/lib/drug-catalog";
 import { expandFrequencyInput } from "@/lib/prescription-dosing";
 import type {
@@ -1712,8 +1711,6 @@ export function DoctorFastConsultation({
             const matchedDrug = med.name?.trim()
               ? findDrugSuggestion(drugSuggestions, med.name)
               : null;
-            const stock = matchedDrug?.stockQuantity;
-            const reorder = matchedDrug?.reorderLevel ?? 10;
 
             return (
               <div
@@ -1758,61 +1755,6 @@ export function DoctorFastConsultation({
                     </span>
                   </div>
                 )}
-
-                {/* Stock Indicator if matched */}
-                {matchedDrug && stock !== undefined && (
-                  <div className="mb-2 pl-8 flex items-center gap-2 text-[11px]">
-                    <span className="font-semibold text-slate-500">Stock:</span>
-                    {stock > reorder ? (
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.2 font-bold text-emerald-800">
-                        ✓ {stock} in pharmacy
-                      </span>
-                    ) : stock > 0 ? (
-                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.2 font-bold text-amber-800">
-                        ⚠ Low stock: {stock} left
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.2 font-bold text-rose-800">
-                        ✕ Out of stock
-                      </span>
-                    )}
-                    {matchedDrug.unitPrice && (
-                      <span className="text-slate-400">· MRP: ₹{matchedDrug.unitPrice}</span>
-                    )}
-                  </div>
-                )}
-
-                {/* 1-Tap Alternative Brand Switcher */}
-                {med.name?.trim() && (() => {
-                  const alts = getAlternativeBrandsForDrug(med.name, 6);
-                  if (alts.length === 0) return null;
-                  return (
-                    <div className="mb-2 pl-8 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-bold text-teal-800 uppercase">⚡ Brands:</span>
-                      {alts.map((altDrug, altIdx) => (
-                        <button
-                          key={altIdx}
-                          type="button"
-                          onClick={() => {
-                            handleUpdateMedicine(index, {
-                              name: altDrug.name,
-                              genericName: altDrug.genericName || med.genericName,
-                              dosage: altDrug.dosage || med.dosage,
-                              frequency: altDrug.frequency || med.frequency,
-                              duration: altDrug.duration || med.duration,
-                              instructions: altDrug.instructions || med.instructions,
-                              route: altDrug.route || med.route,
-                            });
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md border border-teal-200/90 bg-white px-2 py-0.5 text-[10px] font-bold text-teal-900 hover:bg-teal-100 hover:border-teal-400 cursor-pointer transition-all active:scale-95 shadow-2xs"
-                          title={`Switch to ${altDrug.name} (${altDrug.dosage} · ${altDrug.frequency})`}
-                        >
-                          <span>{altDrug.name.replace(/\s+(tablet|capsule|syrup|gel|injection|suspension)/i, "")}</span>
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
 
                 {/* 1-CLICK RAPID DOSING PRESETS (1 TAP FILLS DOSE, FREQ, DUR, INSTRUCTIONS) */}
                 <div className="mb-2 pl-8 flex flex-wrap items-center gap-1.5">

@@ -48,7 +48,6 @@ import {
   applyDrugDefaults,
   type DrugSuggestion,
   findDrugSuggestion,
-  getAlternativeBrandsForDrug,
 } from "@/lib/drug-catalog";
 import {
   loadFavoriteMedicines,
@@ -671,75 +670,6 @@ export function PrescriptionBuilder({
                     </span>
                   </div>
                 )}
-
-                {(() => {
-                  const matchedDrug = med.name?.trim()
-                    ? findDrugSuggestion(drugSuggestions, med.name)
-                    : null;
-                  if (!matchedDrug || matchedDrug.stockQuantity === undefined) {
-                    return null;
-                  }
-                  const stock = matchedDrug.stockQuantity;
-                  const reorder = matchedDrug.reorderLevel ?? 10;
-                  return (
-                    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-xs">
-                      <span className="font-medium text-muted-foreground">Pharmacy stock:</span>
-                      {stock > reorder ? (
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
-                          ✓ {stock} units available
-                        </span>
-                      ) : stock > 0 ? (
-                        <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
-                          ⚠ Low stock: {stock} left (reorder level: {reorder})
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-rose-500/15 px-2 py-0.5 font-medium text-rose-700 dark:text-rose-400">
-                          ✕ Out of stock (0 units in pharmacy)
-                        </span>
-                      )}
-                      {matchedDrug.batchNumber ? (
-                        <span className="text-[11px] text-muted-foreground">
-                          · Batch: {matchedDrug.batchNumber}
-                        </span>
-                      ) : null}
-                      {matchedDrug.unitPrice ? (
-                        <span className="text-[11px] text-muted-foreground">
-                          · MRP: ₹{matchedDrug.unitPrice}
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-
-                {/* 1-Tap Alternative Brand Switcher */}
-                {med.name?.trim() && (() => {
-                  const alts = getAlternativeBrandsForDrug(med.name, 6);
-                  if (alts.length === 0) return null;
-                  return (
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] font-bold text-teal-800 dark:text-teal-300 uppercase">⚡ Brands:</span>
-                      {alts.map((altDrug, altIdx) => (
-                        <button
-                          key={altIdx}
-                          type="button"
-                          onClick={() => {
-                            updateMedicine(index, "name", altDrug.name);
-                            if (altDrug.genericName) updateMedicine(index, "genericName", altDrug.genericName);
-                            if (altDrug.dosage) updateMedicine(index, "dosage", altDrug.dosage);
-                            if (altDrug.route) updateMedicine(index, "route", altDrug.route);
-                            if (altDrug.frequency) updateMedicine(index, "frequency", altDrug.frequency);
-                            if (altDrug.duration) updateMedicine(index, "duration", altDrug.duration);
-                            if (altDrug.instructions) updateMedicine(index, "instructions", altDrug.instructions);
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md border border-teal-200 dark:border-teal-800 bg-white dark:bg-card px-2 py-0.5 text-[10px] font-bold text-teal-900 dark:text-teal-200 hover:bg-teal-50 dark:hover:bg-teal-950/60 cursor-pointer transition-all active:scale-95 shadow-2xs"
-                          title={`Switch to ${altDrug.name} (${altDrug.dosage} · ${altDrug.frequency})`}
-                        >
-                          <span>{altDrug.name.replace(/\s+(tablet|capsule|syrup|gel|injection|suspension)/i, "")}</span>
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
 
                 {/* 1-CLICK RAPID DOSING PRESETS */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
