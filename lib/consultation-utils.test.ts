@@ -4,6 +4,7 @@ import {
   isConsultationEditable,
   mergePatientAlertsIntoClinical,
   hasPatientSafetyAlerts,
+  resolvePrescriptionPastHistory,
 } from "@/lib/consultation-utils";
 
 describe("isConsultationEditable", () => {
@@ -42,6 +43,24 @@ describe("patient safety helpers", () => {
     expect(merged.patientHistory?.pastMedical).toBe("Hypertension");
   });
 
+  it("prefills default negative history when no patient alerts exist", () => {
+    const merged = mergePatientAlertsIntoClinical(
+      { patientHistory: {} },
+      {}
+    );
+
+    expect(merged.patientHistory?.pastMedical).toBe("No DM, No HTN, No surgery");
+  });
+
+  it("does not overwrite explicitly cleared history values", () => {
+    const merged = mergePatientAlertsIntoClinical(
+      { patientHistory: { pastMedical: "" } },
+      { chronicConditions: "Hypertension" }
+    );
+
+    expect(merged.patientHistory?.pastMedical).toBe("");
+  });
+
   it("does not overwrite existing history values", () => {
     const merged = mergePatientAlertsIntoClinical(
       { patientHistory: { allergies: "Sulfa", pastMedical: "Diabetes" } },
@@ -50,5 +69,34 @@ describe("patient safety helpers", () => {
 
     expect(merged.patientHistory?.allergies).toBe("Sulfa");
     expect(merged.patientHistory?.pastMedical).toBe("Diabetes");
+  });
+});
+
+describe("resolvePrescriptionPastHistory", () => {
+  it("returns empty string when pastMedical is explicitly cleared", () => {
+    expect(
+      resolvePrescriptionPastHistory("Hypertension", { pastMedical: "" })
+    ).toBe("");
+  });
+
+  it("returns pastMedical when set to default negative string", () => {
+    expect(
+      resolvePrescriptionPastHistory(null, {
+        pastMedical: "No DM, No HTN, No surgery",
+      })
+    ).toBe("No DM, No HTN, No surgery");
+  });
+
+  it("returns joined conditions and surgery when present", () => {
+    expect(
+      resolvePrescriptionPastHistory(null, {
+        pastMedical: "Known HTN; Known DM",
+        pastSurgical: "Appendectomy",
+      })
+    ).toBe("Known HTN; Known DM; Surgery: Appendectomy");
+  });
+
+  it("returns empty string when neither chronicConditions nor patientHistory are present", () => {
+    expect(resolvePrescriptionPastHistory(null, null)).toBe("");
   });
 });

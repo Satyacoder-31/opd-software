@@ -108,8 +108,12 @@ export function mergePatientAlertsIntoClinical(
     history.allergies = patient.allergies.trim();
   }
 
-  if (!history.pastMedical?.trim() && patient.chronicConditions?.trim()) {
-    history.pastMedical = patient.chronicConditions.trim();
+  if (history.pastMedical === undefined) {
+    if (patient.chronicConditions?.trim()) {
+      history.pastMedical = patient.chronicConditions.trim();
+    } else {
+      history.pastMedical = "No DM, No HTN, No surgery";
+    }
   }
 
   return {
@@ -132,17 +136,42 @@ export function resolvePrescriptionPastHistory(
   chronicConditions?: string | null,
   patientHistory?: any
 ): string {
+  // If patientHistory is provided with pastMedical explicitly set as a string (including empty string)
+  if (
+    patientHistory &&
+    typeof patientHistory === "object" &&
+    typeof patientHistory.pastMedical === "string"
+  ) {
+    const parts: string[] = [];
+    if (patientHistory.pastMedical.trim()) {
+      parts.push(patientHistory.pastMedical.trim());
+    }
+    if (
+      patientHistory.pastSurgical?.trim() &&
+      !parts.includes(patientHistory.pastSurgical.trim())
+    ) {
+      parts.push(`Surgery: ${patientHistory.pastSurgical.trim()}`);
+    }
+    return parts.join("; ");
+  }
+
   const parts: string[] = [];
   if (chronicConditions?.trim()) {
     parts.push(chronicConditions.trim());
   }
   if (patientHistory && typeof patientHistory === "object") {
-    if (patientHistory.pastMedical?.trim() && !parts.includes(patientHistory.pastMedical.trim())) {
+    if (
+      patientHistory.pastMedical?.trim() &&
+      !parts.includes(patientHistory.pastMedical.trim())
+    ) {
       parts.push(patientHistory.pastMedical.trim());
     }
-    if (patientHistory.pastSurgical?.trim() && !parts.includes(patientHistory.pastSurgical.trim())) {
+    if (
+      patientHistory.pastSurgical?.trim() &&
+      !parts.includes(patientHistory.pastSurgical.trim())
+    ) {
       parts.push(`Surgery: ${patientHistory.pastSurgical.trim()}`);
     }
   }
-  return parts.length > 0 ? parts.join("; ") : "No DM, No HTN, No surgery";
+  return parts.join("; ");
 }

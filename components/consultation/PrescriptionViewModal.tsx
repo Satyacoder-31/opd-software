@@ -529,12 +529,14 @@ export function PrescriptionViewModal({
                       {lang === "hi" ? "कोई ज्ञात दवा एलर्जी नहीं (NKDA)" : "Allergies: No Known Drug Allergies"}
                     </span>
                   )}
-                  <span className="text-slate-600">
-                    {lang === "hi" ? "पूर्व चिकित्सा इतिहास: " : "Past History: "}
-                    <strong className="text-slate-800">
-                      {translatePastHistory(prescriptionData.patient.chronicConditions, lang)}
-                    </strong>
-                  </span>
+                  {prescriptionData.patient.chronicConditions?.trim() ? (
+                    <span className="text-slate-600">
+                      {lang === "hi" ? "पूर्व चिकित्सा इतिहास: " : "Past History: "}
+                      <strong className="text-slate-800">
+                        {translatePastHistory(prescriptionData.patient.chronicConditions, lang)}
+                      </strong>
+                    </span>
+                  ) : null}
                 </div>
               </div>
 

@@ -283,6 +283,9 @@ export function DoctorFastConsultation({
   const [adviceNotice, setAdviceNotice] = useState<string | null>(null);
   const adviceRef = useRef<HTMLDivElement>(null);
 
+  const [showCustomHistory, setShowCustomHistory] = useState(false);
+  const [customHistoryInput, setCustomHistoryInput] = useState("");
+
   // Default preset lists
   const defaultSymptomsList = useMemo(() => {
     const list =
@@ -797,61 +800,207 @@ export function DoctorFastConsultation({
         </div>
 
         {/* PAST MEDICAL & SURGICAL HISTORY */}
-        <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-              Past History:
-            </span>
-            <span className="text-xs font-semibold text-slate-800">
-              {clinical.patientHistory?.pastMedical?.trim() || "No DM, No HTN, No surgery"}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
-            {[
-              "No DM, No HTN, No surgery",
-              "Known HTN",
-              "Known DM",
-              "No past surgery",
-              "Prior surgery",
-              "Asthma / Allergy",
-            ].map((tag) => {
-              const current = clinical.patientHistory?.pastMedical ?? "";
-              const isActive = current === tag || (current.includes(tag) && tag !== "No DM, No HTN, No surgery");
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => {
-                    let next = "";
-                    if (tag === "No DM, No HTN, No surgery") {
-                      next = tag;
-                    } else if (!current || current === "No DM, No HTN, No surgery") {
-                      next = tag;
-                    } else if (current.includes(tag)) {
-                      next = current.replace(new RegExp(`;?\\s*${tag}`, "g"), "").replace(/^;\s*/, "").trim();
-                    } else {
-                      next = `${current}; ${tag}`;
-                    }
-                    onClinicalChange({
-                      ...clinical,
-                      patientHistory: {
-                        ...(clinical.patientHistory ?? {}),
-                        pastMedical: next,
-                      },
-                    });
-                  }}
-                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-2xs font-bold"
-                      : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {(() => {
+          const rawPast = clinical.patientHistory?.pastMedical;
+          const currentPastMedical =
+            rawPast !== undefined ? rawPast.trim() : "No DM, No HTN, No surgery";
+          const hasPastMedical = Boolean(currentPastMedical);
+
+          const presetTags = [
+            "No DM, No HTN, No surgery",
+            "Known HTN",
+            "Known DM",
+            "No past surgery",
+            "Prior surgery",
+            "Asthma / Allergy",
+          ];
+
+          return (
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                  Past History:
+                </span>
+                {hasPastMedical ? (
+                  <span className="text-xs font-semibold text-slate-800">
+                    {currentPastMedical}
+                  </span>
+                ) : (
+                  <span className="text-xs italic text-slate-400">
+                    None (Removed)
+                  </span>
+                )}
+                {hasPastMedical && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClinicalChange({
+                        ...clinical,
+                        patientHistory: {
+                          ...(clinical.patientHistory ?? {}),
+                          pastMedical: "",
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border border-rose-200/60"
+                    title="Remove / Clear past history"
+                  >
+                    <Icon icon={faTrashCan} className="size-2.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                {presetTags.map((tag) => {
+                  const isActive =
+                    tag === "No DM, No HTN, No surgery"
+                      ? currentPastMedical === "No DM, No HTN, No surgery"
+                      : currentPastMedical.includes(tag) &&
+                        currentPastMedical !== "No DM, No HTN, No surgery";
+
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        let next = "";
+                        if (tag === "No DM, No HTN, No surgery") {
+                          if (currentPastMedical === "No DM, No HTN, No surgery") {
+                            next = "";
+                          } else {
+                            next = "No DM, No HTN, No surgery";
+                          }
+                        } else {
+                          if (currentPastMedical === "No DM, No HTN, No surgery") {
+                            next = tag;
+                          } else if (currentPastMedical.includes(tag)) {
+                            const remaining = currentPastMedical
+                              .split(";")
+                              .map((s) => s.trim())
+                              .filter(
+                                (s) =>
+                                  s &&
+                                  s !== tag &&
+                                  s !== "No DM, No HTN, No surgery"
+                              );
+                            next = remaining.join("; ");
+                          } else {
+                            const existing = currentPastMedical
+                              .split(";")
+                              .map((s) => s.trim())
+                              .filter((s) => s && s !== "No DM, No HTN, No surgery");
+                            existing.push(tag);
+                            next = existing.join("; ");
+                          }
+                        }
+                        onClinicalChange({
+                          ...clinical,
+                          patientHistory: {
+                            ...(clinical.patientHistory ?? {}),
+                            pastMedical: next,
+                          },
+                        });
+                      }}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-2xs font-bold"
+                          : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {isActive && tag !== "No DM, No HTN, No surgery" ? `✓ ${tag}` : tag}
+                    </button>
+                  );
+                })}
+
+                {showCustomHistory ? (
+                  <div className="inline-flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={customHistoryInput}
+                      onChange={(e) => setCustomHistoryInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const val = customHistoryInput.trim();
+                          if (val) {
+                            const existing =
+                              currentPastMedical &&
+                              currentPastMedical !== "No DM, No HTN, No surgery"
+                                ? currentPastMedical
+                                    .split(";")
+                                    .map((s) => s.trim())
+                                    .filter(Boolean)
+                                : [];
+                            existing.push(val);
+                            onClinicalChange({
+                              ...clinical,
+                              patientHistory: {
+                                ...(clinical.patientHistory ?? {}),
+                                pastMedical: existing.join("; "),
+                              },
+                            });
+                            setCustomHistoryInput("");
+                            setShowCustomHistory(false);
+                          }
+                        } else if (e.key === "Escape") {
+                          setShowCustomHistory(false);
+                        }
+                      }}
+                      placeholder="e.g. Hypothyroidism"
+                      className="h-6 text-[10px] px-2 rounded-md border border-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-32 bg-white"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = customHistoryInput.trim();
+                        if (val) {
+                          const existing =
+                            currentPastMedical &&
+                            currentPastMedical !== "No DM, No HTN, No surgery"
+                              ? currentPastMedical
+                                  .split(";")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean)
+                              : [];
+                          existing.push(val);
+                          onClinicalChange({
+                            ...clinical,
+                            patientHistory: {
+                              ...(clinical.patientHistory ?? {}),
+                              pastMedical: existing.join("; "),
+                            },
+                          });
+                          setCustomHistoryInput("");
+                          setShowCustomHistory(false);
+                        }
+                      }}
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomHistory(false)}
+                      className="text-[10px] text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomHistory(true)}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-dashed border-slate-300 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                    title="Add custom past medical history"
+                  >
+                    + Custom
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* TWO COLUMN GRID: CHIEF COMPLAINTS & DIAGNOSIS */}
@@ -1081,36 +1230,6 @@ export function DoctorFastConsultation({
               rows={4}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
-            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
-              {complaintNotice ? (
-                <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-in fade-in">
-                  {complaintNotice}
-                </span>
-              ) : clinical.chiefComplaint?.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const raw = clinical.chiefComplaint!.trim();
-                    const parts = raw
-                      .split(/[;\n]+/)
-                      .map((s) => s.trim().replace(/^[•\-\*]\s*/, ""))
-                      .filter((s) => s.length >= 3);
-                    if (parts.length > 0) {
-                      parts.forEach((p) => addCustomComplaint(p));
-                    } else {
-                      addCustomComplaint(raw);
-                    }
-                    setComplaintNotice("Saved to your future suggestions ✓");
-                    setTimeout(() => setComplaintNotice(null), 3000);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-blue-50/90 px-2 py-0.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors cursor-pointer"
-                  title="Save to your future reusable complaints"
-                >
-                  <Icon icon={faStar} className="size-2.5 text-amber-500" />
-                  <span>Save as future suggestion</span>
-                </button>
-              ) : null}
-            </div>
           </div>
         </div>
 
@@ -1297,28 +1416,6 @@ export function DoctorFastConsultation({
                   )}
                 </div>
               )}
-            </div>
-
-            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
-              {diagnosisNotice ? (
-                <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-in fade-in">
-                  {diagnosisNotice}
-                </span>
-              ) : clinical.diagnosis?.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    addCustomDiagnosis(clinical.diagnosis!.trim());
-                    setDiagnosisNotice("Saved to your future diagnoses ✓");
-                    setTimeout(() => setDiagnosisNotice(null), 3000);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50/90 px-2 py-0.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer"
-                  title="Save to your future reusable diagnoses"
-                >
-                  <Icon icon={faStar} className="size-2.5 text-amber-500" />
-                  <span>Save as future diagnosis</span>
-                </button>
-              ) : null}
             </div>
           </div>
         </div>
@@ -1580,36 +1677,6 @@ export function DoctorFastConsultation({
           rows={3}
           className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
         />
-        <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
-          {examNotice ? (
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 animate-in fade-in">
-              {examNotice}
-            </span>
-          ) : clinical.examination?.jointsAndParts?.trim() ? (
-            <button
-              type="button"
-              onClick={() => {
-                const raw = clinical.examination!.jointsAndParts!.trim();
-                const lines = raw
-                  .split("\n")
-                  .map((l) => l.trim().replace(/^[•\-\*]\s*/, ""))
-                  .filter((l) => l.length >= 3);
-                if (lines.length > 0) {
-                  lines.forEach((l) => addCustomExam(l));
-                } else {
-                  addCustomExam(raw);
-                }
-                setExamNotice("Saved to your future findings ✓");
-                setTimeout(() => setExamNotice(null), 3000);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-md bg-amber-50/90 px-2 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
-              title="Save to your future reusable exam findings"
-            >
-              <Icon icon={faStar} className="size-2.5 text-amber-500" />
-              <span>Save as future finding</span>
-            </button>
-          ) : null}
-        </div>
       </div>
 
       {/* CARD 4: MEDICINES & PRESCRIPTION (Rx) - THE DOCTOR'S HEART */}
@@ -2049,36 +2116,6 @@ export function DoctorFastConsultation({
               rows={3}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
-            <div className="mt-1.5 flex flex-wrap items-center justify-end gap-2 text-[11px]">
-              {adviceNotice ? (
-                <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 animate-in fade-in">
-                  {adviceNotice}
-                </span>
-              ) : advice?.trim() ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const raw = advice.trim();
-                    const lines = raw
-                      .split("\n")
-                      .map((l) => l.trim().replace(/^[•\-\*]\s*/, ""))
-                      .filter((l) => l.length >= 3);
-                    if (lines.length > 0) {
-                      lines.forEach((l) => addCustomAdvice(l));
-                    } else {
-                      addCustomAdvice(raw);
-                    }
-                    setAdviceNotice("Saved to your future recommendations ✓");
-                    setTimeout(() => setAdviceNotice(null), 3000);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-50/90 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors cursor-pointer"
-                  title="Save to your future reusable recommendations"
-                >
-                  <Icon icon={faStar} className="size-2.5 text-amber-500" />
-                  <span>Save as future recommendation</span>
-                </button>
-              ) : null}
-            </div>
           </div>
         </div>
 

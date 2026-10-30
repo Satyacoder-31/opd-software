@@ -640,9 +640,7 @@ export function translateExaminationFindings(findings?: string | null, lang: Pdf
  */
 export function translatePastHistory(history?: string | null, lang: PdfLanguage = "en"): string {
   if (!history?.trim()) {
-    return lang === "hi"
-      ? "कोई मधुमेह नहीं, कोई उच्च रक्तचाप नहीं, कोई पूर्व सर्जरी नहीं (No DM, No HTN, No Surgery)"
-      : "No DM, No HTN, No surgery";
+    return "";
   }
   if (lang !== "hi") return history;
 

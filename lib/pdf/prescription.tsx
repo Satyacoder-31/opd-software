@@ -672,52 +672,52 @@ function PatientSafetyAndVitals({
       )}
 
       {/* 2. Past History & Chief Complaints */}
-      <View
-        style={{
-          backgroundColor: "#f8fafc",
-          border: `0.75px solid ${colors.rule}`,
-          borderRadius: 4,
-          padding: 6,
-          marginBottom: 6,
-        }}
-      >
-        {hasChiefComplaint && (
-          <View style={{ flexDirection: "row", marginBottom: 3 }}>
-            <Text
-              style={{
-                fontSize: 7.5,
-                fontFamily: theme.bold,
-                color: colors.accent,
-                width: 95,
-              }}
-            >
-              {i18n.chiefComplaint}:
-            </Text>
-            <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
-              {translateChiefComplaint(props.chiefComplaint, theme.lang)}
-            </Text>
-          </View>
-        )}
-        <View style={{ flexDirection: "row" }}>
-          <Text
-            style={{
-              fontSize: 7.5,
-              fontFamily: theme.bold,
-              color: "#475569",
-              width: 95,
-            }}
-          >
-            {i18n.chronicConditions}:
-          </Text>
-          <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
-            {hasChronic
-              ? translatePastHistory(props.patientChronicConditions, theme.lang)
-              : (theme.lang === "hi"
-                  ? "कोई मधुमेह नहीं, कोई उच्च रक्तचाप नहीं, कोई पूर्व सर्जरी नहीं (No DM, No HTN, No surgery)"
-                  : "No DM, No HTN, No surgery")}
-          </Text>
+      {(hasChiefComplaint || hasChronic) && (
+        <View
+          style={{
+            backgroundColor: "#f8fafc",
+            border: `0.75px solid ${colors.rule}`,
+            borderRadius: 4,
+            padding: 6,
+            marginBottom: 6,
+          }}
+        >
+          {hasChiefComplaint && (
+            <View style={{ flexDirection: "row", marginBottom: hasChronic ? 3 : 0 }}>
+              <Text
+                style={{
+                  fontSize: 7.5,
+                  fontFamily: theme.bold,
+                  color: colors.accent,
+                  width: 95,
+                }}
+              >
+                {i18n.chiefComplaint}:
+              </Text>
+              <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
+                {translateChiefComplaint(props.chiefComplaint, theme.lang)}
+              </Text>
+            </View>
+          )}
+          {hasChronic && (
+            <View style={{ flexDirection: "row" }}>
+              <Text
+                style={{
+                  fontSize: 7.5,
+                  fontFamily: theme.bold,
+                  color: "#475569",
+                  width: 95,
+                }}
+              >
+                {i18n.chronicConditions}:
+              </Text>
+              <Text style={{ fontSize: 8, color: colors.ink, flex: 1 }}>
+                {translatePastHistory(props.patientChronicConditions, theme.lang)}
+              </Text>
+            </View>
+          )}
         </View>
-      </View>
+      )}
 
       {/* 3. Vitals Strip */}
       {hasVitals && (
