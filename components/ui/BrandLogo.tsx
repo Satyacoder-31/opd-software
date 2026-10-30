@@ -58,12 +58,12 @@ export function OrthoIcon({
     >
       <defs>
         <linearGradient id="ortho-grad-primary" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-          <stop stopColor={inverted ? "#38BDF8" : "#0284C7"} />
-          <stop stopColor={inverted ? "#0284C7" : "#0F2E4A"} />
+          <stop stopColor={inverted ? "#C084FC" : "#7C3AED"} />
+          <stop stopColor={inverted ? "#818CF8" : "#4338CA"} />
         </linearGradient>
         <linearGradient id="ortho-grad-accent" x1="12" y1="12" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#38BDF8" />
-          <stop stopColor="#0EA5E9" />
+          <stop stopColor="#E879F9" />
+          <stop stopColor="#6366F1" />
         </linearGradient>
       </defs>
 
@@ -74,8 +74,8 @@ export function OrthoIcon({
         width="42"
         height="42"
         rx="12"
-        fill={inverted ? "rgba(255, 255, 255, 0.1)" : "#F0F7FD"}
-        stroke={inverted ? "rgba(56, 189, 248, 0.4)" : "#BAE6FD"}
+        fill={inverted ? "rgba(255, 255, 255, 0.1)" : "#FAF5FF"}
+        stroke={inverted ? "rgba(192, 132, 252, 0.4)" : "#DDD6FE"}
         strokeWidth="1.5"
       />
 
@@ -100,7 +100,7 @@ export function OrthoIcon({
       />
 
       {/* Center Biomechanical Pivot Dot */}
-      <circle cx="24" cy="24" r="3.5" fill={inverted ? "#38BDF8" : "#0284C7"} />
+      <circle cx="24" cy="24" r="3.5" fill={inverted ? "#C084FC" : "#7C3AED"} />
     </svg>
   );
 }
@@ -119,9 +119,11 @@ export function BrandLogo({
       <span className="flex flex-col leading-none">
         <span
           className={cn(
-            "tracking-tight transition-colors",
+            "tracking-tight transition-colors font-extrabold",
             textClassName,
-            inverted ? "text-white" : "text-[#0B1E33]"
+            inverted
+              ? "text-white"
+              : "bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 bg-clip-text text-transparent"
           )}
         >
           Dr Orthos
@@ -129,9 +131,9 @@ export function BrandLogo({
         {showSubtitle && (
           <span
             className={cn(
-              "uppercase tracking-widest mt-0.5",
+              "uppercase tracking-widest mt-0.5 font-bold",
               subClassName,
-              inverted ? "text-sky-300/80" : "text-sky-700"
+              inverted ? "text-purple-300/80" : "text-purple-600"
             )}
           >
             Hospital OPD System

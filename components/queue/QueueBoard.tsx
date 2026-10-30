@@ -132,7 +132,7 @@ export function QueueBoard({
             <span>Today&apos;s queue</span>
             <Link
               href="/patients/new"
-              className="shrink-0 font-sans text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 text-white shadow-[0_2px_8px_rgba(124,58,237,0.22)] hover:from-purple-500 hover:to-indigo-500 hover:shadow-[0_4px_12px_rgba(124,58,237,0.32)] transition-all"
             >
               Register patient
             </Link>
@@ -148,8 +148,8 @@ export function QueueBoard({
             className={cn(
               "cursor-pointer rounded-xl border p-3.5 transition-all",
               tab === "waiting"
-                ? "border-sky-300 bg-sky-50/70 shadow-xs"
-                : "border-border bg-surface hover:bg-slate-50"
+                ? "border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white shadow-xs ring-1 ring-amber-400/30"
+                : "border-border bg-surface hover:bg-amber-50/20"
             )}
           >
             <div className="flex items-center justify-between text-muted-foreground">
@@ -169,15 +169,15 @@ export function QueueBoard({
             className={cn(
               "cursor-pointer rounded-xl border p-3.5 transition-all",
               tab === "in_progress"
-                ? "border-blue-300 bg-blue-50/70 shadow-xs"
-                : "border-border bg-surface hover:bg-slate-50"
+                ? "border-purple-300 bg-gradient-to-br from-purple-50/90 via-indigo-50/50 to-white shadow-xs ring-1 ring-purple-400/30"
+                : "border-border bg-surface hover:bg-purple-50/20"
             )}
           >
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-900">
                 In Consult
               </span>
-              <span className="size-2 rounded-full bg-blue-600" />
+              <span className="size-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600" />
             </div>
             <div className="mt-1 font-display text-2xl font-bold text-ink">
               {inProgress.length}
@@ -190,8 +190,8 @@ export function QueueBoard({
             className={cn(
               "cursor-pointer rounded-xl border p-3.5 transition-all",
               tab === "completed"
-                ? "border-emerald-300 bg-emerald-50/70 shadow-xs"
-                : "border-border bg-surface hover:bg-slate-50"
+                ? "border-emerald-300 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white shadow-xs ring-1 ring-emerald-400/30"
+                : "border-border bg-surface hover:bg-emerald-50/20"
             )}
           >
             <div className="flex items-center justify-between text-muted-foreground">
@@ -236,7 +236,7 @@ export function QueueBoard({
                   className={cn(
                     "rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
                     selected
-                      ? "bg-primary text-white"
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-2xs"
                       : "bg-slate-200 text-slate-700"
                   )}
                 >

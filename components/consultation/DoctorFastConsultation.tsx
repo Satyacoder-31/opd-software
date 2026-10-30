@@ -577,7 +577,7 @@ export function DoctorFastConsultation({
       {/* TOP ACTION BAR: VIEW PRESCRIPTION & OUTPATIENT SUMMARY */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-2xs">
         <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 text-white font-bold text-sm shadow-xs">
+          <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-500 text-white font-bold text-sm shadow-[0_2px_8px_rgba(124,58,237,0.25)]">
             ⚡
           </span>
           <div>
@@ -634,14 +634,14 @@ export function DoctorFastConsultation({
       </div>
 
       {/* 1-CLICK SUPER TEMPLATES BANNER */}
-      <div className="rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-r from-indigo-50/90 via-sky-50/70 to-indigo-50/90 p-3 shadow-xs">
+      <div className="rounded-2xl border-2 border-purple-200/90 bg-gradient-to-r from-purple-50/90 via-indigo-50/60 to-purple-50/80 p-3 shadow-xs">
         <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs">
               <Icon icon={faWandMagicSparkles} className="size-3.5" />
             </span>
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-950">
                 Clinical Quick Templates
               </span>
               <p className="text-[11px] text-slate-600">
@@ -743,7 +743,7 @@ export function DoctorFastConsultation({
       )}
 
       {/* TOP COMPACT VITALS BAR */}
-      <div className="rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-2xs">
+      <div className="rounded-xl border border-purple-200/70 bg-gradient-to-r from-purple-50/30 via-white to-white p-2.5 shadow-2xs">
         <div className="flex items-center gap-2 mb-1.5">
           <Icon icon={faHeartPulse} className="size-3 text-rose-500" />
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
@@ -1009,7 +1009,7 @@ export function DoctorFastConsultation({
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-blue-500/20">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-purple-50 text-purple-700 ring-1 ring-purple-500/20">
                   <Icon icon={faStethoscope} className="size-3.5" />
                 </span>
                 <span className="text-xs font-bold text-slate-900 tracking-tight">
@@ -1035,9 +1035,9 @@ export function DoctorFastConsultation({
                   <button
                     type="button"
                     onClick={() => setSymptomsMenuOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-colors shadow-2xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/80 px-2.5 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-colors shadow-2xs cursor-pointer"
                   >
-                    <Icon icon={faWandMagicSparkles} className="size-2.5 text-blue-600" />
+                    <Icon icon={faWandMagicSparkles} className="size-2.5 text-purple-600" />
                     <span>Suggestions ({complaintsOptions.length})</span>
                     <Icon icon={symptomsMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-blue-500" />
                   </button>
@@ -1679,10 +1679,10 @@ export function DoctorFastConsultation({
       </div>
 
       {/* CARD 4: MEDICINES & PRESCRIPTION (Rx) - THE DOCTOR'S HEART */}
-      <div className="rounded-2xl border-2 border-violet-200/90 bg-white p-3 md:p-4 shadow-sm">
+      <div className="rounded-2xl border-2 border-purple-200/90 bg-white p-3 md:p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-200/80 mb-3">
           <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-xl bg-violet-600 text-white shadow-xs">
+            <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs">
               <Icon icon={faPills} className="size-3.5" />
             </span>
             <div>
@@ -1698,7 +1698,7 @@ export function DoctorFastConsultation({
             type="button"
             size="sm"
             onClick={handleAddMedicineRow}
-            className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs"
+            className="gap-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-xs"
           >
             <Icon icon={faPlus} className="size-3" />
             Add Medicine

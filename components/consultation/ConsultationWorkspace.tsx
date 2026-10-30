@@ -864,10 +864,10 @@ export function ConsultationWorkspace({
             ) : null}
 
             {previousVisit ? (
-              <div className="border-b border-indigo-200/70 bg-gradient-to-r from-indigo-50/90 via-sky-50/50 to-indigo-50/60 p-3.5 dark:border-indigo-900/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/30 md:p-4">
+              <div className="border-b border-purple-200/70 bg-gradient-to-r from-purple-50/90 via-indigo-50/50 to-purple-50/60 p-3.5 dark:border-indigo-900/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/30 md:p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-sm">
                       <Icon icon={faRotate} className="size-3.5" />
                     </span>
                     <div>

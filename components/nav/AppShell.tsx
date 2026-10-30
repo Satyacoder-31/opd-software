@@ -109,14 +109,14 @@ function SidebarNavLink({
           ? "justify-center p-2 mx-auto w-11 h-11"
           : "gap-2.5 px-3 py-2 mx-2",
         active
-          ? "bg-gradient-to-r from-sky-50 via-sky-50/70 to-white text-sky-950 border border-sky-200/80 shadow-[0_1px_2px_rgba(2,132,199,0.06)]"
-          : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 border border-transparent"
+          ? "bg-gradient-to-r from-purple-50 via-indigo-50/60 to-white text-purple-950 border border-purple-200/80 shadow-[0_1px_3px_rgba(124,58,237,0.1)]"
+          : "text-slate-600 hover:bg-purple-50/40 hover:text-purple-950 border border-transparent"
       )}
     >
       {/* Active accent pill on the left */}
       {active && !collapsed && (
         <span
-          className="absolute -left-2 top-2 bottom-2 w-1 rounded-r-full bg-sky-600 shadow-xs shadow-sky-500/40"
+          className="absolute -left-2 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-purple-600 to-indigo-600 shadow-xs shadow-purple-500/40"
           aria-hidden
         />
       )}
@@ -126,12 +126,12 @@ function SidebarNavLink({
         className={cn(
           "relative flex size-7.5 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
           active
-            ? "bg-sky-600 text-white shadow-xs shadow-sky-500/25"
+            ? "bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs shadow-purple-500/30"
             : "bg-slate-100/90 text-slate-500 group-hover:bg-white group-hover:text-slate-800 group-hover:shadow-2xs"
         )}
       >
         <Icon icon={item.icon} aria-hidden className="size-3.5" />
-        <NavPendingSpinner className="inset-1 size-5 border-sky-600 border-t-transparent" />
+        <NavPendingSpinner className="inset-1 size-5 border-purple-600 border-t-transparent" />
       </div>
 
       {/* Label */}
@@ -285,7 +285,7 @@ function ClinicMark({
   }
 
   return (
-    <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 text-xs font-extrabold text-white shadow-xs ring-1 ring-sky-500/20">
+    <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-950 via-indigo-950 to-slate-900 text-xs font-extrabold text-white shadow-xs ring-1 ring-purple-500/30">
       {clinicName.slice(0, 1).toUpperCase()}
       <span
         className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white bg-emerald-500 shadow-xs"
@@ -400,7 +400,7 @@ export function AppShell({
           ) : (
             <div className="flex items-center justify-between w-full">
               <BrandLogo size="sm" />
-              <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 ring-1 ring-sky-200/80 tracking-wide select-none">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-xs tracking-wider uppercase select-none">
                 OPD
               </span>
             </div>
@@ -412,7 +412,7 @@ export function AppShell({
           <div
             className={cn(
               "group relative flex items-center rounded-xl border border-slate-200/80 bg-white/90 p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150",
-              "hover:border-sky-300/80 hover:bg-sky-50/20 hover:shadow-xs",
+              "hover:border-purple-300/80 hover:bg-purple-50/20 hover:shadow-xs border-l-2 border-l-purple-500/50",
               collapsed ? "justify-center p-2 mx-auto w-11 h-11" : "gap-2.5"
             )}
             title={clinicName}
@@ -507,7 +507,7 @@ export function AppShell({
                 : undefined
             }
           >
-            <div className="relative flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-900 to-sky-950 text-xs font-bold text-white shadow-xs ring-1 ring-slate-200/60">
+            <div className="relative flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-950 to-indigo-950 text-xs font-bold text-white shadow-xs ring-1 ring-purple-400/30">
               {userInitials}
               <span
                 className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full border border-white bg-emerald-500 shadow-xs"
@@ -525,7 +525,7 @@ export function AppShell({
                     className={cn(
                       "inline-block rounded px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider",
                       session.role === "doctor" &&
-                        "bg-sky-50 text-sky-700 ring-1 ring-sky-200/70",
+                        "bg-purple-50 text-purple-700 ring-1 ring-purple-200/70 font-semibold",
                       session.role === "admin" &&
                         "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/70",
                       session.role === "owner" &&
@@ -585,7 +585,7 @@ export function AppShell({
             className={cn(
               "group relative flex w-full items-center rounded-xl text-xs font-medium text-slate-500 transition-all select-none cursor-pointer",
               "hover:bg-slate-100 hover:text-slate-800 active:scale-[0.98]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40",
               collapsed
                 ? "justify-center p-2 mx-auto w-11 h-11"
                 : "gap-2.5 px-3 py-2 mx-2 w-[calc(100%-1rem)]"
@@ -627,7 +627,8 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top utility bar */}
-        <header className="font-nav sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur-sm">
+        <header className="font-nav sticky top-0 z-40 border-b border-border/80 bg-white/95 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-500" />
           <div className="flex items-center gap-3 px-3 py-2.5 md:px-5">
             <div className="flex shrink-0 items-center gap-2 md:hidden">
               <ClinicMark
