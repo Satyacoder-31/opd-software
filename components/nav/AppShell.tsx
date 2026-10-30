@@ -22,6 +22,7 @@ import {
 import { GlobalPatientSearch } from "@/components/nav/GlobalPatientSearch";
 import { ClinicAlertsBell } from "@/components/nav/ClinicAlertsBell";
 import { SyncStatusBadge } from "@/components/nav/SyncStatusBadge";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import {
   PRIMARY_NAV_GROUPS,
   SETTINGS_NAV_ITEM,
@@ -109,8 +110,8 @@ function SidebarNavLink({
           ? "justify-center p-2 mx-auto w-11 h-11"
           : "gap-2.5 px-3 py-2 mx-2",
         active
-          ? "bg-gradient-to-r from-purple-50 via-indigo-50/60 to-white text-purple-950 border border-purple-200/80 shadow-[0_1px_3px_rgba(124,58,237,0.1)]"
-          : "text-slate-600 hover:bg-purple-50/40 hover:text-purple-950 border border-transparent"
+          ? "bg-gradient-to-r from-purple-50 via-indigo-50/60 to-white dark:from-purple-950/70 dark:via-indigo-950/50 dark:to-slate-900/80 text-purple-950 dark:text-purple-200 border border-purple-200/80 dark:border-purple-800/60 shadow-[0_1px_3px_rgba(124,58,237,0.1)]"
+          : "text-slate-600 dark:text-slate-300 hover:bg-purple-50/40 dark:hover:bg-purple-950/40 hover:text-purple-950 dark:hover:text-purple-200 border border-transparent"
       )}
     >
       {/* Active accent pill on the left */}
@@ -136,7 +137,7 @@ function SidebarNavLink({
 
       {/* Label */}
       {!collapsed && (
-        <span className="truncate tracking-tight font-medium text-slate-800 group-hover:text-slate-950">
+        <span className="truncate tracking-tight font-medium text-slate-800 group-hover:text-slate-950 dark:text-slate-200 dark:group-hover:text-white">
           {item.label}
         </span>
       )}
@@ -384,14 +385,14 @@ export function AppShell({
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "font-nav sticky top-0 hidden h-svh shrink-0 flex-col border-r border-slate-200/80 bg-white/95 backdrop-blur-sm transition-[width] duration-200 ease-out md:flex shadow-[1px_0_3px_rgba(0,0,0,0.02)] select-none",
+          "font-nav sticky top-0 hidden h-svh shrink-0 flex-col border-r border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0d1322]/95 backdrop-blur-sm transition-[width] duration-200 ease-out md:flex shadow-[1px_0_3px_rgba(0,0,0,0.02)] select-none",
           collapsed ? "w-18" : "w-[18rem]"
         )}
       >
         {/* Brand Header */}
         <div
           className={cn(
-            "flex items-center border-b border-slate-200/70",
+            "flex items-center border-b border-slate-200/70 dark:border-slate-800/70",
             collapsed ? "justify-center px-2 py-3.5" : "justify-between px-4 py-3.5"
           )}
         >
@@ -411,7 +412,7 @@ export function AppShell({
         <div className={cn(collapsed ? "p-2" : "px-3 pt-3 pb-1")}>
           <div
             className={cn(
-              "group relative flex items-center rounded-xl border border-slate-200/80 bg-white/90 p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150",
+              "group relative flex items-center rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-150",
               "hover:border-purple-300/80 hover:bg-purple-50/20 hover:shadow-xs border-l-2 border-l-purple-500/50",
               collapsed ? "justify-center p-2 mx-auto w-11 h-11" : "gap-2.5"
             )}
@@ -421,7 +422,7 @@ export function AppShell({
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <p
-                  className="truncate text-xs font-bold text-slate-900 tracking-tight leading-snug"
+                  className="truncate text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-snug"
                   title={clinicName}
                 >
                   {clinicName}
@@ -494,11 +495,11 @@ export function AppShell({
         </nav>
 
         {/* Clinician Profile & Footer Navigation */}
-        <div className="mt-auto border-t border-slate-200/80 p-2 space-y-1 bg-slate-50/50">
+        <div className="mt-auto border-t border-slate-200/80 dark:border-slate-800/80 p-2 space-y-1 bg-slate-50/50 dark:bg-slate-950/50">
           {/* Clinician Card */}
           <div
             className={cn(
-              "group relative flex items-center rounded-xl border border-slate-200/70 bg-white/80 p-2 transition-all hover:border-slate-300 hover:bg-white hover:shadow-2xs",
+              "group relative flex items-center rounded-xl border border-slate-200/70 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-2 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-900 hover:shadow-2xs",
               collapsed ? "justify-center p-1.5 mx-auto w-11 h-11" : "gap-2.5"
             )}
             title={
@@ -517,7 +518,7 @@ export function AppShell({
 
             {!collapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-slate-800 tracking-tight">
+                <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 tracking-tight">
                   {session.name || "Doctor"}
                 </p>
                 <div className="flex items-center gap-1.5 mt-0.5">
@@ -603,7 +604,7 @@ export function AppShell({
             </div>
             {!collapsed ? (
               <div className="flex flex-1 items-center justify-between">
-                <span className="font-medium text-slate-700 group-hover:text-slate-950">
+                <span className="font-medium text-slate-700 group-hover:text-slate-950 dark:text-slate-300 dark:group-hover:text-white">
                   Collapse
                 </span>
                 <kbd className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-semibold text-slate-400 shadow-2xs">
@@ -627,7 +628,7 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top utility bar */}
-        <header className="font-nav sticky top-0 z-40 border-b border-border/80 bg-white/95 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+        <header className="font-nav sticky top-0 z-40 border-b border-border/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0d1322]/95 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-500" />
           <div className="flex items-center gap-3 px-3 py-2.5 md:px-5">
             <div className="flex shrink-0 items-center gap-2 md:hidden">
@@ -652,6 +653,7 @@ export function AppShell({
                 className="max-w-none md:hidden"
               />
 
+              <ThemeSwitcher />
               <SyncStatusBadge clinicId={session.clinicId} />
               <ClinicAlertsBell alerts={alerts} />
             </div>
@@ -662,7 +664,7 @@ export function AppShell({
 
         {/* Mobile bottom nav */}
         <nav
-          className="font-nav fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
+          className="font-nav fixed inset-x-0 bottom-0 z-40 border-t border-border dark:border-slate-800 bg-white/95 dark:bg-[#0d1322]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden"
           aria-label="Primary"
           aria-busy={navigating || undefined}
         >

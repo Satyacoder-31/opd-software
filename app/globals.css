@@ -128,14 +128,32 @@
     background-color: #1e3a5f;
   }
 
-  /* Crisp modern wash for working surfaces with subtle purple & indigo ambient mesh */
-  .tint-soft {
+  /* Option 1: White Background — Crisp modern wash with subtle royal purple & indigo ambient mesh */
+  .tint-soft,
+  html:not(.dark) body,
+  html:not(.dark) .tint-soft {
     background-color: #f8fafc;
     background-image:
-      radial-gradient(at 0% 0%, rgba(147, 51, 234, 0.045) 0px, transparent 45%),
-      radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.055) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(168, 85, 247, 0.035) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.03) 0px, transparent 40%);
+      radial-gradient(ellipse 90% 50% at 50% -5%, rgba(147, 51, 234, 0.065) 0px, transparent 65%),
+      radial-gradient(circle at 5% 95%, rgba(99, 102, 241, 0.055) 0px, transparent 50%),
+      radial-gradient(circle at 95% 85%, rgba(217, 70, 239, 0.04) 0px, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.025) 0px, transparent 55%);
+    background-attachment: fixed;
+  }
+
+  /* Option 2: Dark Background — Deep Obsidian Midnight with glowing cosmic violet, electric indigo & cyan nebula */
+  html.dark body,
+  html.dark .tint-soft,
+  .dark .tint-soft,
+  [data-theme="dark"] body,
+  [data-theme="dark"] .tint-soft {
+    background-color: #090d16;
+    background-image:
+      radial-gradient(ellipse 85% 60% at 50% -10%, rgba(147, 51, 234, 0.22) 0px, transparent 65%),
+      radial-gradient(circle at 10% 90%, rgba(79, 70, 229, 0.18) 0px, transparent 55%),
+      radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
+      radial-gradient(circle at 50% 60%, rgba(192, 132, 252, 0.08) 0px, transparent 60%),
+      linear-gradient(180deg, #090d16 0%, #0c1220 50%, #070a12 100%);
     background-attachment: fixed;
   }
 
@@ -247,35 +265,35 @@
 }
 
 .dark {
-  --background: #071322;
+  --background: #090d16;
   --foreground: #f8fafc;
-  --card: #0b1f33;
+  --card: #111827;
   --card-foreground: #f8fafc;
-  --popover: #0b1f33;
+  --popover: #111827;
   --popover-foreground: #f8fafc;
-  --primary: #38bdf8;
-  --primary-foreground: #071322;
-  --secondary: #132a40;
+  --primary: #a855f7;
+  --primary-foreground: #ffffff;
+  --secondary: #1e1b4b;
   --secondary-foreground: #f8fafc;
-  --muted: #132a40;
+  --muted: #1e293b;
   --muted-foreground: #94a3b8;
-  --accent: #0ea5e9;
+  --accent: #8b5cf6;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
-  --border: #1e3a5f;
-  --input: #1e3a5f;
-  --ring: #38bdf8;
-  --chart-1: #38bdf8;
-  --chart-2: #10b981;
-  --chart-3: #f59e0b;
+  --border: #1f293d;
+  --input: #1f293d;
+  --ring: #c084fc;
+  --chart-1: #c084fc;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
   --chart-4: #60a5fa;
-  --chart-5: #ef4444;
-  --sidebar: #0b1f33;
+  --chart-5: #f87171;
+  --sidebar: #0d1322;
   --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #38bdf8;
-  --sidebar-primary-foreground: #071322;
-  --sidebar-accent: #132a40;
-  --sidebar-accent-foreground: #38bdf8;
-  --sidebar-border: #1e3a5f;
-  --sidebar-ring: #38bdf8;
+  --sidebar-primary: #a855f7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e1b4b;
+  --sidebar-accent-foreground: #c084fc;
+  --sidebar-border: #1f293d;
+  --sidebar-ring: #c084fc;
 }

@@ -575,7 +575,7 @@ export function DoctorFastConsultation({
   return (
     <div className="flex flex-col gap-3 p-3 md:p-4 max-w-7xl mx-auto">
       {/* TOP ACTION BAR: VIEW PRESCRIPTION & OUTPATIENT SUMMARY */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-2xs">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-3 shadow-2xs">
         <div className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-500 text-white font-bold text-sm shadow-[0_2px_8px_rgba(124,58,237,0.25)]">
             ⚡
@@ -634,7 +634,7 @@ export function DoctorFastConsultation({
       </div>
 
       {/* 1-CLICK SUPER TEMPLATES BANNER */}
-      <div className="rounded-2xl border-2 border-purple-200/90 bg-gradient-to-r from-purple-50/90 via-indigo-50/60 to-purple-50/80 p-3 shadow-xs">
+      <div className="rounded-2xl border-2 border-purple-200/90 dark:border-purple-900/70 bg-gradient-to-r from-purple-50/90 via-indigo-50/60 to-purple-50/80 dark:from-purple-950/60 dark:via-indigo-950/40 dark:to-purple-950/50 p-3 shadow-xs">
         <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs">
@@ -743,7 +743,7 @@ export function DoctorFastConsultation({
       )}
 
       {/* TOP COMPACT VITALS BAR */}
-      <div className="rounded-xl border border-purple-200/70 bg-gradient-to-r from-purple-50/30 via-white to-white p-2.5 shadow-2xs">
+      <div className="rounded-xl border border-purple-200/70 dark:border-slate-800 bg-gradient-to-r from-purple-50/30 via-white to-white dark:from-purple-950/30 dark:via-slate-900 dark:to-slate-900 p-2.5 shadow-2xs">
         <div className="flex items-center gap-2 mb-1.5">
           <Icon icon={faHeartPulse} className="size-3 text-rose-500" />
           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
@@ -1005,7 +1005,7 @@ export function DoctorFastConsultation({
       {/* TWO COLUMN GRID: CHIEF COMPLAINTS & DIAGNOSIS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* CARD 1: CHIEF COMPLAINTS & SYMPTOMS */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative">
+        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
@@ -1233,7 +1233,7 @@ export function DoctorFastConsultation({
         </div>
 
         {/* CARD 2: CLINICAL DIAGNOSIS */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={diagnosisRef}>
+        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={diagnosisRef}>
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
@@ -1679,7 +1679,7 @@ export function DoctorFastConsultation({
       </div>
 
       {/* CARD 4: MEDICINES & PRESCRIPTION (Rx) - THE DOCTOR'S HEART */}
-      <div className="rounded-2xl border-2 border-purple-200/90 bg-white p-3 md:p-4 shadow-sm">
+      <div className="rounded-2xl border-2 border-purple-200/90 dark:border-purple-900/60 bg-white dark:bg-slate-900 p-3 md:p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-200/80 mb-3">
           <div className="flex items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs">
@@ -1715,7 +1715,7 @@ export function DoctorFastConsultation({
             return (
               <div
                 key={index}
-                className="rounded-xl border border-slate-200/90 bg-slate-50/50 p-2.5 transition-all hover:border-violet-300"
+                className="rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/40 p-2.5 transition-all hover:border-purple-400"
               >
                 {/* Row Header: Number, Drug Name, Remove */}
                 <div className="flex items-center gap-2 mb-2">

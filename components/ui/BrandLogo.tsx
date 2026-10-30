@@ -123,7 +123,7 @@ export function BrandLogo({
             textClassName,
             inverted
               ? "text-white"
-              : "bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 bg-clip-text text-transparent"
+              : "bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 dark:from-purple-200 dark:via-indigo-100 dark:to-white bg-clip-text text-transparent"
           )}
         >
           Dr Orthos
@@ -133,7 +133,7 @@ export function BrandLogo({
             className={cn(
               "uppercase tracking-widest mt-0.5 font-bold",
               subClassName,
-              inverted ? "text-purple-300/80" : "text-purple-600"
+              inverted ? "text-purple-300/80" : "text-purple-600 dark:text-purple-300"
             )}
           >
             Hospital OPD System

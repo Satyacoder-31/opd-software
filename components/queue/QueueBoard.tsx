@@ -148,12 +148,12 @@ export function QueueBoard({
             className={cn(
               "cursor-pointer rounded-xl border p-3.5 transition-all",
               tab === "waiting"
-                ? "border-amber-300 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white shadow-xs ring-1 ring-amber-400/30"
-                : "border-border bg-surface hover:bg-amber-50/20"
+                ? "border-amber-300 dark:border-amber-500/40 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white dark:from-amber-950/40 dark:via-orange-950/20 dark:to-slate-900 shadow-xs ring-1 ring-amber-400/30"
+                : "border-border bg-surface dark:bg-slate-900/60 hover:bg-amber-50/20 dark:hover:bg-amber-950/20"
             )}
           >
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-sky-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">
                 Waiting
               </span>
               <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
@@ -169,12 +169,12 @@ export function QueueBoard({
             className={cn(
               "cursor-pointer rounded-xl border p-3.5 transition-all",
               tab === "in_progress"
-                ? "border-purple-300 bg-gradient-to-br from-purple-50/90 via-indigo-50/50 to-white shadow-xs ring-1 ring-purple-400/30"
-                : "border-border bg-surface hover:bg-purple-50/20"
+                ? "border-purple-300 dark:border-purple-500/40 bg-gradient-to-br from-purple-50/90 via-indigo-50/50 to-white dark:from-purple-950/40 dark:via-indigo-950/20 dark:to-slate-900 shadow-xs ring-1 ring-purple-400/30"
+                : "border-border bg-surface dark:bg-slate-900/60 hover:bg-purple-50/20 dark:hover:bg-purple-950/20"
             )}
           >
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-900">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-900 dark:text-purple-300">
                 In Consult
               </span>
               <span className="size-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600" />
@@ -190,12 +190,12 @@ export function QueueBoard({
             className={cn(
               "cursor-pointer rounded-xl border p-3.5 transition-all",
               tab === "completed"
-                ? "border-emerald-300 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white shadow-xs ring-1 ring-emerald-400/30"
-                : "border-border bg-surface hover:bg-emerald-50/20"
+                ? "border-emerald-300 dark:border-emerald-500/40 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-slate-900 shadow-xs ring-1 ring-emerald-400/30"
+                : "border-border bg-surface dark:bg-slate-900/60 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20"
             )}
           >
             <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
                 Completed
               </span>
               <span className="size-2 rounded-full bg-emerald-500" />
@@ -203,7 +203,7 @@ export function QueueBoard({
             <div className="mt-1 font-display text-2xl font-bold text-ink">
               {completed.length}
             </div>
-            <span className="text-[11px] text-emerald-700 font-medium">ready for billing</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">ready for billing</span>
           </div>
         </div>
       </div>
@@ -227,8 +227,8 @@ export function QueueBoard({
                   "inline-flex min-h-11 flex-1 items-center justify-center gap-2 px-2 text-sm font-semibold transition-[background-color,color] duration-150",
                   "border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                   selected
-                    ? "border-primary bg-white text-primary shadow-xs"
-                    : "border-transparent text-muted-foreground hover:bg-white/70 hover:text-ink"
+                    ? "border-primary bg-white dark:bg-slate-900 text-primary dark:text-purple-300 shadow-xs"
+                    : "border-transparent text-muted-foreground hover:bg-white/70 dark:hover:bg-slate-800/70 hover:text-ink"
                 )}
               >
                 <span>{item.label}</span>
@@ -237,7 +237,7 @@ export function QueueBoard({
                     "rounded-full px-2 py-0.5 text-xs font-bold tabular-nums",
                     selected
                       ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-2xs"
-                      : "bg-slate-200 text-slate-700"
+                      : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                   )}
                 >
                   {item.count}
