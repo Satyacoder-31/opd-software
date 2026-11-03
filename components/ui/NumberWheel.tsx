@@ -8,6 +8,8 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
 const ITEM_WIDTH = 44;
@@ -38,6 +40,12 @@ export function NumberWheel({
   const suppressScrollRef = useRef(true);
   const userInteractedRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  
+  // Mouse drag support for PC users
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const scrollLeftRef = useRef(0);
+
   const items = useRef(
     Array.from({ length: max - min + 1 }, (_, index) => min + index)
   ).current;
@@ -104,6 +112,24 @@ export function NumberWheel({
     return () => cancelAnimationFrame(frame);
   }, [defaultIndex, edgePad, items.length, min, scrollToIndex, value]);
 
+  // Non-passive wheel event listener for PC mouse scrolling
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Prevent parent document vertical scroll when hovering over the wheel
+      e.preventDefault();
+      e.stopPropagation();
+      userInteractedRef.current = true;
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      el.scrollLeft += delta;
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []);
+
   function handleScroll() {
     if (suppressScrollRef.current || disabled) return;
 
@@ -141,23 +167,88 @@ export function NumberWheel({
     }
   }
 
+  // Mouse Drag to Scroll on PC
+  function handleMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    if (disabled || !containerRef.current) return;
+    isDraggingRef.current = true;
+    startXRef.current = e.pageX - containerRef.current.offsetLeft;
+    scrollLeftRef.current = containerRef.current.scrollLeft;
+    userInteractedRef.current = true;
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!isDraggingRef.current || !containerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - containerRef.current.offsetLeft;
+    const walk = (x - startXRef.current) * 1.5;
+    containerRef.current.scrollLeft = scrollLeftRef.current - walk;
+  }
+
+  function handleMouseUpOrLeave() {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      handleScroll();
+    }
+  }
+
   return (
     <div
       ref={rootRef}
-      className={cn("relative h-11 w-full select-none", className)}
+      className={cn("group relative h-11 w-full select-none", className)}
     >
+      {/* Center active indicator highlight */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-11 -translate-x-1/2 rounded-sm border border-primary/25 bg-primary/5"
+        className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-11 -translate-x-1/2 rounded-lg border border-primary/40 bg-primary/10 shadow-xs"
+      />
+
+      {/* Fade edges */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-background via-background/80 to-transparent"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-linear-to-r from-background via-background/85 to-transparent"
+        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-background via-background/80 to-transparent"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-linear-to-l from-background via-background/85 to-transparent"
-      />
+
+      {/* Left scroll button for PC click navigation */}
+      <button
+        type="button"
+        aria-label="Previous number"
+        tabIndex={-1}
+        disabled={disabled || activeIndex <= 0}
+        onClick={(e) => {
+          e.preventDefault();
+          commitIndex(activeIndex - 1);
+        }}
+        className={cn(
+          "absolute left-1 top-1/2 -translate-y-1/2 z-20 flex size-7 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-sm transition-all hover:bg-muted active:scale-95 cursor-pointer",
+          (disabled || activeIndex <= 0) && "opacity-20 pointer-events-none"
+        )}
+        title="Scroll left (-1)"
+      >
+        <Icon icon={faChevronLeft} className="size-3 text-slate-700 dark:text-slate-200" />
+      </button>
+
+      {/* Right scroll button for PC click navigation */}
+      <button
+        type="button"
+        aria-label="Next number"
+        tabIndex={-1}
+        disabled={disabled || activeIndex >= items.length - 1}
+        onClick={(e) => {
+          e.preventDefault();
+          commitIndex(activeIndex + 1);
+        }}
+        className={cn(
+          "absolute right-1 top-1/2 -translate-y-1/2 z-20 flex size-7 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-sm transition-all hover:bg-muted active:scale-95 cursor-pointer",
+          (disabled || activeIndex >= items.length - 1) && "opacity-20 pointer-events-none"
+        )}
+        title="Scroll right (+1)"
+      >
+        <Icon icon={faChevronRight} className="size-3 text-slate-700 dark:text-slate-200" />
+      </button>
 
       <div
         ref={containerRef}
@@ -168,20 +259,18 @@ export function NumberWheel({
         onPointerDown={() => {
           userInteractedRef.current = true;
         }}
-        onWheel={(event) => {
-          userInteractedRef.current = true;
-          if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-            event.currentTarget.scrollLeft += event.deltaY;
-          }
-        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
         onScroll={handleScroll}
         onKeyDown={handleKeyDown}
         className={cn(
-          "scrollbar-hide h-full overflow-x-auto overflow-y-hidden scroll-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+          "scrollbar-hide h-full overflow-x-auto overflow-y-hidden scroll-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 cursor-grab active:cursor-grabbing",
           disabled && "pointer-events-none opacity-50"
         )}
         style={{
-          scrollSnapType: "x mandatory",
+          scrollSnapType: isDraggingRef.current ? "none" : "x mandatory",
           paddingLeft: edgePad,
           paddingRight: edgePad,
         }}
@@ -195,17 +284,18 @@ export function NumberWheel({
                 id={`number-wheel-option-${num}`}
                 role="option"
                 aria-selected={isActive}
+                onClick={() => commitIndex(index)}
                 className={cn(
-                  "flex shrink-0 snap-center items-center justify-center text-base tabular-nums transition-[color,font-weight]",
+                  "flex shrink-0 snap-center items-center justify-center text-base tabular-nums transition-all cursor-pointer",
                   isActive
-                    ? "font-semibold text-ink"
-                    : "text-muted-foreground/70"
+                    ? "font-extrabold text-primary text-lg scale-105"
+                    : "text-muted-foreground/70 hover:text-foreground hover:scale-105"
                 )}
                 style={{ width: ITEM_WIDTH }}
               >
                 {num}
                 {suffix && isActive ? (
-                  <span className="ml-0.5 text-xs font-normal text-muted-foreground">
+                  <span className="ml-0.5 text-xs font-semibold text-primary/80">
                     {suffix}
                   </span>
                 ) : null}

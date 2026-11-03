@@ -158,10 +158,10 @@ export function QueueBoard({
               </span>
               <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
             </div>
-            <div className="mt-1 font-display text-2xl font-bold text-ink">
+            <div className="mt-1 font-display text-2xl font-bold text-ink dark:text-white">
               {waiting.length}
             </div>
-            <span className="text-[11px] text-muted-foreground">in waiting room</span>
+            <span className="text-[11px] text-muted-foreground dark:text-slate-300">in waiting room</span>
           </div>
 
           <div
@@ -179,10 +179,10 @@ export function QueueBoard({
               </span>
               <span className="size-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600" />
             </div>
-            <div className="mt-1 font-display text-2xl font-bold text-ink">
+            <div className="mt-1 font-display text-2xl font-bold text-ink dark:text-white">
               {inProgress.length}
             </div>
-            <span className="text-[11px] text-muted-foreground">with doctor</span>
+            <span className="text-[11px] text-muted-foreground dark:text-slate-300">with doctor</span>
           </div>
 
           <div
@@ -200,10 +200,10 @@ export function QueueBoard({
               </span>
               <span className="size-2 rounded-full bg-emerald-500" />
             </div>
-            <div className="mt-1 font-display text-2xl font-bold text-ink">
+            <div className="mt-1 font-display text-2xl font-bold text-ink dark:text-white">
               {completed.length}
             </div>
-            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">ready for billing</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium">ready for billing</span>
           </div>
         </div>
       </div>
@@ -212,7 +212,7 @@ export function QueueBoard({
         <div
           role="tablist"
           aria-label="Queue status"
-          className="flex w-full bg-surface-muted/60"
+          className="flex w-full bg-surface-muted/60 dark:bg-slate-900/90"
         >
           {tabs.map((item) => {
             const selected = tab === item.id;
@@ -228,7 +228,7 @@ export function QueueBoard({
                   "border-b-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary",
                   selected
                     ? "border-primary bg-white dark:bg-slate-900 text-primary dark:text-purple-300 shadow-xs"
-                    : "border-transparent text-muted-foreground hover:bg-white/70 dark:hover:bg-slate-800/70 hover:text-ink"
+                    : "border-transparent text-muted-foreground dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-800/70 hover:text-ink dark:hover:text-white"
                 )}
               >
                 <span>{item.label}</span>
@@ -391,8 +391,8 @@ function QueueTabSummary({
 
   return (
     <div className="border-b border-border bg-card px-4 py-2.5 md:px-8">
-      <p className="text-sm text-muted-foreground">
-        <span className="font-medium tabular-nums text-ink">{count}</span>
+      <p className="text-sm text-muted-foreground dark:text-slate-300">
+        <span className="font-medium tabular-nums text-ink dark:text-white">{count}</span>
         {" "}
         {count === 1 ? singular : plural}
       </p>
@@ -475,8 +475,8 @@ function QueueCard({
           className={cn(
             "flex min-w-[2.75rem] flex-col items-center justify-center rounded-xl px-2 py-1.5 text-center",
             isWaiting
-              ? "bg-amber-100 text-amber-800 border border-amber-200"
-              : "bg-blue-100 text-blue-800 border border-blue-200"
+              ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800/60"
+              : "bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800/60"
           )}
           aria-label={`Token ${item.tokenNumber}`}
         >
@@ -492,7 +492,7 @@ function QueueCard({
             <Link
               href={`/patients/${item.patient.id}`}
               prefetch={false}
-              className="block truncate font-bold text-[15px] text-ink hover:text-primary transition-colors leading-snug"
+              className="block truncate font-bold text-[15px] text-ink dark:text-white hover:text-primary transition-colors leading-snug"
             >
               {item.patient.name}
             </Link>
@@ -517,21 +517,21 @@ function QueueCard({
               <MetaPill
                 icon={faPhone}
                 text={phone}
-                color="border-slate-200 bg-slate-50 text-slate-600"
+                color="border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
               />
             )}
             {ageLabel && (
               <MetaPill
                 icon={faVenusMars}
                 text={ageLabel}
-                color="border-violet-200 bg-violet-50 text-violet-700"
+                color="border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300"
               />
             )}
             {doctorName && (
               <MetaPill
                 icon={faUserDoctor}
                 text={`Dr. ${doctorName}`}
-                color="border-teal-200 bg-teal-50 text-teal-700"
+                color="border-teal-200 dark:border-teal-800/60 bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300"
               />
             )}
           </div>
@@ -547,7 +547,7 @@ function QueueCard({
       {/* Action footer */}
       <div className={cn(
         "flex items-center gap-2 border-t px-5 py-2.5 pl-6",
-        isWaiting ? "border-amber-100 bg-amber-50/30" : "border-blue-100 bg-blue-50/30"
+        isWaiting ? "border-amber-100 dark:border-slate-800 bg-amber-50/30 dark:bg-slate-900/50" : "border-blue-100 dark:border-slate-800 bg-blue-50/30 dark:bg-slate-900/50"
       )}>
         {isWaiting && canStart && (
           <Button
@@ -633,7 +633,7 @@ function CompletedCard({
             <Link
               href={`/patients/${item.patient.id}`}
               prefetch={false}
-              className="block truncate font-bold text-[15px] text-ink hover:text-primary transition-colors leading-snug"
+              className="block truncate font-bold text-[15px] text-ink dark:text-white hover:text-primary transition-colors leading-snug"
             >
               {item.patient.name}
             </Link>

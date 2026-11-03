@@ -62,7 +62,7 @@ export function PageHeader({
               >
                 <Icon icon={faChevronLeft} className="size-4" aria-hidden />
               </Link>
-              <h1 className="min-w-0 font-display text-2xl font-semibold text-ink whitespace-nowrap">
+              <h1 className="min-w-0 font-display text-2xl font-semibold text-ink dark:text-white whitespace-nowrap">
                 {title}
               </h1>
               {backAccessory}
@@ -82,7 +82,7 @@ export function PageHeader({
                   {backAccessory}
                 </div>
               ) : null}
-              <h1 className="font-display text-2xl font-semibold text-ink whitespace-nowrap">
+              <h1 className="font-display text-2xl font-semibold text-ink dark:text-white whitespace-nowrap">
                 {title}
               </h1>
             </>
