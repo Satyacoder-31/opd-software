@@ -124,7 +124,7 @@ async function createMainWindow() {
             try {
               await mainWindow?.webContents.session.clearCache();
             } catch {}
-            mainWindow?.loadURL(`${PRODUCTION_CLOUD_BASE}/queue`, {
+            mainWindow?.loadURL(`${PRODUCTION_CLOUD_BASE}/login`, {
               extraHeaders: "pragma: no-cache\nCache-Control: no-cache\n",
             });
           },
@@ -135,7 +135,7 @@ async function createMainWindow() {
             try {
               await mainWindow?.webContents.session.clearCache();
             } catch {}
-            mainWindow?.loadURL(`${LOCAL_SERVER_BASE}/queue`, {
+            mainWindow?.loadURL(`${LOCAL_SERVER_BASE}/login`, {
               extraHeaders: "pragma: no-cache\nCache-Control: no-cache\n",
             });
           },
@@ -197,14 +197,14 @@ async function createMainWindow() {
     }
 
     // Determine target URL: prefer local server if running, else Cloud server
-    let targetUrl = `${PRODUCTION_CLOUD_BASE}/queue`;
+    let targetUrl = `${PRODUCTION_CLOUD_BASE}/login`;
     if (process.env.ELECTRON_LOCAL === "1") {
-      targetUrl = `${LOCAL_SERVER_BASE}/queue`;
+      targetUrl = `${LOCAL_SERVER_BASE}/login`;
       await pollServer(LOCAL_SERVER_BASE);
     } else {
       const isLocalActive = await checkLocalServer();
       if (isLocalActive) {
-        targetUrl = `${LOCAL_SERVER_BASE}/queue`;
+        targetUrl = `${LOCAL_SERVER_BASE}/login`;
       }
     }
 

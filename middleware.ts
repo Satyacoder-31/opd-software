@@ -77,8 +77,9 @@ function nextWithCleanHeaders(
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // The software is for the hospital, not patients — redirect public patient portal routes to login
+  // The software is for the hospital OPD — redirect landing root and public patient portal routes directly to login
   if (
+    pathname === "/" ||
     pathname === "/portal" ||
     pathname.startsWith("/portal/") ||
     pathname === "/clinics" ||

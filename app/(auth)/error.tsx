@@ -45,10 +45,10 @@ export default function AuthError({
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button onClick={reset}>Try again</Button>
         <Link
-          href="/"
+          href="/login"
           className="inline-flex min-h-11 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent text-ink"
         >
-          Return Home
+          Return to Sign In
         </Link>
       </div>
     </div>
