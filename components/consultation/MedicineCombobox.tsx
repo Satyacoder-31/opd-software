@@ -317,24 +317,11 @@ export function MedicineCombobox({
                         </span>
                       ) : null}
                     </span>
-                    <span className="shrink-0 flex items-center gap-1.5 text-xs">
-                      {item.suggestion.stockQuantity !== undefined ? (
-                        item.suggestion.stockQuantity > (item.suggestion.reorderLevel ?? 10) ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                            Stock: {item.suggestion.stockQuantity}
-                          </span>
-                        ) : item.suggestion.stockQuantity > 0 ? (
-                          <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
-                            Low: {item.suggestion.stockQuantity}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-700 dark:text-rose-400">
-                            Out of stock
-                          </span>
-                        )
-                      ) : null}
-                      <span className="text-muted-foreground">{item.badge}</span>
-                    </span>
+                    {item.badge ? (
+                      <span className="shrink-0 flex items-center text-xs text-muted-foreground">
+                        {item.badge}
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </>

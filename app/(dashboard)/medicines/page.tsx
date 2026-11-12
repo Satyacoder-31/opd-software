@@ -3,8 +3,8 @@ import { MedicinesDashboard } from "@/components/medicines/MedicinesDashboard";
 import { PageBody, PageHeader, PageShell } from "@/components/ui/PageShell";
 
 export const metadata = {
-  title: "Medicines & Pharmacy Stock | Dr. Ortho OPD",
-  description: "Manage clinic medicine catalog, inventory stocks, batches, and consultation dispensing.",
+  title: "Medicines Directory | Dr. Ortho OPD",
+  description: "Global drug catalog master, generic formulations, dosages, and prescribing templates.",
 };
 
 export default async function MedicinesPage() {
@@ -17,8 +17,8 @@ export default async function MedicinesPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Medicines & Pharmacy Inventory"
-        description="Catalog master, real-time stock balances, batch & expiry tracking, and consultation dispensing"
+        title="Medicines Directory"
+        description="Global drug catalog master, generic salts, therapeutic classes, and consultation prescribing templates"
       />
       <PageBody>
         <MedicinesDashboard

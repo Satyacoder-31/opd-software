@@ -166,17 +166,9 @@ export function EditMedicineModal({
 
           <div className="space-y-3 pt-3 border-t border-border">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Inventory & Location
+              Pricing, Batch & Storage Location (Optional)
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <Input
-                label="Reorder Alert Level *"
-                type="number"
-                min="0"
-                required
-                value={form.reorderLevel}
-                onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Selling Price (MRP ₹)"
                 type="number"

@@ -37,8 +37,8 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
     manufacturer: "",
     batchNumber: "",
     expiryDate: "",
-    stockQuantity: "100",
-    reorderLevel: "15",
+    stockQuantity: "999",
+    reorderLevel: "0",
     unitPrice: "",
     purchasePrice: "",
     rackLocation: "",
@@ -135,7 +135,7 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
         <header className="border-b border-border pb-3 mb-4 shrink-0">
           <h2 className="text-xl font-semibold text-ink">Add New Medicine</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Register a medicine into the clinic pharmacy catalog and set initial inventory.
+            Register a medicine into the clinic catalog with prescribing defaults.
           </p>
         </header>
 
@@ -187,35 +187,17 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
 
           <div className="space-y-3 pt-3 border-t border-border">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Inventory, Stock & Pricing
+              Batch, Expiry & Pricing (Optional)
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Initial Stock *"
-                type="number"
-                min="0"
-                required
-                value={form.stockQuantity}
-                onChange={(e) => setForm({ ...form, stockQuantity: e.target.value })}
-                placeholder="100"
-              />
-              <Input
-                label="Reorder Level *"
-                type="number"
-                min="0"
-                required
-                value={form.reorderLevel}
-                onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })}
-                placeholder="15"
-              />
-              <Input
-                label="MRP / Sale (₹)"
+                label="MRP / Sale Price (₹)"
                 type="number"
                 min="0"
                 step="0.01"
                 value={form.unitPrice}
                 onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-                placeholder="180"
+                placeholder="e.g. 180"
               />
               <Input
                 label="Cost Price (₹)"
@@ -224,7 +206,7 @@ export function AddMedicineModal({ open, onClose, onSuccess }: AddMedicineModalP
                 step="0.01"
                 value={form.purchasePrice}
                 onChange={(e) => setForm({ ...form, purchasePrice: e.target.value })}
-                placeholder="120"
+                placeholder="e.g. 120"
               />
             </div>
 

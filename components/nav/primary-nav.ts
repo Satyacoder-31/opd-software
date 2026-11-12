@@ -60,7 +60,7 @@ export const PRIMARY_NAV_GROUPS: readonly PrimaryNavGroup[] = [
       },
       {
         href: "/medicines",
-        label: "Medicines & Stock",
+        label: "Medicines",
         permission: "drugs.search",
         icon: faPills,
       },
