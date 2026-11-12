@@ -1,7 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, Image } from "@react-pdf/renderer";
 import type { Style } from "@react-pdf/types";
-import type { Medicine, Vitals } from "@/lib/types";
+import type { Medicine, PlasterBandageItem, Vitals } from "@/lib/types";
 import { getGenericCompositionForDrug } from "@/lib/drug-catalog";
 import {
   resolvePrescriptionLayout,
@@ -23,6 +23,10 @@ import {
   translateAdviceLine,
   translatePastHistory,
   translateDoctorSpecialty,
+  translatePlasterName,
+  translatePlasterSite,
+  translatePlasterDuration,
+  translatePlasterInstruction,
 } from "@/lib/pdf/translations";
 
 export type PrescriptionPdfProps = {
@@ -47,6 +51,10 @@ export type PrescriptionPdfProps = {
   medicines: Medicine[];
   advice?: string;
   followUp?: string;
+  /** Bandages, plasters, and orthopedic immobilization items prescribed */
+  plasterOrBandages?: PlasterBandageItem[];
+  /** Dedicated advice and precautions for plaster/bandage care */
+  plasterAdvice?: string | null;
   /** Visual layout id from the prescription layout registry. */
   layout?: string | null;
   /** Language for prescription labels: "en" | "hi". Defaults to "en". */
@@ -1373,6 +1381,80 @@ function Medicines({
   return <MedicinesScheduleTable theme={theme} medicines={medicines} lang={lang} />;
 }
 
+function PlastersAndBandages({
+  theme,
+  items,
+  advice,
+  lang,
+}: {
+  theme: Theme;
+  items?: PlasterBandageItem[];
+  advice?: string | null;
+  lang: PdfLanguage;
+}) {
+  const i18n = PRESCRIPTION_I18N[lang];
+  const { colors } = theme.layout;
+  const validItems = (items ?? []).filter((it) => it.name?.trim());
+  const hasAdvice = Boolean(advice?.trim());
+
+  if (validItems.length === 0 && !hasAdvice) return null;
+
+  return (
+    <View style={{ marginTop: 12 }}>
+      <SectionTitle theme={theme}>{i18n.plastersAndBandagesTitle}</SectionTitle>
+
+      {validItems.length > 0 ? (
+        <View style={{ marginTop: 4, marginBottom: 4 }}>
+          {validItems.map((item, idx) => (
+            <View
+              key={idx}
+              style={{
+                flexDirection: "row",
+                marginBottom: 3,
+                paddingVertical: 2,
+                paddingHorizontal: 4,
+                backgroundColor: idx % 2 === 0 ? "#f8fafc" : "#ffffff",
+                borderRadius: 3,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontSize: 9, color: colors.ink, fontFamily: theme.bold, width: "36%" }}>
+                •  {translatePlasterName(item.name, lang)}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: colors.muted, width: "24%" }}>
+                {item.site ? `${lang === "hi" ? "अंग: " : "Site: "}${translatePlasterSite(item.site, lang)}` : ""}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: colors.muted, width: "18%" }}>
+                {item.duration ? `${lang === "hi" ? "अवधि: " : "Duration: "}${translatePlasterDuration(item.duration, lang)}` : ""}
+              </Text>
+              <Text style={{ fontSize: 8.5, color: colors.accent, fontFamily: theme.bold, width: "22%" }}>
+                {item.instructions ? translatePlasterInstruction(item.instructions, lang) : ""}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {hasAdvice ? (
+        <View style={{ marginTop: 4, padding: 5, backgroundColor: "#f8fafc", borderRadius: 4, borderLeftWidth: 2.5, borderLeftColor: colors.accent }}>
+          <Text style={{ fontSize: 8.5, color: colors.accent, fontFamily: theme.bold, marginBottom: 2 }}>
+            {i18n.plasterCareAdviceTitle}:
+          </Text>
+          {advice!
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .map((line, i) => (
+              <Text key={i} style={{ fontSize: 8.5, color: colors.ink, marginBottom: 1.5, marginLeft: 4 }}>
+                •  {translateAdviceLine(line, lang)}
+              </Text>
+            ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /* ------------------------------ Document ------------------------------ */
 
 export function PrescriptionDocument(props: PrescriptionPdfProps) {
@@ -1446,6 +1528,14 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
           <View style={{ marginTop: 12 }}>
             <Medicines theme={theme} medicines={props.medicines} lang={lang} />
           </View>
+
+          {/* Bandages, Plasters & Supports with dedicated advice */}
+          <PlastersAndBandages
+            theme={theme}
+            items={props.plasterOrBandages}
+            advice={props.plasterAdvice}
+            lang={lang}
+          />
 
           {/* Advice / Precautions */}
           {adviceLines.length > 0 ? (

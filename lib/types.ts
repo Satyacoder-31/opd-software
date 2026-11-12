@@ -55,6 +55,14 @@ export type AdviceData = {
   followUpInstructions?: string;
 };
 
+export type PlasterBandageItem = {
+  id: string;
+  name: string;
+  site?: string;
+  duration?: string;
+  instructions?: string;
+};
+
 export type TreatmentPlan = {
   treatmentType?: string;
   proposedProcedure?: string;
@@ -67,6 +75,8 @@ export type TreatmentPlan = {
   counselingAndConsent?: string;
   conservativePlan?: string;
   notes?: string;
+  plasterOrBandages?: PlasterBandageItem[];
+  plasterAdvice?: string;
 };
 
 export type InvestigationResults = {

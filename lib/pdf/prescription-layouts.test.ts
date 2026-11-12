@@ -139,5 +139,78 @@ describe("prescription PDF layouts", () => {
     expect(buffer.byteLength).toBeGreaterThan(1000);
     expect(Buffer.from(buffer).subarray(0, 4).toString()).toBe("%PDF");
   });
+
+  it("renders prescription with bandages, plasters, and dedicated plaster advice in English and Hindi", async () => {
+    const bufferEn = await renderPrescriptionPdf({
+      clinicName: "Dr. Orthos Advanced Care",
+      clinicPhone: "+91 9876543210",
+      clinicAddress: "101 Ortho Complex, New Delhi",
+      doctorName: "Dr. Aarav Gupta",
+      date: "12 Nov 2026",
+      patientName: "Vikram Malhotra",
+      patientAge: "38 yrs",
+      patientGender: "Male",
+      patientMrn: "MRN-2026-0045",
+      patientPhone: "9876543210",
+      diagnosis: "Acute Ankle Ligament Sprain Grade 2",
+      medicines: sampleMedicines,
+      plasterOrBandages: [
+        {
+          id: "pb-1",
+          name: "Below Knee POP Slab",
+          site: "Right Ankle",
+          duration: "3 weeks",
+          instructions: "Strict Non-Weight Bearing",
+        },
+        {
+          id: "pb-2",
+          name: "Crepe Bandage 6 inch",
+          site: "Right Ankle",
+          duration: "2 weeks",
+          instructions: "Remove while sleeping at night",
+        },
+      ],
+      plasterAdvice:
+        "• Keep plaster strictly dry at all times.\n• Keep limb elevated on pillows.\n• Actively wiggle toes.",
+      advice: "Take medicines after food. Walk with support.",
+      followUp: "Review after 3 weeks",
+      language: "en",
+    });
+
+    expect(bufferEn.byteLength).toBeGreaterThan(1000);
+    expect(Buffer.from(bufferEn).subarray(0, 4).toString()).toBe("%PDF");
+
+    const bufferHi = await renderPrescriptionPdf({
+      clinicName: "डॉ ऑर्थोस एडवांस्ड केयर",
+      clinicPhone: "+91 9876543210",
+      clinicAddress: "नई दिल्ली",
+      doctorName: "डॉ. आरव गुप्ता",
+      date: "12 Nov 2026",
+      patientName: "विक्रम मल्होत्रा",
+      patientAge: "38 वर्ष",
+      patientGender: "Male",
+      patientMrn: "MRN-2026-0045",
+      patientPhone: "9876543210",
+      diagnosis: "Acute Ankle Ligament Sprain",
+      medicines: sampleMedicines,
+      plasterOrBandages: [
+        {
+          id: "pb-1",
+          name: "Below Knee POP Slab",
+          site: "Right Ankle",
+          duration: "3 weeks",
+          instructions: "Strict Non-Weight Bearing",
+        },
+      ],
+      plasterAdvice:
+        "• प्लास्टर को बिल्कुल सूखा रखें।\n• अंग को तकिए के सहारे ऊंचा रखें।",
+      advice: "दवा समय पर लें",
+      followUp: "3 सप्ताह बाद दिखाएं",
+      language: "hi",
+    });
+
+    expect(bufferHi.byteLength).toBeGreaterThan(1000);
+    expect(Buffer.from(bufferHi).subarray(0, 4).toString()).toBe("%PDF");
+  });
 });
 

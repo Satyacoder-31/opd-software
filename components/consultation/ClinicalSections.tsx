@@ -107,10 +107,10 @@ import type {
 } from "@/lib/types";
 import { DiagnosisCodesField } from "@/components/consultation/DiagnosisCodesField";
 
-function updateRecordField<T extends Record<string, string | undefined>>(
-  setter: Dispatch<SetStateAction<T>>,
+function updateRecordField<T extends Record<string, any>>(
+  setter: Dispatch<SetStateAction<T>> | ((next: SetStateAction<T>) => void),
   key: keyof T,
-  value: string,
+  value: any,
 ) {
   setter((prev) => ({ ...prev, [key]: value }));
 }

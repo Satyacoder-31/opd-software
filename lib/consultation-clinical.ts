@@ -116,6 +116,14 @@ export const adviceDataSchema = z.object({
   followUpInstructions: z.string().optional(),
 });
 
+export const plasterBandageItemSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1),
+  site: z.string().optional(),
+  duration: z.string().optional(),
+  instructions: z.string().optional(),
+});
+
 export const treatmentPlanSchema = z.object({
   treatmentType: z.string().optional(),
   proposedProcedure: z.string().optional(),
@@ -128,6 +136,8 @@ export const treatmentPlanSchema = z.object({
   counselingAndConsent: z.string().optional(),
   conservativePlan: z.string().optional(),
   notes: z.string().optional(),
+  plasterOrBandages: z.array(plasterBandageItemSchema).optional(),
+  plasterAdvice: z.string().optional(),
 });
 
 export const investigationResultsSchema = z.object({
@@ -180,9 +190,11 @@ function countFilled(values: Array<string | undefined>): number {
   return values.filter((v) => v?.trim()).length;
 }
 
-function countFilledRecord(record: Record<string, string | undefined> | undefined): number {
+function countFilledRecord(record: Record<string, any> | undefined): number {
   if (!record) return 0;
-  return countFilled(Object.values(record));
+  return Object.values(record).filter((v) =>
+    typeof v === "string" ? Boolean(v.trim()) : Array.isArray(v) ? v.length > 0 : Boolean(v)
+  ).length;
 }
 
 export function sectionCompletion(data: {
@@ -213,9 +225,11 @@ export function sectionCompletion(data: {
   const hasIcd = (data.diagnosisCodes?.length ?? 0) > 0;
   const diagnosisFilled = !!data.diagnosis?.trim() || hasIcd;
   const adviceFilled =
-    !!data.advice?.trim() || countFilledRecord(adviceDetails as Record<string, string | undefined>) > 0;
+    !!data.advice?.trim() || countFilledRecord(adviceDetails) > 0;
   const treatmentPlanFilled =
-    countFilledRecord(treatmentPlan as Record<string, string | undefined>) > 0;
+    countFilledRecord(treatmentPlan) > 0 ||
+    (treatmentPlan.plasterOrBandages?.length ?? 0) > 0 ||
+    !!treatmentPlan.plasterAdvice?.trim();
 
   return {
     vitals: {
@@ -246,12 +260,12 @@ export function sectionCompletion(data: {
       filled: adviceFilled,
       count:
         (data.advice?.trim() ? 1 : 0) +
-        countFilledRecord(adviceDetails as Record<string, string | undefined>),
+        countFilledRecord(adviceDetails),
       total: 6,
     },
     treatmentPlan: {
       filled: treatmentPlanFilled,
-      count: countFilledRecord(treatmentPlan as Record<string, string | undefined>),
+      count: countFilledRecord(treatmentPlan),
       total: 10,
     },
     investigationResults: {

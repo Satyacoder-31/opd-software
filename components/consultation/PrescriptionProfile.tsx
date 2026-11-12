@@ -1,13 +1,15 @@
 import { faPills } from "@fortawesome/free-solid-svg-icons";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { medicineTitle } from "@/lib/prescription-utils";
-import type { Medicine } from "@/lib/types";
+import type { Medicine, PlasterBandageItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type PrescriptionProfileProps = {
   medicines: Medicine[];
   advice?: string | null;
   followUp?: string | null;
+  plasterOrBandages?: PlasterBandageItem[];
+  plasterAdvice?: string | null;
 };
 
 function MultilineValue({ value }: { value?: string | null }) {
@@ -40,6 +42,8 @@ export function PrescriptionProfile({
   medicines,
   advice,
   followUp,
+  plasterOrBandages,
+  plasterAdvice,
 }: PrescriptionProfileProps) {
   const filledMedicines = medicines.filter((m) => m.name?.trim());
 
@@ -117,6 +121,51 @@ export function PrescriptionProfile({
           </div>
         )}
       </section>
+
+      {((plasterOrBandages && plasterOrBandages.length > 0) || plasterAdvice) && (
+        <section className="px-5 py-5 sm:px-6">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Bandages, Plasters & Orthopedic Supports
+          </h3>
+          {plasterOrBandages && plasterOrBandages.length > 0 && (
+            <div className="mt-3 grid gap-2">
+              {plasterOrBandages.map((item, index) => (
+                <div
+                  key={item.id || index}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/40 p-2.5 text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-ink">{item.name}</span>
+                    {item.site && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                        Site: {item.site}
+                      </span>
+                    )}
+                    {item.duration && (
+                      <span className="text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 font-medium">
+                        Duration: {item.duration}
+                      </span>
+                    )}
+                  </div>
+                  {item.instructions && (
+                    <span className="text-xs font-medium text-primary">
+                      {item.instructions}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {plasterAdvice && (
+            <div className="mt-3 rounded-lg border border-border bg-surface-muted/30 p-3 text-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">
+                Plaster & Bandage Care Advice:
+              </span>
+              <p className="whitespace-pre-line text-ink">{plasterAdvice}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="px-5 py-5 sm:px-6">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

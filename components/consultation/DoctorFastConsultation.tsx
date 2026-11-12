@@ -11,6 +11,7 @@ import {
   faClock,
   faCopy,
   faEye,
+  faBandage,
   faFileContract,
   faFileLines,
   faFlaskVial,
@@ -64,6 +65,7 @@ import { expandFrequencyInput } from "@/lib/prescription-dosing";
 import type {
   ConsultationClinicalData,
   Medicine,
+  PlasterBandageItem,
   PreviousVisitData,
   Vitals,
 } from "@/lib/types";
@@ -152,6 +154,75 @@ const FAST_FOLLOW_UPS: QuickTag[] = [
   { label: "15 Days", text: "Review after 15 days" },
   { label: "1 Month", text: "Review after 1 month" },
   { label: "SOS / If Needed", text: "SOS if severe pain persists or symptoms worsen" },
+];
+
+// Quick Presets for Bandages, Plasters & Orthopedic Supports
+const PRESET_PLASTERS = [
+  { name: "POP Slab (Below Knee)", defaultSite: "Right Ankle", defaultDuration: "3 weeks", defaultInstructions: "Strict Non-Weight Bearing (NWB)" },
+  { name: "POP Slab (Above Knee)", defaultSite: "Right Leg", defaultDuration: "4 weeks", defaultInstructions: "Strict Non-Weight Bearing (NWB)" },
+  { name: "POP Slab (Below Elbow / Wrist)", defaultSite: "Left Wrist", defaultDuration: "3 weeks", defaultInstructions: "Keep elevated, do not wet" },
+  { name: "POP Cast (Below Knee)", defaultSite: "Right Leg", defaultDuration: "4 weeks", defaultInstructions: "Strict Non-Weight Bearing" },
+  { name: "Crepe Bandage (6 inch)", defaultSite: "Right Ankle", defaultDuration: "2 weeks", defaultInstructions: "Rewrap snug, remove at night" },
+  { name: "Crepe Bandage (4 inch)", defaultSite: "Left Wrist", defaultDuration: "10 days", defaultInstructions: "Remove at night while sleeping" },
+  { name: "Dynaplast Adhesive Bandage", defaultSite: "Affected Joint", defaultDuration: "5 days", defaultInstructions: "Keep strictly dry" },
+  { name: "L.S. (Lumbar Sacral) Belt", defaultSite: "Lower Back / Spine", defaultDuration: "1 month", defaultInstructions: "Wear while walking/travelling; remove at rest" },
+  { name: "Cervical Collar (Soft/Hard)", defaultSite: "Cervical Spine", defaultDuration: "2 weeks", defaultInstructions: "Wear while sitting/standing; remove while sleeping" },
+  { name: "Knee Cap / Hinged Brace", defaultSite: "Right Knee", defaultDuration: "3 weeks", defaultInstructions: "Wear during daytime walking" },
+  { name: "Arm Sling Pouch", defaultSite: "Right Arm", defaultDuration: "2 weeks", defaultInstructions: "Support arm while standing/walking" },
+  { name: "Cock-up Wrist Splint", defaultSite: "Left Wrist", defaultDuration: "3 weeks", defaultInstructions: "Keep wrist in neutral position" },
+  { name: "Ankle Binder / Support", defaultSite: "Right Ankle", defaultDuration: "2 weeks", defaultInstructions: "Wear during ambulation" },
+  { name: "Finger / Mallet Splint", defaultSite: "Affected Finger", defaultDuration: "3 weeks", defaultInstructions: "Continuous immobilization" },
+  { name: "Sterile Antiseptic Dressing", defaultSite: "Wound Site", defaultDuration: "3 days", defaultInstructions: "Keep clean and strictly dry" },
+];
+
+const PRESET_PLASTER_SITES = [
+  "Right Ankle",
+  "Left Ankle",
+  "Right Knee",
+  "Left Knee",
+  "Right Wrist",
+  "Left Wrist",
+  "Right Leg",
+  "Left Leg",
+  "Right Arm",
+  "Left Arm",
+  "Lower Back (L.S.)",
+  "Cervical (Neck)",
+  "Right Shoulder",
+  "Left Shoulder",
+];
+
+const PRESET_PLASTER_DURATIONS = [
+  "3 weeks",
+  "4 weeks",
+  "2 weeks",
+  "10 days",
+  "1 week",
+  "1 month",
+  "6 weeks",
+];
+
+const PRESET_PLASTER_INSTRUCTIONS = [
+  "Strict Non-Weight Bearing (NWB)",
+  "Partial Weight Bearing (PWB)",
+  "Full weight bearing as tolerated",
+  "Wear while walking/travelling; remove at rest",
+  "Remove at night while sleeping",
+  "Keep strictly dry; protect with plastic while bathing",
+  "Keep limb elevated on pillows above chest level",
+];
+
+// Dedicated Plaster & Bandage Care Precautions for Patients
+const PLASTER_ADVICE_PRESETS = [
+  "Keep plaster / bandage strictly dry at all times; cover with plastic while bathing.",
+  "Keep the limb elevated on 1-2 pillows above heart level to reduce pain and swelling.",
+  "Strict Non-Weight Bearing: Do NOT put weight or walk on the plastered limb.",
+  "Actively move / wiggle fingers and toes regularly throughout the day to maintain healthy blood circulation.",
+  "Do not insert pencils, pins, or any objects inside the cast to scratch itchy skin.",
+  "Contact clinic / doctor immediately if fingers/toes turn blue, cold, numb, or severely painful.",
+  "Remove crepe bandage while sleeping at night unless instructed otherwise.",
+  "Wear lumbar belt / brace only while sitting, walking, and travelling; remove at rest.",
+  "Keep wound dressing dry and clean; report immediately if there is excessive soakage or foul smell.",
 ];
 
 // Rapid 1-click Dosing Presets for medicines
@@ -292,6 +363,93 @@ export function DoctorFastConsultation({
 
   const [showCustomHistory, setShowCustomHistory] = useState(false);
   const [customHistoryInput, setCustomHistoryInput] = useState("");
+
+  // Bandages, Plasters & Supports State
+  const [newPlasterName, setNewPlasterName] = useState("");
+  const [newPlasterSite, setNewPlasterSite] = useState("");
+  const [newPlasterDuration, setNewPlasterDuration] = useState("");
+  const [newPlasterInstructions, setNewPlasterInstructions] = useState("");
+  const [plasterNotice, setPlasterNotice] = useState<string | null>(null);
+
+  const treatmentPlan = clinical.treatmentPlan ?? {};
+  const plasterOrBandages = treatmentPlan.plasterOrBandages ?? [];
+  const plasterAdvice = treatmentPlan.plasterAdvice ?? "";
+
+  const handleAddPlasterItem = (item: {
+    name: string;
+    site?: string;
+    duration?: string;
+    instructions?: string;
+  }) => {
+    if (!item.name?.trim()) return;
+    const newItem: PlasterBandageItem = {
+      id: "pb-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6),
+      name: item.name.trim(),
+      site: item.site?.trim() || undefined,
+      duration: item.duration?.trim() || undefined,
+      instructions: item.instructions?.trim() || undefined,
+    };
+    const nextList = [...plasterOrBandages, newItem];
+
+    // Auto-suggest standard plaster care advice if advice is currently empty
+    let nextAdvice = plasterAdvice;
+    if (!nextAdvice?.trim()) {
+      const l = item.name.toLowerCase();
+      if (l.includes("plaster") || l.includes("slab") || l.includes("cast")) {
+        nextAdvice = "• Keep plaster strictly dry at all times; cover with plastic while bathing.\n• Keep limb elevated on pillows above chest level to reduce pain and swelling.\n• Strict Non-Weight Bearing: Do NOT put weight or walk on the plastered limb.\n• Actively move and wiggle fingers/toes regularly to maintain healthy blood circulation.\n• Contact doctor immediately if toes/fingers turn blue, cold, numb, or severely painful.";
+      } else if (l.includes("crepe")) {
+        nextAdvice = "• Rewrap crepe bandage snugly if it feels too loose or tight.\n• Remove crepe bandage while sleeping at night.\n• Keep limb elevated on pillows while resting.";
+      } else if (l.includes("belt") || l.includes("collar")) {
+        nextAdvice = "• Wear support belt/collar only while sitting, standing, and travelling; remove while sleeping/resting.\n• Avoid bending forward or lifting heavy objects.";
+      }
+    }
+
+    onClinicalChange({
+      ...clinical,
+      treatmentPlan: {
+        ...treatmentPlan,
+        plasterOrBandages: nextList,
+        plasterAdvice: nextAdvice,
+      },
+    });
+
+    setPlasterNotice(`Added "${item.name}" ✓`);
+    setTimeout(() => setPlasterNotice(null), 2500);
+  };
+
+  const handleRemovePlasterItem = (id: string) => {
+    const nextList = plasterOrBandages.filter((it) => it.id !== id);
+    onClinicalChange({
+      ...clinical,
+      treatmentPlan: {
+        ...treatmentPlan,
+        plasterOrBandages: nextList,
+      },
+    });
+  };
+
+  const handlePlasterAdviceChange = (text: string) => {
+    onClinicalChange({
+      ...clinical,
+      treatmentPlan: {
+        ...treatmentPlan,
+        plasterAdvice: text,
+      },
+    });
+  };
+
+  const handleTogglePlasterAdviceTag = (tag: string) => {
+    const current = plasterAdvice?.trim() ?? "";
+    if (current.includes(tag)) {
+      const next = current
+        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(tag)}`, "g"), "")
+        .trim();
+      handlePlasterAdviceChange(next);
+    } else {
+      const next = current ? `${current}\n• ${tag}` : `• ${tag}`;
+      handlePlasterAdviceChange(next);
+    }
+  };
 
   // Default preset lists
   const defaultSymptomsList = useMemo(() => {
@@ -1849,6 +2007,299 @@ export function DoctorFastConsultation({
         </div>
       </div>
 
+      {/* CARD: BANDAGES, PLASTERS & ORTHOPEDIC SUPPORTS WITH DEDICATED ADVICE */}
+      <div className="rounded-2xl border-2 border-indigo-200/90 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm">
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/20 dark:bg-indigo-950 dark:text-indigo-300">
+              <Icon icon={faBandage} className="size-3.5" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">
+                  Bandages, Plasters & Supports
+                </span>
+                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-200/60">
+                  प्लास्टर, पट्टी एवं सपोर्ट
+                </span>
+                {plasterOrBandages.length > 0 && (
+                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 dark:bg-indigo-900/80 px-2 py-0.5 rounded-full">
+                    {plasterOrBandages.length} applied
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Prescribe POP slabs, casts, crepe bandages, braces, splints & give care instructions to patient
+              </p>
+            </div>
+          </div>
+
+          {(plasterOrBandages.length > 0 || plasterAdvice?.trim()) && (
+            <button
+              type="button"
+              onClick={() => {
+                onClinicalChange({
+                  ...clinical,
+                  treatmentPlan: {
+                    ...treatmentPlan,
+                    plasterOrBandages: [],
+                    plasterAdvice: "",
+                  },
+                });
+              }}
+              className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors border border-rose-200/80"
+              title="Clear all bandages, plasters, and plaster advice"
+            >
+              <Icon icon={faTrashCan} className="size-2.5" />
+              <span>Clear All</span>
+            </button>
+          )}
+        </div>
+
+        {plasterNotice && (
+          <div className="mb-2.5 flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 animate-in fade-in">
+            <Icon icon={faCheckCircle} className="size-3 text-emerald-600 shrink-0" />
+            <span>{plasterNotice}</span>
+          </div>
+        )}
+
+        {/* 1-Tap Quick Presets Carousel / Grid */}
+        <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+            <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600" />
+            <span>1-Tap Popular Applications (click to add):</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PRESET_PLASTERS.map((preset, pIdx) => {
+              const isApplied = plasterOrBandages.some(
+                (it) => it.name.toLowerCase() === preset.name.toLowerCase()
+              );
+              return (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() =>
+                    handleAddPlasterItem({
+                      name: preset.name,
+                      site: preset.defaultSite,
+                      duration: preset.defaultDuration,
+                      instructions: preset.defaultInstructions,
+                    })
+                  }
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold transition-all cursor-pointer ${
+                    isApplied
+                      ? "bg-indigo-100 border-indigo-400 text-indigo-950 font-bold shadow-2xs"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400 hover:bg-indigo-50/70 hover:text-indigo-900 shadow-2xs active:scale-95"
+                  }`}
+                >
+                  <span>{preset.name}</span>
+                  <span className="text-[9px] text-slate-400 font-normal">
+                    ({preset.defaultDuration})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Currently Prescribed Bandages & Plasters Table / List */}
+        {plasterOrBandages.length > 0 && (
+          <div className="mb-3 space-y-2">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+              Active Prescribed Applications ({plasterOrBandages.length}):
+            </div>
+            <div className="grid gap-2">
+              {plasterOrBandages.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border border-indigo-200/80 bg-indigo-50/30 dark:bg-slate-800/80 dark:border-slate-700 shadow-2xs"
+                >
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                    <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-[10px]">
+                      #{idx + 1}
+                    </span>
+                    <strong className="text-xs font-bold text-slate-900 dark:text-white">
+                      {item.name}
+                    </strong>
+                    {item.site && (
+                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">
+                        📍 {item.site}
+                      </span>
+                    )}
+                    {item.duration && (
+                      <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
+                        ⏱️ {item.duration}
+                      </span>
+                    )}
+                    {item.instructions && (
+                      <span className="text-[11px] font-medium text-indigo-800 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
+                        📋 {item.instructions}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePlasterItem(item.id)}
+                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                    title="Remove this appliance/bandage"
+                  >
+                    <Icon icon={faTrashCan} className="size-3 text-rose-500" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Custom Application / Bandage Add Row */}
+        <div className="mb-3 p-2.5 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/20 dark:bg-slate-800/30">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300 mb-1.5 flex items-center justify-between">
+            <span>+ Add Custom Appliance / Bandage / Plaster</span>
+            <span className="text-[9px] text-slate-500 font-normal">Enter details and click Add</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <div>
+              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Item Name</label>
+              <Input
+                value={newPlasterName}
+                onChange={(e) => setNewPlasterName(e.target.value)}
+                placeholder="e.g. Scaphoid Cast, U-Slab..."
+                className="h-8 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Body Site / Side</label>
+              <div className="relative">
+                <Input
+                  value={newPlasterSite}
+                  onChange={(e) => setNewPlasterSite(e.target.value)}
+                  placeholder="e.g. Right Ankle, Left Wrist..."
+                  className="h-8 text-xs font-semibold"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Duration</label>
+              <Input
+                value={newPlasterDuration}
+                onChange={(e) => setNewPlasterDuration(e.target.value)}
+                placeholder="e.g. 3 weeks, 2 weeks..."
+                className="h-8 text-xs font-semibold"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Wear Instructions</label>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={newPlasterInstructions}
+                  onChange={(e) => setNewPlasterInstructions(e.target.value)}
+                  placeholder="e.g. Strict Non-Weight Bearing..."
+                  className="h-8 text-xs font-semibold flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newPlasterName.trim()) {
+                      e.preventDefault();
+                      handleAddPlasterItem({
+                        name: newPlasterName,
+                        site: newPlasterSite,
+                        duration: newPlasterDuration,
+                        instructions: newPlasterInstructions,
+                      });
+                      setNewPlasterName("");
+                      setNewPlasterSite("");
+                      setNewPlasterDuration("");
+                      setNewPlasterInstructions("");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (newPlasterName.trim()) {
+                      handleAddPlasterItem({
+                        name: newPlasterName,
+                        site: newPlasterSite,
+                        duration: newPlasterDuration,
+                        instructions: newPlasterInstructions,
+                      });
+                      setNewPlasterName("");
+                      setNewPlasterSite("");
+                      setNewPlasterDuration("");
+                      setNewPlasterInstructions("");
+                    }
+                  }}
+                  disabled={!newPlasterName.trim()}
+                  className="h-8 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer shadow-xs shrink-0"
+                >
+                  + Add
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* DEDICATED PLASTER & BANDAGE ADVICE SECTION */}
+        <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/50 to-purple-50/40 dark:from-slate-800 dark:to-slate-800/80 p-3">
+          <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-600 text-white">
+                <Icon icon={faNotesMedical} className="size-3" />
+              </span>
+              <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+                Plaster & Bandage Care Advice / Precautions
+              </span>
+              <span className="text-[10px] font-bold text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-1.5 py-0.2 rounded border border-teal-200/60">
+                प्लास्टर एवं पट्टी की सावधानियां
+              </span>
+            </div>
+            {plasterAdvice?.trim() && (
+              <button
+                type="button"
+                onClick={() => handlePlasterAdviceChange("")}
+                className="text-[10px] font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+              >
+                Clear Advice
+              </button>
+            )}
+          </div>
+
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2">
+            Click any precaution to add to the patient prescription, or customize directly below:
+          </p>
+
+          {/* Preset Advice Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+            {PLASTER_ADVICE_PRESETS.map((adviceItem, aIdx) => {
+              const isIncluded = Boolean(plasterAdvice?.includes(adviceItem));
+              return (
+                <button
+                  key={aIdx}
+                  type="button"
+                  onClick={() => handleTogglePlasterAdviceTag(adviceItem)}
+                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10.5px] font-medium transition-all text-left cursor-pointer ${
+                    isIncluded
+                      ? "bg-indigo-600 text-white border-indigo-700 font-bold shadow-2xs"
+                      : "bg-white dark:bg-slate-800 border-indigo-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-indigo-50 hover:border-indigo-400 shadow-2xs active:scale-98"
+                  }`}
+                >
+                  <span>{isIncluded ? "✓" : "+"}</span>
+                  <span>{adviceItem}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Editable Plaster Advice Textarea */}
+          <Textarea
+            value={plasterAdvice}
+            onChange={(e) => handlePlasterAdviceChange(e.target.value)}
+            placeholder="Doctor's plaster & bandage instructions for patient (e.g. Keep strictly dry, elevate on pillows, non-weight bearing, wiggle toes...)"
+            rows={3}
+            className="w-full text-xs font-medium resize-none leading-relaxed border-indigo-200 dark:border-indigo-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-slate-900 rounded-lg transition-colors"
+          />
+        </div>
+      </div>
+
       {/* CARD 5: ADVICE & FOLLOW-UP */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* ADVICE */}
@@ -2167,75 +2618,6 @@ export function DoctorFastConsultation({
               <span>Medical Certificate / Referral</span>
             </button>
           )}
-        </div>
-      </div>
-
-      {/* BOTTOM PRIMARY CONSULTATION ACTIONS BAR */}
-      <div className="sticky bottom-2 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-300/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3.5 shadow-xl backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-            <Icon icon={faPills} className="size-4" />
-          </span>
-          <div>
-            <div className="text-xs font-bold text-slate-900 dark:text-white">
-              {medicines.filter((m) => m.name?.trim()).length} Medicine{medicines.filter((m) => m.name?.trim()).length === 1 ? "" : "s"} Ready
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Save changes, print official prescription, or finalize OPD consultation
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onSaveDraft}
-            loading={isSaving}
-            disabled={isCompleting}
-            className="h-9 gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
-          >
-            <Icon icon={faRotate} className="size-3 text-slate-500" />
-            <span>Save Draft</span>
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => handleOpenPrintRx("en")}
-            disabled={isSaving || isCompleting}
-            className="h-9 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-xs cursor-pointer"
-            title="Print Prescription (English)"
-          >
-            <Icon icon={faPrint} className="size-3.5 text-white" />
-            <span>Print Rx (EN)</span>
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => handleOpenPrintRx("hi")}
-            disabled={isSaving || isCompleting}
-            className="h-9 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer"
-            title="चिकित्सीय पर्चा प्रिंट करें (Hindi)"
-          >
-            <Icon icon={faPrint} className="size-3.5 text-white" />
-            <span>पर्चा प्रिंट (Hindi)</span>
-          </Button>
-
-          <Button
-            type="button"
-            size="sm"
-            onClick={onCompleteVisit}
-            loading={isCompleting}
-            disabled={isSaving || isCompleting}
-            className="h-9 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md cursor-pointer"
-            title="Complete visit and go to checkout/billing"
-          >
-            <Icon icon={faCheck} className="size-3.5 text-white" />
-            <span>{isCompleting ? "Completing..." : "Complete & Print Rx"}</span>
-          </Button>
         </div>
       </div>
 

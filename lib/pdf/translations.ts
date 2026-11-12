@@ -42,6 +42,8 @@ export interface PrescriptionTranslations {
   duration: string;
   instructions: string;
   adviceTitle: string;
+  plastersAndBandagesTitle: string;
+  plasterCareAdviceTitle: string;
   followUpTitle: string;
   followUpBring: string;
   doctorSignature: string;
@@ -139,6 +141,8 @@ export const PRESCRIPTION_I18N: Record<PdfLanguage, PrescriptionTranslations> = 
     duration: "Duration",
     instructions: "Remarks",
     adviceTitle: "Doctor's Advice & Precautions",
+    plastersAndBandagesTitle: "Bandages, Plasters & Orthopedic Supports",
+    plasterCareAdviceTitle: "Plaster & Bandage Care Precautions",
     followUpTitle: "Next Follow-up / Review",
     followUpBring: "Bring this prescription on next visit",
     doctorSignature: "Doctor's Signature",
@@ -190,6 +194,8 @@ export const PRESCRIPTION_I18N: Record<PdfLanguage, PrescriptionTranslations> = 
     duration: "अवधि",
     instructions: "निर्देश / Remarks",
     adviceTitle: "परामर्श एवं सावधानियां",
+    plastersAndBandagesTitle: "प्लास्टर, पट्टी एवं ऑर्थोपेडिक सपोर्ट",
+    plasterCareAdviceTitle: "प्लास्टर एवं पट्टी संबंधी सावधानियां / निर्देश",
     followUpTitle: "पुनः परामर्श / अगली जांच",
     followUpBring: "अगली मुलाकात पर यह पर्चा साथ लाएं",
     doctorSignature: "चिकित्सक के अधिकृत हस्ताक्षर",
@@ -1141,6 +1147,35 @@ export function translateAdviceLine(line?: string | null, lang: PdfLanguage = "e
     return `${prefix}ऊंचाई: लेटते समय पैर को तकिए के सहारे ऊंचा रखें`;
   }
 
+  // Plaster & Bandage Care Precautions
+  if (lower.includes("keep plaster") || (lower.includes("plaster") && lower.includes("dry")) || lower.includes("strictly dry") || lower.includes("cover with plastic")) {
+    return `${prefix}प्लास्टर व पट्टी को बिल्कुल सूखा रखें, नहाते समय पॉलीथिन से सुरक्षित रखें`;
+  }
+  if ((lower.includes("elevate") || lower.includes("elevated")) && (lower.includes("pillow") || lower.includes("limb") || lower.includes("pain and swelling"))) {
+    return `${prefix}सूजन व दर्द कम करने के लिए अंग को तकिए के सहारे सीने से ऊंचा उठाकर रखें`;
+  }
+  if (lower.includes("non-weight bearing") || lower.includes("not put weight") || lower.includes("not bear weight") || lower.includes("nwb")) {
+    return `${prefix}डॉक्टर की अनुमति के बिना प्लास्टर वाले पैर पर बिल्कुल वजन न डालें और न चलें`;
+  }
+  if (lower.includes("wiggle") || (lower.includes("move") && (lower.includes("finger") || lower.includes("toe"))) || lower.includes("blood circulation")) {
+    return `${prefix}खून का दौरा सुचारू रखने के लिए उंगलियों और अंगूठे को बार-बार हिलाते रहें`;
+  }
+  if (lower.includes("insert") && (lower.includes("scratch") || lower.includes("inside") || lower.includes("pins") || lower.includes("pencils"))) {
+    return `${prefix}प्लास्टर के अंदर खुजली के लिए कोई नुकीली चीज, तीली या तार न डालें`;
+  }
+  if (lower.includes("turn blue") || lower.includes("numb") || lower.includes("cold") || lower.includes("severely painful") || lower.includes("tight")) {
+    return `${prefix}उंगलियां नीली पड़ने, ठंडी होने, सुन्नपन या अत्यधिक दर्द होने पर तुरंत डॉक्टर से संपर्क करें`;
+  }
+  if (lower.includes("remove crepe bandage") || (lower.includes("crepe") && (lower.includes("sleep") || lower.includes("night")))) {
+    return `${prefix}रात को सोते समय क्रेप पट्टी खोलकर रख दें`;
+  }
+  if (lower.includes("wear lumbar") || (lower.includes("belt") && lower.includes("travel")) || (lower.includes("collar") && lower.includes("resting"))) {
+    return `${prefix}कमर का बेल्ट या कॉलर केवल चलते-फिरते व यात्रा के समय पहनें; आराम करते समय हटा दें`;
+  }
+  if (lower.includes("wound dressing") || (lower.includes("dressing") && lower.includes("clean"))) {
+    return `${prefix}पट्टी को साफ और सुरक्षित रखें; अधिक रिसाव या गंध आने पर डॉक्टर को दिखाएं`;
+  }
+
   // Multi-clause token translations fallback
   let translated = core
     .replace(/\bkeep rt ll elevated on pillow\b/gi, "दाएं पैर को तकिए पर ऊंचा रखें")
@@ -1175,4 +1210,82 @@ export function translateAdviceText(text?: string | null, lang: PdfLanguage = "e
     .split("\n")
     .map((line) => translateAdviceLine(line, lang))
     .join("\n");
+}
+
+export function translatePlasterName(name: string, lang: PdfLanguage = "en"): string {
+  if (lang !== "hi") return name;
+  const l = name.toLowerCase();
+  if (l.includes("below knee") && (l.includes("slab") || l.includes("स्लैब"))) return "प्लास्टर स्लैब (घुटने के नीचे)";
+  if (l.includes("above knee") && (l.includes("slab") || l.includes("स्लैब"))) return "प्लास्टर स्लैब (घुटने के ऊपर)";
+  if (l.includes("below knee") && (l.includes("cast") || l.includes("pop"))) return "कास्ट / पक्का प्लास्टर (घुटने के नीचे)";
+  if (l.includes("above knee") && (l.includes("cast") || l.includes("pop"))) return "कास्ट / पक्का प्लास्टर (घुटने के ऊपर)";
+  if ((l.includes("forearm") || l.includes("below elbow") || l.includes("wrist")) && l.includes("slab")) return "अग्रबाहु / कलाई स्लैब";
+  if (l.includes("above elbow") && l.includes("slab")) return "कोहनी के ऊपर स्लैब";
+  if (l.includes("colles") || l.includes("scaphoid")) return "कलाई का प्लास्टर कास्ट";
+  if (l.includes("u-slab") || l.includes("u slab")) return "यू-स्लैब (कंधे/हाथ हेतु)";
+  if (l.includes("fiber") || l.includes("synthetic")) return "सिंथेटिक / फाइबर कास्ट";
+  if (l.includes("crepe") && (l.includes("6") || l.includes("6\""))) return "क्रेप बैंडेज / गरम पट्टी (6 इंच)";
+  if (l.includes("crepe") && (l.includes("4") || l.includes("4\""))) return "क्रेप बैंडेज / गरम पट्टी (4 इंच)";
+  if (l.includes("crepe")) return "क्रेप बैंडेज (गरम पट्टी)";
+  if (l.includes("dynaplast")) return "डायनाप्लास्ट चिपकाने वाली पट्टी";
+  if (l.includes("l.s.") || l.includes("lumbar")) return "कमर का बेल्ट (एल.एस. बेल्ट)";
+  if (l.includes("cervical") || l.includes("collar")) return "गर्दन का कॉलर (सर्वाइकल कॉलर)";
+  if (l.includes("knee cap") || l.includes("knee brace")) return "नी कैप / नी ब्रेस (घुटने का सपोर्ट)";
+  if (l.includes("arm sling") || l.includes("pouch")) return "आर्म स्लिंग (हाथ का झूला)";
+  if (l.includes("cock-up") || l.includes("wrist splint")) return "कॉक-अप रिस्ट स्प्लिंट (कलाई का सपोर्ट)";
+  if (l.includes("ankle binder") || l.includes("ankle brace") || l.includes("ankle support")) return "टखने का बाइंडर / एंकल सपोर्ट";
+  if (l.includes("finger") || l.includes("mallet")) return "उंगली का स्प्लिंट";
+  if (l.includes("dressing")) return "घाव की ड्रेसिंग / पट्टी";
+  return name;
+}
+
+export function translatePlasterSite(site?: string | null, lang: PdfLanguage = "en"): string {
+  if (!site?.trim()) return "";
+  if (lang !== "hi") return site;
+  const l = site.toLowerCase();
+  if (l.includes("right ankle") || l.includes("rt ankle")) return "दायां टखना";
+  if (l.includes("left ankle") || l.includes("lt ankle")) return "बायां टखना";
+  if (l.includes("right knee") || l.includes("rt knee")) return "दायां घुटना";
+  if (l.includes("left knee") || l.includes("lt knee")) return "बायां घुटना";
+  if (l.includes("right wrist") || l.includes("rt wrist")) return "दाईं कलाई";
+  if (l.includes("left wrist") || l.includes("lt wrist")) return "बाईं कलाई";
+  if (l.includes("right leg") || l.includes("rt leg") || l.includes("rt ll")) return "दायां पैर";
+  if (l.includes("left leg") || l.includes("lt leg") || l.includes("lt ll")) return "बायां पैर";
+  if (l.includes("right arm") || l.includes("rt arm") || l.includes("rt ul")) return "दायां हाथ / अग्रबाहु";
+  if (l.includes("left arm") || l.includes("lt arm") || l.includes("lt ul")) return "बायां हाथ / अग्रबाहु";
+  if (l.includes("lumbar") || l.includes("lower back") || l.includes("spine")) return "कमर / निचली रीढ़";
+  if (l.includes("cervical") || l.includes("neck")) return "गर्दन (सर्वाइकल)";
+  if (l.includes("right shoulder") || l.includes("rt shoulder")) return "दायां कंधा";
+  if (l.includes("left shoulder") || l.includes("lt shoulder")) return "बायां कंधा";
+  return site;
+}
+
+export function translatePlasterDuration(duration?: string | null, lang: PdfLanguage = "en"): string {
+  if (!duration?.trim()) return "";
+  if (lang !== "hi") return duration;
+  const l = duration.toLowerCase();
+  if (l.includes("3") && l.includes("week")) return "3 सप्ताह";
+  if (l.includes("4") && l.includes("week")) return "4 सप्ताह";
+  if (l.includes("6") && l.includes("week")) return "6 सप्ताह";
+  if (l.includes("2") && l.includes("week")) return "2 सप्ताह";
+  if (l.includes("1") && l.includes("week")) return "1 सप्ताह";
+  if (l.includes("1") && l.includes("month")) return "1 माह";
+  if (l.includes("10") && l.includes("day")) return "10 दिन";
+  if (l.includes("5") && l.includes("day")) return "5 दिन";
+  if (l.includes("7") && l.includes("day")) return "7 दिन";
+  if (l.includes("14") && l.includes("day")) return "14 दिन";
+  return duration;
+}
+
+export function translatePlasterInstruction(instruction?: string | null, lang: PdfLanguage = "en"): string {
+  if (!instruction?.trim()) return "";
+  if (lang !== "hi") return instruction;
+  const l = instruction.toLowerCase();
+  if (l.includes("strict non-weight bearing") || l.includes("nwb") || l.includes("non weight bearing")) return "पैर पर बिल्कुल वजन न डालें (NWB)";
+  if (l.includes("partial weight bearing") || l.includes("pwb")) return "हल्का वजन रखकर चलें (PWB)";
+  if (l.includes("full weight bearing")) return "सहनशीलता अनुसार वजन रखें";
+  if (l.includes("remove while sleeping") || l.includes("remove at night")) return "सोते समय निकाल लें";
+  if (l.includes("wear while walking") || l.includes("wear during daytime")) return "चलते-फिरते समय पहनें";
+  if (l.includes("keep dry")) return "बिल्कुल सूखा रखें";
+  return instruction;
 }

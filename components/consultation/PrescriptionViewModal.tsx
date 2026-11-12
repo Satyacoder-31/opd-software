@@ -16,6 +16,7 @@ import {
   faSpinner,
   faTriangleExclamation,
   faNotesMedical,
+  faBandage,
   faSun,
   faMoon,
   faClock,
@@ -41,6 +42,10 @@ import {
   translateInstructions,
   translateAdviceText,
   translateFollowUp,
+  translatePlasterName,
+  translatePlasterSite,
+  translatePlasterDuration,
+  translatePlasterInstruction,
 } from "@/lib/pdf/translations";
 import { Button } from "@/components/ui/Button";
 
@@ -719,6 +724,62 @@ export function PrescriptionViewModal({
                   </table>
                 </div>
               </div>
+
+              {/* BANDAGES, PLASTERS & SUPPORTS */}
+              {((prescriptionData.plasterOrBandages && prescriptionData.plasterOrBandages.length > 0) ||
+                prescriptionData.plasterAdvice) && (
+                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 p-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                    <Icon icon={faBandage} className="size-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>{i18n.plastersAndBandagesTitle}</span>
+                  </div>
+
+                  {prescriptionData.plasterOrBandages && prescriptionData.plasterOrBandages.length > 0 && (
+                    <div className="grid gap-2">
+                      {prescriptionData.plasterOrBandages.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900/50 shadow-2xs text-xs"
+                        >
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900 dark:text-white">
+                              {translatePlasterName(item.name, lang)}
+                            </span>
+                            {item.site && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium">
+                                {lang === "hi" ? "अंग: " : "Site: "}
+                                {translatePlasterSite(item.site, lang)}
+                              </span>
+                            )}
+                            {item.duration && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-900/60">
+                                {lang === "hi" ? "अवधि: " : "Duration: "}
+                                {translatePlasterDuration(item.duration, lang)}
+                              </span>
+                            )}
+                          </div>
+                          {item.instructions && (
+                            <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-semibold bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded">
+                              {translatePlasterInstruction(item.instructions, lang)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {prescriptionData.plasterAdvice && (
+                    <div className="p-3 rounded-lg bg-white/90 dark:bg-slate-800/90 border border-indigo-200 dark:border-indigo-900/50 text-xs">
+                      <div className="font-bold text-indigo-900 dark:text-indigo-300 mb-1 flex items-center gap-1.5">
+                        <span>{i18n.plasterCareAdviceTitle}:</span>
+                      </div>
+                      <div className="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line pl-1">
+                        {translateAdviceText(prescriptionData.plasterAdvice, lang)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ADVICE & INSTRUCTIONS */}
               {prescriptionData.advice && (

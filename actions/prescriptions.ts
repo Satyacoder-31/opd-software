@@ -18,7 +18,7 @@ import { recordPrescribedDrugs } from "@/lib/drug-catalog.server";
 import { applyPrescriptionStockMovements } from "@/lib/prescription-stock.server";
 import { normalizeDrugName, parsePrescriptionQuantity } from "@/lib/drug-catalog";
 import { can } from "@/lib/rbac";
-import type { ActionResult, Medicine, VoidActionResult } from "@/lib/types";
+import type { ActionResult, Medicine, PlasterBandageItem, TreatmentPlan, VoidActionResult } from "@/lib/types";
 
 /** Dummy Maple Care mark for layout PDF previews (data URI for react-pdf). */
 function sampleClinicLogoDataUri(): string {
@@ -240,6 +240,9 @@ export async function generatePrescriptionPdf(
   });
 
   const medicines = (consultation.prescription?.medicines as Medicine[]) || [];
+  const treatmentPlan = (consultation.treatmentPlan as TreatmentPlan) ?? null;
+  const plasterOrBandages = treatmentPlan?.plasterOrBandages ?? [];
+  const plasterAdvice = treatmentPlan?.plasterAdvice ?? null;
   const consultationDate = consultation.createdAt;
   const vitals = (consultation.vitals as any) ?? null;
 
@@ -271,6 +274,8 @@ export async function generatePrescriptionPdf(
     abhaAddress: consultation.patient.abhaAddress ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
     medicines,
+    plasterOrBandages,
+    plasterAdvice,
     advice: consultation.prescription?.advice ?? undefined,
     followUp: consultation.prescription?.followUp ?? undefined,
     layout: clinic.prescriptionLayout,
@@ -325,6 +330,8 @@ export type PrescriptionViewData = {
   diagnosis: string;
   vitals?: any | null;
   medicines: Medicine[];
+  plasterOrBandages?: PlasterBandageItem[];
+  plasterAdvice?: string | null;
   advice?: string | null;
   followUp?: string | null;
   pdfBase64: string;
@@ -363,6 +370,9 @@ export async function getPrescriptionViewData(
   });
 
   const medicines = (consultation.prescription?.medicines as Medicine[]) || [];
+  const treatmentPlan = (consultation.treatmentPlan as TreatmentPlan) ?? null;
+  const plasterOrBandages = treatmentPlan?.plasterOrBandages ?? [];
+  const plasterAdvice = treatmentPlan?.plasterAdvice ?? null;
   const consultationDate = consultation.createdAt;
   const vitals = (consultation.vitals as any) ?? null;
   const formattedDate = formatPrescriptionDate(consultationDate);
@@ -395,6 +405,8 @@ export async function getPrescriptionViewData(
     abhaAddress: consultation.patient.abhaAddress ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
     medicines,
+    plasterOrBandages,
+    plasterAdvice,
     advice: consultation.prescription?.advice ?? undefined,
     followUp: consultation.prescription?.followUp ?? undefined,
     layout: clinic.prescriptionLayout,
@@ -452,6 +464,8 @@ export async function getPrescriptionViewData(
       diagnosis: consultation.diagnosis ?? "",
       vitals,
       medicines,
+      plasterOrBandages,
+      plasterAdvice,
       advice: consultation.prescription?.advice ?? null,
       followUp: consultation.prescription?.followUp ?? null,
       pdfBase64,

@@ -918,7 +918,7 @@ function formatExaminationSummary(exam: any): string | null {
   return parts.length > 0 ? parts.join("\n") : null;
 }
 
-function formatAdviceSummary(rawAdvice: any, rxAdvice?: string | null): string | null {
+function formatAdviceSummary(rawAdvice: any, rxAdvice?: string | null, treatmentPlan?: any): string | null {
   const parts: string[] = [];
   if (rxAdvice?.trim()) parts.push(rxAdvice.trim());
   if (typeof rawAdvice === "string" && rawAdvice.trim() && rawAdvice.trim() !== rxAdvice?.trim()) {
@@ -940,6 +940,19 @@ function formatAdviceSummary(rawAdvice: any, rxAdvice?: string | null): string |
       parts.push(`Warning Signs / Emergency: ${rawAdvice.warningSignsEmergency.trim()}`);
     }
   }
+
+  if (treatmentPlan && typeof treatmentPlan === "object") {
+    if (Array.isArray(treatmentPlan.plasterOrBandages) && treatmentPlan.plasterOrBandages.length > 0) {
+      const items = treatmentPlan.plasterOrBandages
+        .map((p: any) => `• ${p.name}${p.site ? ` (${p.site})` : ""}${p.duration ? ` · ${p.duration}` : ""}${p.instructions ? ` · ${p.instructions}` : ""}`)
+        .join("\n");
+      parts.push(`Bandages / Plasters Applied:\n${items}`);
+    }
+    if (treatmentPlan.plasterAdvice?.trim()) {
+      parts.push(`Plaster & Bandage Care Precautions:\n${treatmentPlan.plasterAdvice.trim()}`);
+    }
+  }
+
   return parts.length > 0 ? parts.join("\n") : null;
 }
 
@@ -998,7 +1011,11 @@ export async function getPatientOutpatientSummary(
   const labs = invResults?.labs?.trim() || null;
 
   const medicines = (consultation.prescription?.medicines as Medicine[]) || [];
-  const advice = formatAdviceSummary(consultation.advice, consultation.prescription?.advice);
+  const advice = formatAdviceSummary(
+    consultation.advice,
+    consultation.prescription?.advice,
+    consultation.treatmentPlan
+  );
   const followUp =
     consultation.prescription?.followUp ||
     (consultation.advice as any)?.followUpInstructions ||

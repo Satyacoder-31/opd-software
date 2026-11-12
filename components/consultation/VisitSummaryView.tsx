@@ -156,6 +156,8 @@ export function VisitSummaryView({
             medicines={medicines}
             advice={advice}
             followUp={followUp}
+            plasterOrBandages={clinical.treatmentPlan?.plasterOrBandages}
+            plasterAdvice={clinical.treatmentPlan?.plasterAdvice}
           />
         </Card>
         {labOrders && labOrders.length > 0 && (
