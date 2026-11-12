@@ -49,6 +49,7 @@ export type PrescriptionViewModalProps = {
   isOpen: boolean;
   onClose: () => void;
   initialLang?: "en" | "hi";
+  autoPrint?: boolean;
 };
 
 export function PrescriptionViewModal({
@@ -56,6 +57,7 @@ export function PrescriptionViewModal({
   isOpen,
   onClose,
   initialLang = "en",
+  autoPrint = false,
 }: PrescriptionViewModalProps) {
   const [lang, setLang] = useState<"en" | "hi">(initialLang);
   const [viewMode, setViewMode] = useState<"paper" | "pdf">("paper");
@@ -64,13 +66,26 @@ export function PrescriptionViewModal({
   const [error, setError] = useState<string | null>(null);
   const [prescriptionData, setPrescriptionData] = useState<PrescriptionViewData | null>(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [hasTriggeredAutoPrint, setHasTriggeredAutoPrint] = useState(false);
 
   // Sync initial language whenever modal opens
   useEffect(() => {
     if (isOpen) {
       setLang(initialLang);
+      setHasTriggeredAutoPrint(false);
     }
   }, [isOpen, initialLang]);
+
+  // Handle autoPrint trigger when ready
+  useEffect(() => {
+    if (isOpen && autoPrint && !hasTriggeredAutoPrint && !loading && prescriptionData && pdfBlobUrl) {
+      setHasTriggeredAutoPrint(true);
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoPrint, hasTriggeredAutoPrint, loading, prescriptionData, pdfBlobUrl]);
 
   // Clean up previous blob URL
   useEffect(() => {
@@ -178,26 +193,26 @@ export function PrescriptionViewModal({
       aria-labelledby="rx-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-4xl max-h-[94vh] flex flex-col rounded-2xl border border-slate-200 bg-slate-100 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-[94vh] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shadow-2xl overflow-hidden">
         {/* HEADER */}
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3.5 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-teal-100 text-teal-700 shadow-2xs">
               <Icon icon={faPrescription} className="size-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 id="rx-modal-title" className="font-display text-base font-bold text-slate-900">
+                <h2 id="rx-modal-title" className="font-display text-base font-bold text-slate-900 dark:text-white">
                   {lang === "hi" ? "चिकित्सीय पर्चा एवं उपचार विवरण" : "Prescription & Treatment Plan"}
                 </h2>
                 {prescriptionData && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-700 border border-emerald-200">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                     <Icon icon={faCheck} className="size-2.5" />
                     {lang === "hi" ? "चिकित्सक द्वारा सत्यापित" : "Doctor Verified"}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {lang === "hi"
                   ? "अधिकृत ओपीडी चिकित्सीय पर्चा, खुराक समय सारणी एवं सावधानियां"
                   : "Official OPD medical prescription, dosing schedule, and precautions"}
@@ -208,15 +223,15 @@ export function PrescriptionViewModal({
           {/* ACTIONS & CONTROLS */}
           <div className="flex flex-wrap items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setViewMode("paper")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all cursor-pointer",
                   viewMode === "paper"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <Icon icon={faFileLines} className="size-3" />
@@ -226,10 +241,10 @@ export function PrescriptionViewModal({
                 type="button"
                 onClick={() => setViewMode("pdf")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all cursor-pointer",
                   viewMode === "pdf"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <Icon icon={faFilePdf} className="size-3" />
@@ -238,7 +253,7 @@ export function PrescriptionViewModal({
             </div>
 
             {/* Language Switcher */}
-            <div className="inline-flex items-center rounded-xl border border-slate-300 bg-slate-100 p-1 text-xs shadow-2xs">
+            <div className="inline-flex items-center rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-1 text-xs shadow-2xs">
               <button
                 type="button"
                 onClick={() => setLang("en")}
@@ -246,7 +261,7 @@ export function PrescriptionViewModal({
                   "inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-bold transition-all cursor-pointer",
                   lang === "en"
                     ? "bg-teal-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
                 title="View prescription in English"
               >
@@ -260,7 +275,7 @@ export function PrescriptionViewModal({
                   "inline-flex items-center gap-1.5 rounded-lg px-3 py-1 font-bold transition-all cursor-pointer",
                   lang === "hi"
                     ? "bg-teal-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
                 title="चिकित्सीय पर्चा हिंदी में देखें"
               >
@@ -269,28 +284,28 @@ export function PrescriptionViewModal({
               </button>
             </div>
 
-            {/* Print & Download */}
+            {/* Print & Download - Highly visible, vibrant and always prominent */}
             <Button
               type="button"
-              variant="secondary"
               size="sm"
               onClick={handlePrint}
               disabled={loading || !prescriptionData}
-              title="Print Prescription"
+              title="Print Prescription (Ctrl+P)"
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faPrint} data-icon="inline-start" />
+              <Icon icon={faPrint} className="size-3 text-white" />
               <span>{i18n.printPrescription}</span>
             </Button>
 
             <Button
               type="button"
-              variant="primary"
               size="sm"
               onClick={handleDownload}
               disabled={loading || !prescriptionData}
               title="Download Prescription PDF"
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faDownload} data-icon="inline-start" />
+              <Icon icon={faDownload} className="size-3 text-white" />
               <span>{i18n.downloadPrescription}</span>
             </Button>
 
@@ -783,27 +798,33 @@ export function PrescriptionViewModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-              {i18n.close}
-            </Button>
             <Button
               type="button"
               variant="secondary"
               size="sm"
+              onClick={onClose}
+              className="h-8 text-xs font-medium text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {i18n.close}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               onClick={handlePrint}
               disabled={loading || !prescriptionData}
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faPrint} data-icon="inline-start" />
+              <Icon icon={faPrint} className="size-3 text-white" />
               <span>{i18n.printPrescription}</span>
             </Button>
             <Button
               type="button"
-              variant="primary"
               size="sm"
               onClick={handleDownload}
               disabled={loading || !prescriptionData}
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faDownload} data-icon="inline-start" />
+              <Icon icon={faDownload} className="size-3 text-white" />
               <span>{i18n.downloadPrescription}</span>
             </Button>
           </div>

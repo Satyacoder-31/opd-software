@@ -257,7 +257,15 @@ export function DoctorFastConsultation({
   // Modals for Prescription View & Apollo Outpatient Summary
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
   const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
+  const [rxAutoPrint, setRxAutoPrint] = useState(false);
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
+
+  function handleOpenPrintRx(lang: "en" | "hi" = "en") {
+    onSaveDraft();
+    setRxModalLang(lang);
+    setRxAutoPrint(true);
+    setIsRxViewOpen(true);
+  }
 
   // Suggestion Dropdown States
   const [symptomsMenuOpen, setSymptomsMenuOpen] = useState(false);
@@ -593,41 +601,48 @@ export function DoctorFastConsultation({
         <div className="flex items-center gap-2 flex-wrap">
           <Button
             type="button"
-            variant="outline"
             size="sm"
-            onClick={() => {
-              setRxModalLang("en");
-              setIsRxViewOpen(true);
-            }}
-            className="h-8 gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs cursor-pointer"
-            title="View full prescription in English"
+            onClick={() => handleOpenPrintRx("en")}
+            className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer"
+            title="Print Prescription (English)"
           >
-            <Icon icon={faEye} className="size-3 text-indigo-600" />
-            <span>View Rx (EN)</span>
+            <Icon icon={faPrint} className="size-3 text-white" />
+            <span>Print Rx (EN)</span>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleOpenPrintRx("hi")}
+            className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer"
+            title="चिकित्सीय पर्चा प्रिंट करें (Hindi Prescription Print)"
+          >
+            <Icon icon={faPrint} className="size-3 text-white" />
+            <span>पर्चा प्रिंट (Hindi)</span>
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => {
-              setRxModalLang("hi");
+              setRxModalLang("en");
+              setRxAutoPrint(false);
               setIsRxViewOpen(true);
             }}
-            className="h-8 gap-1.5 text-xs font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs cursor-pointer"
-            title="चिकित्सीय पर्चा हिंदी में देखें (Hindi Prescription Preview)"
+            className="h-8 gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs cursor-pointer"
+            title="View full prescription in English"
           >
-            <Icon icon={faEye} className="size-3 text-teal-600" />
-            <span>पर्चा देखें (Hindi)</span>
+            <Icon icon={faEye} className="size-3 text-indigo-600 dark:text-indigo-400" />
+            <span>View Rx</span>
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setIsSummaryViewOpen(true)}
-            className="h-8 gap-1.5 text-xs font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs cursor-pointer"
+            className="h-8 gap-1.5 text-xs font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs cursor-pointer"
             title="View Apollo standard Outpatient Summary & Prescription"
           >
-            <Icon icon={faFileContract} className="size-3 text-teal-600" />
+            <Icon icon={faFileContract} className="size-3 text-teal-600 dark:text-teal-400" />
             <span>Outpatient Summary</span>
           </Button>
         </div>
@@ -2155,12 +2170,85 @@ export function DoctorFastConsultation({
         </div>
       </div>
 
+      {/* BOTTOM PRIMARY CONSULTATION ACTIONS BAR */}
+      <div className="sticky bottom-2 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-slate-300/80 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 p-3.5 shadow-xl backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+            <Icon icon={faPills} className="size-4" />
+          </span>
+          <div>
+            <div className="text-xs font-bold text-slate-900 dark:text-white">
+              {medicines.filter((m) => m.name?.trim()).length} Medicine{medicines.filter((m) => m.name?.trim()).length === 1 ? "" : "s"} Ready
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Save changes, print official prescription, or finalize OPD consultation
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onSaveDraft}
+            loading={isSaving}
+            disabled={isCompleting}
+            className="h-9 gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer"
+          >
+            <Icon icon={faRotate} className="size-3 text-slate-500" />
+            <span>Save Draft</span>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleOpenPrintRx("en")}
+            disabled={isSaving || isCompleting}
+            className="h-9 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-xs cursor-pointer"
+            title="Print Prescription (English)"
+          >
+            <Icon icon={faPrint} className="size-3.5 text-white" />
+            <span>Print Rx (EN)</span>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleOpenPrintRx("hi")}
+            disabled={isSaving || isCompleting}
+            className="h-9 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer"
+            title="चिकित्सीय पर्चा प्रिंट करें (Hindi)"
+          >
+            <Icon icon={faPrint} className="size-3.5 text-white" />
+            <span>पर्चा प्रिंट (Hindi)</span>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            onClick={onCompleteVisit}
+            loading={isCompleting}
+            disabled={isSaving || isCompleting}
+            className="h-9 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md cursor-pointer"
+            title="Complete visit and go to checkout/billing"
+          >
+            <Icon icon={faCheck} className="size-3.5 text-white" />
+            <span>{isCompleting ? "Completing..." : "Complete & Print Rx"}</span>
+          </Button>
+        </div>
+      </div>
+
       {/* Prescription Viewer Modal */}
       <PrescriptionViewModal
         consultationId={consultationId}
         isOpen={isRxViewOpen}
-        onClose={() => setIsRxViewOpen(false)}
+        onClose={() => {
+          setIsRxViewOpen(false);
+          setRxAutoPrint(false);
+        }}
         initialLang={rxModalLang}
+        autoPrint={rxAutoPrint}
       />
 
       {/* Apollo-Standard Outpatient Summary Modal */}

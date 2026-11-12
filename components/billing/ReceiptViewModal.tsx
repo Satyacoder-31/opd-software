@@ -43,6 +43,7 @@ export type ReceiptViewModalProps = {
   isOpen: boolean;
   onClose: () => void;
   initialLang?: PdfLanguage;
+  autoPrint?: boolean;
 };
 
 export function ReceiptViewModal({
@@ -50,6 +51,7 @@ export function ReceiptViewModal({
   isOpen,
   onClose,
   initialLang = "en",
+  autoPrint = false,
 }: ReceiptViewModalProps) {
   const [activeConsultationId, setActiveConsultationId] = useState<string | null>(
     consultationId
@@ -62,13 +64,26 @@ export function ReceiptViewModal({
   const [receiptData, setReceiptData] = useState<ReceiptViewData | null>(null);
   const [patientReceipts, setPatientReceipts] = useState<PatientReceiptSummary[]>([]);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [hasTriggeredAutoPrint, setHasTriggeredAutoPrint] = useState(false);
 
   // Sync initial language when modal opens
   useEffect(() => {
     if (isOpen) {
       setLang(initialLang);
+      setHasTriggeredAutoPrint(false);
     }
   }, [isOpen, initialLang]);
+
+  // Handle autoPrint trigger when ready
+  useEffect(() => {
+    if (isOpen && autoPrint && !hasTriggeredAutoPrint && !loading && receiptData && pdfBlobUrl) {
+      setHasTriggeredAutoPrint(true);
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoPrint, hasTriggeredAutoPrint, loading, receiptData, pdfBlobUrl]);
 
   // Keep activeConsultationId synced when prop changes
   useEffect(() => {
@@ -190,9 +205,9 @@ export function ReceiptViewModal({
       aria-labelledby="receipt-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-4xl max-h-[94vh] flex flex-col rounded-2xl border border-slate-200 bg-slate-100 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-[94vh] flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shadow-2xl overflow-hidden">
         {/* MODAL TOP BAR */}
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3.5 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-sky-100 text-sky-700 shadow-2xs">
               <Icon icon={faReceipt} className="size-4" />
@@ -201,18 +216,18 @@ export function ReceiptViewModal({
               <div className="flex items-center gap-2">
                 <h2
                   id="receipt-modal-title"
-                  className="font-display text-base font-bold text-slate-900"
+                  className="font-display text-base font-bold text-slate-900 dark:text-white"
                 >
                   {i18n.documentTitle}
                 </h2>
                 {receiptData && (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-700 border border-emerald-200">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 text-[11px] font-bold uppercase text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                     <Icon icon={faCheck} className="size-2.5" />
                     {receiptData.invoiceNumber}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Official GST Tax Invoice & Settled Payment Receipt
               </p>
             </div>
@@ -221,15 +236,15 @@ export function ReceiptViewModal({
           {/* CONTROLS & ACTIONS */}
           <div className="flex flex-wrap items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setViewMode("paper")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all cursor-pointer",
                   viewMode === "paper"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <Icon icon={faFileInvoiceDollar} className="size-3" />
@@ -239,10 +254,10 @@ export function ReceiptViewModal({
                 type="button"
                 onClick={() => setViewMode("pdf")}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-semibold transition-all cursor-pointer",
                   viewMode === "pdf"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-500 hover:text-slate-800"
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 <Icon icon={faFilePdf} className="size-3" />
@@ -251,15 +266,15 @@ export function ReceiptViewModal({
             </div>
 
             {/* Language Switcher */}
-            <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
+            <div className="inline-flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setLang("en")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "rounded-md px-2.5 py-1 font-semibold transition-all cursor-pointer",
                   lang === "en"
                     ? "bg-sky-600 text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 EN
@@ -268,38 +283,38 @@ export function ReceiptViewModal({
                 type="button"
                 onClick={() => setLang("hi")}
                 className={cn(
-                  "rounded-md px-2.5 py-1 font-semibold transition-all",
+                  "rounded-md px-2.5 py-1 font-semibold transition-all cursor-pointer",
                   lang === "hi"
                     ? "bg-sky-600 text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
+                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                 )}
               >
                 हिंदी
               </button>
             </div>
 
-            {/* Quick Print & Download */}
+            {/* Quick Print & Download - Prominent & high contrast */}
             <Button
               type="button"
-              variant="secondary"
               size="sm"
               onClick={handlePrint}
               disabled={loading || !receiptData}
-              title="Print Receipt"
+              title="Print Receipt (Ctrl+P)"
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faPrint} data-icon="inline-start" />
+              <Icon icon={faPrint} className="size-3 text-white" />
               <span>{i18n.printReceipt}</span>
             </Button>
 
             <Button
               type="button"
-              variant="primary"
               size="sm"
               onClick={handleDownload}
               disabled={loading || !receiptData}
               title="Download Receipt PDF"
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faDownload} data-icon="inline-start" />
+              <Icon icon={faDownload} className="size-3 text-white" />
               <span>{i18n.downloadReceipt}</span>
             </Button>
 
@@ -307,7 +322,7 @@ export function ReceiptViewModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
               aria-label="Close dialog"
             >
               <Icon icon={faXmark} className="size-4" />
@@ -817,27 +832,33 @@ export function ReceiptViewModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-              {i18n.close}
-            </Button>
             <Button
               type="button"
               variant="secondary"
               size="sm"
+              onClick={onClose}
+              className="h-8 text-xs font-medium text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {i18n.close}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               onClick={handlePrint}
               disabled={loading || !receiptData}
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faPrint} data-icon="inline-start" />
+              <Icon icon={faPrint} className="size-3 text-white" />
               <span>{i18n.printReceipt}</span>
             </Button>
             <Button
               type="button"
-              variant="primary"
               size="sm"
               onClick={handleDownload}
               disabled={loading || !receiptData}
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 shadow-xs cursor-pointer"
             >
-              <Icon icon={faDownload} data-icon="inline-start" />
+              <Icon icon={faDownload} className="size-3 text-white" />
               <span>{i18n.downloadReceipt}</span>
             </Button>
           </div>

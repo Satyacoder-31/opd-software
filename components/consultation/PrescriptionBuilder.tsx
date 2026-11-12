@@ -22,6 +22,7 @@ import {
 import {
   faCalendarDays,
   faClipboard,
+  faPrint,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   DOSAGE_RECOMMENDATIONS,
@@ -42,6 +43,7 @@ import {
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
+import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import {
@@ -181,7 +183,7 @@ export function PrescriptionBuilder({
   const [error, setError] = useState<string | null>(null);
   const [footerHost, setFooterHost] = useState<HTMLElement | null>(null);
   const { isPending, run } = usePendingAction<
-    "save" | "download" | "download-hi" | "template" | "delete-template"
+    "save" | "download" | "download-hi" | "print" | "print-hi" | "template" | "delete-template"
   >();
 
   const medicines = isControlled
@@ -498,6 +500,54 @@ export function PrescriptionBuilder({
         return;
       }
       downloadBase64Pdf(pdfResult.data.pdfBase64, pdfResult.data.filename);
+    }, actionKey);
+  }
+
+  function handlePrint(lang: "en" | "hi" = "en") {
+    setError(null);
+    const validated = validatePrescriptionDraft(medicines, { advice, followUp });
+    if (!validated.ok) {
+      setError(validated.error);
+      return;
+    }
+    const actionKey = lang === "hi" ? "print-hi" : "print";
+    void run(async () => {
+      if (!isAmendMode) {
+        const saveResult = await persistPrescription();
+        if (!saveResult.success) {
+          setError(saveResult.error);
+          return;
+        }
+      }
+      const pdfResult = await generatePrescriptionPdf(consultationId, lang);
+      if (!pdfResult.success) {
+        setError(pdfResult.error);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(pdfResult.data.pdfBase64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          window.print();
+        }
+        setTimeout(() => {
+          iframe.remove();
+          URL.revokeObjectURL(url);
+        }, 2500);
+      };
     }, actionKey);
   }
 
@@ -825,6 +875,26 @@ export function PrescriptionBuilder({
           </Button>
           <Button
             type="button"
+            onClick={() => handlePrint("en")}
+            loading={isPending("print")}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5 shadow-xs cursor-pointer"
+            title="Print Prescription (English)"
+          >
+            <Icon icon={faPrint} className="size-3 text-white" />
+            Print Rx (EN)
+          </Button>
+          <Button
+            type="button"
+            onClick={() => handlePrint("hi")}
+            loading={isPending("print-hi")}
+            className="bg-teal-600 hover:bg-teal-700 text-white font-bold gap-1.5 shadow-xs cursor-pointer"
+            title="चिकित्सीय पर्चा प्रिंट करें (Hindi)"
+          >
+            <Icon icon={faPrint} className="size-3 text-white" />
+            पर्चा प्रिंट (Hindi)
+          </Button>
+          <Button
+            type="button"
             variant="secondary"
             onClick={() => handleDownload("en")}
             loading={isPending("download")}
@@ -847,6 +917,17 @@ export function PrescriptionBuilder({
 
       {hideSaveActions && (
         <div className="flex flex-wrap items-center gap-2 px-3 py-2.5 md:px-4">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handlePrint("en")}
+            loading={isPending("print")}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5 shadow-xs cursor-pointer"
+            title="Print Prescription (English)"
+          >
+            <Icon icon={faPrint} className="size-3 text-white" />
+            Print Rx
+          </Button>
           <Button
             type="button"
             variant="secondary"

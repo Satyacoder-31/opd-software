@@ -231,15 +231,15 @@ export async function generatePrescriptionPdf(
     },
   });
 
-  if (!consultation?.prescription) {
-    return { success: false, error: "Prescription not found." };
+  if (!consultation) {
+    return { success: false, error: "Consultation not found." };
   }
 
   const clinic = await prisma.clinic.findUniqueOrThrow({
     where: { id: session.clinicId },
   });
 
-  const medicines = consultation.prescription.medicines as Medicine[];
+  const medicines = (consultation.prescription?.medicines as Medicine[]) || [];
   const consultationDate = consultation.createdAt;
   const vitals = (consultation.vitals as any) ?? null;
 
@@ -271,8 +271,8 @@ export async function generatePrescriptionPdf(
     abhaAddress: consultation.patient.abhaAddress ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
     medicines,
-    advice: consultation.prescription.advice ?? undefined,
-    followUp: consultation.prescription.followUp ?? undefined,
+    advice: consultation.prescription?.advice ?? undefined,
+    followUp: consultation.prescription?.followUp ?? undefined,
     layout: clinic.prescriptionLayout,
     language,
   });
@@ -282,7 +282,7 @@ export async function generatePrescriptionPdf(
     actorId: session.userId,
     action: "export",
     resourceType: "prescription",
-    resourceId: consultation.prescription.id,
+    resourceId: consultation.prescription?.id ?? consultation.id,
   });
 
   const pdfBase64 = Buffer.from(pdfBytes).toString("base64");
@@ -354,15 +354,15 @@ export async function getPrescriptionViewData(
     },
   });
 
-  if (!consultation?.prescription) {
-    return { success: false, error: "Prescription not found for this consultation." };
+  if (!consultation) {
+    return { success: false, error: "Consultation not found." };
   }
 
   const clinic = await prisma.clinic.findUniqueOrThrow({
     where: { id: session.clinicId },
   });
 
-  const medicines = consultation.prescription.medicines as Medicine[];
+  const medicines = (consultation.prescription?.medicines as Medicine[]) || [];
   const consultationDate = consultation.createdAt;
   const vitals = (consultation.vitals as any) ?? null;
   const formattedDate = formatPrescriptionDate(consultationDate);
@@ -395,8 +395,8 @@ export async function getPrescriptionViewData(
     abhaAddress: consultation.patient.abhaAddress ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
     medicines,
-    advice: consultation.prescription.advice ?? undefined,
-    followUp: consultation.prescription.followUp ?? undefined,
+    advice: consultation.prescription?.advice ?? undefined,
+    followUp: consultation.prescription?.followUp ?? undefined,
     layout: clinic.prescriptionLayout,
     language,
   });
@@ -406,7 +406,7 @@ export async function getPrescriptionViewData(
     actorId: session.userId,
     action: "read",
     resourceType: "prescription",
-    resourceId: consultation.prescription.id,
+    resourceId: consultation.prescription?.id ?? consultation.id,
     metadata: { view: "prescription_preview", language },
   });
 
@@ -417,7 +417,7 @@ export async function getPrescriptionViewData(
     success: true,
     data: {
       consultationId,
-      prescriptionId: consultation.prescription.id,
+      prescriptionId: consultation.prescription?.id ?? consultation.id,
       date: formattedDate,
       clinic: {
         name: clinic.name,
@@ -452,8 +452,8 @@ export async function getPrescriptionViewData(
       diagnosis: consultation.diagnosis ?? "",
       vitals,
       medicines,
-      advice: consultation.prescription.advice,
-      followUp: consultation.prescription.followUp,
+      advice: consultation.prescription?.advice ?? null,
+      followUp: consultation.prescription?.followUp ?? null,
       pdfBase64,
       filename,
       language,

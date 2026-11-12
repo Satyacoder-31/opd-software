@@ -35,6 +35,7 @@ export function ConsultationDocumentActions({
   const [error, setError] = useState<string | null>(null);
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
   const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
+  const [rxAutoPrint, setRxAutoPrint] = useState(false);
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
   const { isPending, run } = usePendingAction<
     "prescription" | "prescription-hi" | "certificate"
@@ -75,9 +76,24 @@ export function ConsultationDocumentActions({
         <>
           <Button
             type="button"
+            size="sm"
+            onClick={() => {
+              setRxModalLang("en");
+              setRxAutoPrint(true);
+              setIsRxViewOpen(true);
+            }}
+            className="shrink-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold gap-1.5 shadow-xs cursor-pointer"
+            title="Print Prescription (English)"
+          >
+            <Icon icon={faPrint} className="text-xs text-white" />
+            Print Rx
+          </Button>
+          <Button
+            type="button"
             variant="primary"
             onClick={() => {
               setRxModalLang("en");
+              setRxAutoPrint(false);
               setIsRxViewOpen(true);
             }}
             className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold gap-1.5 shadow-xs"
@@ -91,6 +107,7 @@ export function ConsultationDocumentActions({
             variant="outline"
             onClick={() => {
               setRxModalLang("hi");
+              setRxAutoPrint(false);
               setIsRxViewOpen(true);
             }}
             className="shrink-0 border-indigo-300 text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 font-bold gap-1.5 shadow-2xs"
@@ -157,8 +174,12 @@ export function ConsultationDocumentActions({
       <PrescriptionViewModal
         consultationId={consultationId}
         isOpen={isRxViewOpen}
-        onClose={() => setIsRxViewOpen(false)}
+        onClose={() => {
+          setIsRxViewOpen(false);
+          setRxAutoPrint(false);
+        }}
         initialLang={rxModalLang}
+        autoPrint={rxAutoPrint}
       />
 
       {/* Outpatient Summary Modal */}

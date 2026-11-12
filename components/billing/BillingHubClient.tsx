@@ -8,6 +8,7 @@ import {
   faMoneyBillWave,
   faReceipt,
   faEye,
+  faPrint,
   faCalendarDay,
   faArrowTrendUp,
   faCheckDouble,
@@ -63,6 +64,7 @@ export function BillingHubClient({
   const [showCalendar, setShowCalendar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewReceiptConsultationId, setViewReceiptConsultationId] = useState<string | null>(null);
+  const [receiptAutoPrint, setReceiptAutoPrint] = useState(false);
   const [pendingNav, startTransition] = useTransition();
   const { isPending, run } = usePendingAction();
   const selectedDate = parseLocalDateInput(date) ?? undefined;
@@ -480,13 +482,29 @@ export function BillingHubClient({
                               <Button
                                 type="button"
                                 size="sm"
+                                onClick={() => {
+                                  setReceiptAutoPrint(true);
+                                  setViewReceiptConsultationId(row.consultationId);
+                                }}
+                                className="h-8 px-2.5 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 shadow-2xs cursor-pointer"
+                                title="Print Official Tax Invoice / Receipt"
+                              >
+                                <Icon icon={faPrint} className="size-3 text-white" />
+                                <span>Print</span>
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
                                 variant="secondary"
-                                onClick={() => setViewReceiptConsultationId(row.consultationId)}
-                                className="border-sky-300 text-sky-800 bg-sky-50/70 hover:bg-sky-100 font-semibold shadow-2xs"
+                                onClick={() => {
+                                  setReceiptAutoPrint(false);
+                                  setViewReceiptConsultationId(row.consultationId);
+                                }}
+                                className="border-sky-300 text-sky-800 bg-sky-50/70 hover:bg-sky-100 font-semibold shadow-2xs cursor-pointer"
                                 title="View official receipt & tax invoice before downloading"
                               >
                                 <Icon icon={faEye} data-icon="inline-start" />
-                                View Receipt
+                                View
                               </Button>
                               <Button
                                 type="button"
@@ -527,7 +545,11 @@ export function BillingHubClient({
       <ReceiptViewModal
         consultationId={viewReceiptConsultationId}
         isOpen={Boolean(viewReceiptConsultationId)}
-        onClose={() => setViewReceiptConsultationId(null)}
+        onClose={() => {
+          setViewReceiptConsultationId(null);
+          setReceiptAutoPrint(false);
+        }}
+        autoPrint={receiptAutoPrint}
       />
     </PageShell>
   );

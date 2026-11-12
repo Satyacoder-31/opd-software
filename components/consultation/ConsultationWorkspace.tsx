@@ -15,6 +15,7 @@ import {
   faPaperclip,
   faPills,
   faPlus,
+  faPrint,
   faRotate,
   faStethoscope,
 } from "@fortawesome/free-solid-svg-icons";
@@ -112,6 +113,7 @@ export function ConsultationWorkspace({
   const [workspaceViewMode, setWorkspaceViewMode] = useState<"fast" | "hospital">("fast");
   const [isRxViewOpen, setIsRxViewOpen] = useState(false);
   const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
+  const [rxAutoPrint, setRxAutoPrint] = useState(false);
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
 
   useEffect(() => {
@@ -639,11 +641,27 @@ export function ConsultationWorkspace({
           <div className="flex items-center gap-2 ml-auto">
             <Button
               type="button"
+              size="sm"
+              className="min-h-8 text-xs gap-1.5 font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer"
+              onClick={() => {
+                handleSaveDraft();
+                setRxModalLang("en");
+                setRxAutoPrint(true);
+                setIsRxViewOpen(true);
+              }}
+              title="Print Prescription (English)"
+            >
+              <Icon icon={faPrint} className="size-3 text-white" />
+              Print Rx
+            </Button>
+            <Button
+              type="button"
               variant="outline"
               size="sm"
-              className="min-h-8 text-xs gap-1.5 font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs"
+              className="min-h-8 text-xs gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs"
               onClick={() => {
                 setRxModalLang("en");
+                setRxAutoPrint(false);
                 setIsRxViewOpen(true);
               }}
               title="View full prescription in English"
@@ -655,9 +673,10 @@ export function ConsultationWorkspace({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-8 text-xs gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              className="min-h-8 text-xs gap-1.5 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs"
               onClick={() => {
                 setRxModalLang("hi");
+                setRxAutoPrint(false);
                 setIsRxViewOpen(true);
               }}
               title="पर्चा देखें (Hindi Prescription Preview)"
@@ -1083,11 +1102,27 @@ export function ConsultationWorkspace({
           <div className="flex flex-wrap gap-2 ml-auto">
             <Button
               type="button"
+              size="sm"
+              className="min-h-10 gap-1.5 font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer"
+              onClick={() => {
+                handleSaveDraft();
+                setRxModalLang("en");
+                setRxAutoPrint(true);
+                setIsRxViewOpen(true);
+              }}
+              title="Print Prescription (English)"
+            >
+              <Icon icon={faPrint} className="size-3 text-white" />
+              Print Rx
+            </Button>
+            <Button
+              type="button"
               variant="outline"
               size="sm"
-              className="min-h-10 gap-1.5 font-bold text-indigo-700 bg-indigo-50/80 border-indigo-200 hover:bg-indigo-100 shadow-2xs"
+              className="min-h-10 gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs"
               onClick={() => {
                 setRxModalLang("en");
+                setRxAutoPrint(false);
                 setIsRxViewOpen(true);
               }}
               title="View full prescription in English"
@@ -1099,9 +1134,10 @@ export function ConsultationWorkspace({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-10 gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              className="min-h-10 gap-1.5 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs"
               onClick={() => {
                 setRxModalLang("hi");
+                setRxAutoPrint(false);
                 setIsRxViewOpen(true);
               }}
               title="पर्चा देखें (Hindi Prescription Preview)"
@@ -1113,7 +1149,7 @@ export function ConsultationWorkspace({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-10 gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
+              className="min-h-10 gap-1.5 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs"
               onClick={() => setIsSummaryViewOpen(true)}
               title="View Apollo standard Outpatient Summary & Prescription"
             >
@@ -1152,8 +1188,12 @@ export function ConsultationWorkspace({
       <PrescriptionViewModal
         consultationId={consultationId}
         isOpen={isRxViewOpen}
-        onClose={() => setIsRxViewOpen(false)}
+        onClose={() => {
+          setIsRxViewOpen(false);
+          setRxAutoPrint(false);
+        }}
         initialLang={rxModalLang}
+        autoPrint={rxAutoPrint}
       />
 
       {/* Apollo-Standard Outpatient Summary Modal */}

@@ -194,6 +194,7 @@ export function BillingForm({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptLang, setReceiptLang] = useState<"en" | "hi">("en");
+  const [receiptAutoPrint, setReceiptAutoPrint] = useState(false);
 
   // Vitals State & Live Editor
   const [vitals, setVitals] = useState<Vitals>(initialVitals ?? {});
@@ -526,22 +527,35 @@ export function BillingForm({
             <span className="rounded-md bg-white border border-border px-2.5 py-1 text-xs font-mono font-medium text-slate-700 shadow-2xs">
               INV-{receiptNo}
             </span>
-            {isPaid && (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setReceiptLang("en");
-                  setShowReceiptModal(true);
-                }}
-                className="border-sky-300 text-sky-800 bg-sky-50 hover:bg-sky-100 font-semibold text-xs shadow-2xs"
-                title="View & Preview Receipt"
-              >
-                <Icon icon={faEye} data-icon="inline-start" />
-                View Receipt
-              </Button>
-            )}
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setReceiptLang("en");
+                setReceiptAutoPrint(true);
+                setShowReceiptModal(true);
+              }}
+              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 shadow-xs cursor-pointer"
+              title="Print Official Tax Invoice / Receipt (Ctrl+P)"
+            >
+              <Icon icon={faPrint} className="size-3 text-white" />
+              <span>Print {isPaid ? "Receipt" : "Bill"}</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setReceiptLang("en");
+                setReceiptAutoPrint(false);
+                setShowReceiptModal(true);
+              }}
+              className="border-sky-300 text-sky-800 bg-sky-50 hover:bg-sky-100 font-semibold text-xs shadow-2xs cursor-pointer"
+              title="View & Preview Official Receipt"
+            >
+              <Icon icon={faEye} data-icon="inline-start" />
+              <span>View {isPaid ? "Receipt" : "Bill"}</span>
+            </Button>
           </div>
         </div>
 
@@ -1153,6 +1167,19 @@ export function BillingForm({
                 <Icon icon={faMoneyBillWave} data-icon="inline-start" />
                 Collect & Mark Paid (₹{total.toFixed(2)})
               </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setReceiptLang("en");
+                  setReceiptAutoPrint(true);
+                  setShowReceiptModal(true);
+                }}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-bold gap-1.5 shadow-xs cursor-pointer"
+                title="Print Draft Bill / Estimate"
+              >
+                <Icon icon={faPrint} className="size-3 text-white" />
+                Print Bill
+              </Button>
             </>
           )}
 
@@ -1163,6 +1190,7 @@ export function BillingForm({
                 variant="primary"
                 onClick={() => {
                   setReceiptLang("en");
+                  setReceiptAutoPrint(false);
                   setShowReceiptModal(true);
                 }}
                 className="font-semibold shadow-xs"
@@ -1170,6 +1198,20 @@ export function BillingForm({
               >
                 <Icon icon={faEye} data-icon="inline-start" />
                 View Receipt
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => {
+                  setReceiptLang("en");
+                  setReceiptAutoPrint(true);
+                  setShowReceiptModal(true);
+                }}
+                className="bg-sky-600 hover:bg-sky-700 text-white font-bold gap-1.5 shadow-xs cursor-pointer"
+                title="Print Official Receipt (Ctrl+P)"
+              >
+                <Icon icon={faPrint} className="size-3 text-white" />
+                Print Receipt
               </Button>
 
               <Button
@@ -1193,17 +1235,6 @@ export function BillingForm({
               >
                 <Icon icon={faDownload} data-icon="inline-start" />
                 रसीद डाउनलोड (Hindi)
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  setShowReceiptModal(true);
-                }}
-              >
-                <Icon icon={faPrint} data-icon="inline-start" />
-                Print Receipt
               </Button>
             </>
           )}
@@ -1338,8 +1369,12 @@ export function BillingForm({
       <ReceiptViewModal
         consultationId={consultationId}
         isOpen={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
+        onClose={() => {
+          setShowReceiptModal(false);
+          setReceiptAutoPrint(false);
+        }}
         initialLang={receiptLang}
+        autoPrint={receiptAutoPrint}
       />
     </div>
   );

@@ -606,8 +606,8 @@ export async function generateReceiptPdf(
     },
   });
 
-  if (!invoice || invoice.status !== InvoiceStatus.paid) {
-    return { success: false, error: "Paid invoice not found." };
+  if (!invoice || invoice.status === InvoiceStatus.void) {
+    return { success: false, error: "Valid invoice not found." };
   }
 
   const clinic = await prisma.clinic.findUniqueOrThrow({
@@ -757,8 +757,8 @@ export async function getReceiptViewData(
     },
   });
 
-  if (!invoice || invoice.status !== InvoiceStatus.paid) {
-    return { success: false, error: "Paid tax invoice not found for this consultation." };
+  if (!invoice || invoice.status === InvoiceStatus.void) {
+    return { success: false, error: "Valid invoice not found for this consultation." };
   }
 
   const clinic = await prisma.clinic.findUniqueOrThrow({
