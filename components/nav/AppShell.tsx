@@ -82,6 +82,7 @@ function SidebarNavLink({
   active,
   disabled: _disabled,
   onNavigate,
+  onSelect,
   collapsed = false,
   alertCount,
   alertTone,
@@ -90,6 +91,7 @@ function SidebarNavLink({
   active: boolean;
   disabled?: boolean;
   onNavigate: () => void;
+  onSelect?: () => void;
   collapsed?: boolean;
   alertCount?: number;
   alertTone?: "info" | "warning" | "danger";
@@ -102,6 +104,7 @@ function SidebarNavLink({
       aria-current={active ? "page" : undefined}
       onClick={() => {
         if (!active) onNavigate();
+        onSelect?.();
       }}
       className={cn(
         "group relative flex items-center rounded-xl text-xs font-semibold transition-all duration-150 select-none",
@@ -368,6 +371,17 @@ export function AppShell({
     setNavigating(true);
   }
 
+  function handleSelectNavOption() {
+    if (!collapsed) {
+      setCollapsed(true);
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "1");
+      } catch {
+        // Ignore private-mode / storage failures.
+      }
+    }
+  }
+
   function toggleCollapsed() {
     setCollapsed((current) => {
       const next = !current;
@@ -482,6 +496,7 @@ export function AppShell({
                         active={isNavItemActive(pathname, item.href)}
                         disabled={navigating}
                         onNavigate={onNavigate}
+                        onSelect={handleSelectNavOption}
                         collapsed={collapsed}
                         alertCount={count}
                         alertTone={tone}
@@ -573,6 +588,7 @@ export function AppShell({
             active={isNavItemActive(pathname, SETTINGS_NAV_ITEM.href)}
             disabled={navigating}
             onNavigate={onNavigate}
+            onSelect={handleSelectNavOption}
             collapsed={collapsed}
           />
 

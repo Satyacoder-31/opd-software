@@ -638,87 +638,7 @@ export function ConsultationWorkspace({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-8 text-xs gap-1.5 font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer"
-              onClick={() => {
-                handleSaveDraft();
-                setRxModalLang("en");
-                setRxAutoPrint(true);
-                setIsRxViewOpen(true);
-              }}
-              title="Print Prescription (English)"
-            >
-              <Icon icon={faPrint} className="size-3 text-white" />
-              Print Rx
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-8 text-xs gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs"
-              onClick={() => {
-                setRxModalLang("en");
-                setRxAutoPrint(false);
-                setIsRxViewOpen(true);
-              }}
-              title="View full prescription in English"
-            >
-              <Icon icon={faEye} className="size-3 text-indigo-600" />
-              View Rx (EN)
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-8 text-xs gap-1.5 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs"
-              onClick={() => {
-                setRxModalLang("hi");
-                setRxAutoPrint(false);
-                setIsRxViewOpen(true);
-              }}
-              title="पर्चा देखें (Hindi Prescription Preview)"
-            >
-              <Icon icon={faEye} className="size-3 text-teal-600" />
-              पर्चा देखें (Hindi)
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-8 text-xs gap-1.5 font-bold text-teal-800 bg-teal-50/80 border-teal-200 hover:bg-teal-100 shadow-2xs"
-              onClick={() => setIsSummaryViewOpen(true)}
-              title="View Apollo standard Outpatient Summary & Prescription"
-            >
-              <Icon icon={faFileContract} className="size-3 text-teal-600" />
-              Summary
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="min-h-8 text-xs gap-1.5"
-              onClick={handleSaveDraft}
-              loading={isPending("save")}
-              disabled={isPending("complete")}
-            >
-              <Icon icon={faCloudArrowUp} className="size-3" />
-              Save draft
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-8 text-xs gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold shadow-xs hover:from-emerald-700 hover:to-teal-700 cursor-pointer"
-              onClick={handleCompleteVisit}
-              loading={isPending("complete")}
-              disabled={isPending("complete")}
-            >
-              <Icon icon={faCheckCircle} className="size-3" />
-              {isPending("complete") ? "Completing..." : "Complete & Print Rx"}
-            </Button>
-          </div>
+          {/* Bottom docked bar holds all actions (Print, View, Summary, Save, Complete) */}
         </div>
 
         {workspaceViewMode === "fast" ? (
@@ -1114,6 +1034,21 @@ export function ConsultationWorkspace({
             >
               <Icon icon={faPrint} className="size-3 text-white" />
               Print Rx
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="min-h-10 gap-1.5 font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer"
+              onClick={() => {
+                handleSaveDraft();
+                setRxModalLang("hi");
+                setRxAutoPrint(true);
+                setIsRxViewOpen(true);
+              }}
+              title="चिकित्सीय पर्चा प्रिंट करें (Hindi Prescription Print)"
+            >
+              <Icon icon={faPrint} className="size-3 text-white" />
+              पर्चा प्रिंट (Hindi)
             </Button>
             <Button
               type="button"

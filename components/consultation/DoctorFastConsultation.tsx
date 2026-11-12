@@ -39,8 +39,7 @@ import {
   emptyMedicine,
 } from "@/components/consultation/PrescriptionBuilder";
 import { useClinicalRecommendations } from "@/lib/clinical-recommendations-storage";
-import { PrescriptionViewModal } from "@/components/consultation/PrescriptionViewModal";
-import { PatientSummaryModal } from "@/components/consultation/PatientSummaryModal";
+
 import {
   COMMON_ILLNESS_TEMPLATES,
   getClinicalTemplatesBySpecialty,
@@ -325,18 +324,7 @@ export function DoctorFastConsultation({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
 
-  // Modals for Prescription View & Apollo Outpatient Summary
-  const [isRxViewOpen, setIsRxViewOpen] = useState(false);
-  const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
-  const [rxAutoPrint, setRxAutoPrint] = useState(false);
-  const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
 
-  function handleOpenPrintRx(lang: "en" | "hi" = "en") {
-    onSaveDraft();
-    setRxModalLang(lang);
-    setRxAutoPrint(true);
-    setIsRxViewOpen(true);
-  }
 
   // Suggestion Dropdown States
   const [symptomsMenuOpen, setSymptomsMenuOpen] = useState(false);
@@ -740,71 +728,7 @@ export function DoctorFastConsultation({
 
   return (
     <div className="flex flex-col gap-3 p-3 md:p-4 max-w-7xl mx-auto">
-      {/* TOP ACTION BAR: VIEW PRESCRIPTION & OUTPATIENT SUMMARY */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-3 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 via-indigo-600 to-violet-500 text-white font-bold text-sm shadow-[0_2px_8px_rgba(124,58,237,0.25)]">
-            ⚡
-          </span>
-          <div>
-            <div className="text-xs font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Doctor Fast OPD Workspace</span>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              Patient: <strong className="text-slate-700">{patientName}</strong> ({uhid}) · Episode: {episodeNo}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => handleOpenPrintRx("en")}
-            className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer"
-            title="Print Prescription (English)"
-          >
-            <Icon icon={faPrint} className="size-3 text-white" />
-            <span>Print Rx (EN)</span>
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => handleOpenPrintRx("hi")}
-            className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer"
-            title="चिकित्सीय पर्चा प्रिंट करें (Hindi Prescription Print)"
-          >
-            <Icon icon={faPrint} className="size-3 text-white" />
-            <span>पर्चा प्रिंट (Hindi)</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setRxModalLang("en");
-              setRxAutoPrint(false);
-              setIsRxViewOpen(true);
-            }}
-            className="h-8 gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs cursor-pointer"
-            title="View full prescription in English"
-          >
-            <Icon icon={faEye} className="size-3 text-indigo-600 dark:text-indigo-400" />
-            <span>View Rx</span>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsSummaryViewOpen(true)}
-            className="h-8 gap-1.5 text-xs font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs cursor-pointer"
-            title="View Apollo standard Outpatient Summary & Prescription"
-          >
-            <Icon icon={faFileContract} className="size-3 text-teal-600 dark:text-teal-400" />
-            <span>Outpatient Summary</span>
-          </Button>
-        </div>
-      </div>
 
       {/* 1-CLICK SUPER TEMPLATES BANNER */}
       <div className="rounded-2xl border-2 border-purple-200/90 dark:border-purple-900/70 bg-gradient-to-r from-purple-50/90 via-indigo-50/60 to-purple-50/80 dark:from-purple-950/60 dark:via-indigo-950/40 dark:to-purple-950/50 p-3 shadow-xs">
@@ -2620,25 +2544,6 @@ export function DoctorFastConsultation({
           )}
         </div>
       </div>
-
-      {/* Prescription Viewer Modal */}
-      <PrescriptionViewModal
-        consultationId={consultationId}
-        isOpen={isRxViewOpen}
-        onClose={() => {
-          setIsRxViewOpen(false);
-          setRxAutoPrint(false);
-        }}
-        initialLang={rxModalLang}
-        autoPrint={rxAutoPrint}
-      />
-
-      {/* Apollo-Standard Outpatient Summary Modal */}
-      <PatientSummaryModal
-        consultationId={consultationId}
-        isOpen={isSummaryViewOpen}
-        onClose={() => setIsSummaryViewOpen(false)}
-      />
     </div>
   );
 }
