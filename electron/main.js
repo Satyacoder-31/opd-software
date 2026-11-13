@@ -1,6 +1,8 @@
-const { app, BrowserWindow, Menu, Tray, shell } = require("electron");
+const { app, BrowserWindow, Menu, Tray, shell, ipcMain } = require("electron");
 const path = require("path");
 const http = require("http");
+const fs = require("fs");
+const os = require("os");
 
 let mainWindow = null;
 const PORT = process.env.PORT || 3000;
@@ -309,6 +311,71 @@ app.whenReady().then(async () => {
       createMainWindow();
     }
   });
+});
+
+// IPC Handlers for reliable desktop printing and PDF viewing
+ipcMain.handle("desktop:open-pdf", async (_event, { base64Data, filename }) => {
+  try {
+    if (!base64Data) {
+      return { success: false, error: "No PDF data provided" };
+    }
+    const tempDir = os.tmpdir();
+    const safeFilename = (filename || `prescription-${Date.now()}.pdf`).replace(
+      /[^a-zA-Z0-9_.-]/g,
+      "_"
+    );
+    const filePath = path.join(tempDir, safeFilename);
+    const buffer = Buffer.from(base64Data, "base64");
+    fs.writeFileSync(filePath, buffer);
+    await shell.openPath(filePath);
+    return { success: true, filePath };
+  } catch (err) {
+    console.error("Failed to open PDF in default app:", err);
+    return { success: false, error: err?.message || "Failed to open PDF" };
+  }
+});
+
+ipcMain.handle("desktop:print-html", async (_event, { htmlContent }) => {
+  try {
+    if (!htmlContent) {
+      return { success: false, error: "No printable content provided" };
+    }
+    let printWin = new BrowserWindow({
+      show: false,
+      title: "Prescription Print",
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+      },
+    });
+
+    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+    await printWin.loadURL(dataUrl);
+
+    return new Promise((resolve) => {
+      printWin.webContents.print(
+        {
+          silent: false,
+          printBackground: true,
+          margins: { marginType: "none" },
+        },
+        (success, failureReason) => {
+          if (!success) {
+            console.warn("Print cancelled or failed in Electron:", failureReason);
+          }
+          if (printWin) {
+            printWin.close();
+            printWin = null;
+          }
+          resolve({ success, error: failureReason });
+        }
+      );
+    });
+  } catch (err) {
+    console.error("Failed to print HTML in Electron:", err);
+    return { success: false, error: err?.message || "Print failure" };
+  }
 });
 
 app.on("window-all-closed", () => {

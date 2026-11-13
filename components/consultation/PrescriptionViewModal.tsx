@@ -48,6 +48,13 @@ import {
   translatePlasterInstruction,
 } from "@/lib/pdf/translations";
 import { Button } from "@/components/ui/Button";
+import { PrescriptionPaperView } from "@/components/consultation/PrescriptionPaperView";
+import { generatePrintablePrescriptionHtml } from "@/lib/pdf/print-html";
+import {
+  isDesktopApp,
+  openDesktopPdf,
+  printDesktopHtml,
+} from "@/lib/electron-bridge";
 
 export type PrescriptionViewModalProps = {
   consultationId: string | null;
@@ -81,16 +88,16 @@ export function PrescriptionViewModal({
     }
   }, [isOpen, initialLang]);
 
-  // Handle autoPrint trigger when ready
+  // Handle autoPrint trigger when ready (prints cleanly without waiting for blob)
   useEffect(() => {
-    if (isOpen && autoPrint && !hasTriggeredAutoPrint && !loading && prescriptionData && pdfBlobUrl) {
+    if (isOpen && autoPrint && !hasTriggeredAutoPrint && !loading && prescriptionData) {
       setHasTriggeredAutoPrint(true);
       const timer = setTimeout(() => {
         handlePrint();
       }, 350);
       return () => clearTimeout(timer);
     }
-  }, [isOpen, autoPrint, hasTriggeredAutoPrint, loading, prescriptionData, pdfBlobUrl]);
+  }, [isOpen, autoPrint, hasTriggeredAutoPrint, loading, prescriptionData]);
 
   // Clean up previous blob URL
   useEffect(() => {
@@ -161,31 +168,83 @@ export function PrescriptionViewModal({
     downloadBase64Pdf(prescriptionData.pdfBase64, prescriptionData.filename);
   }
 
-  function handlePrint() {
+  async function handleOpenSystemPdf() {
+    if (!prescriptionData?.pdfBase64) return;
+
+    // In Electron desktop app: open directly in Windows default PDF viewer (Adobe / Edge)
+    if (isDesktopApp()) {
+      const res = await openDesktopPdf(
+        prescriptionData.pdfBase64,
+        prescriptionData.filename
+      );
+      if (res.success) return;
+    }
+
+    // In browser: open in new tab
     if (pdfBlobUrl) {
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.src = pdfBlobUrl;
-      document.body.appendChild(iframe);
-      iframe.onload = () => {
+      window.open(pdfBlobUrl, "_blank");
+      return;
+    }
+
+    handleDownload();
+  }
+
+  async function handlePrint() {
+    if (!prescriptionData) return;
+
+    const printableHtml = generatePrintablePrescriptionHtml(prescriptionData, lang);
+
+    // If running in Electron desktop app, print directly via hidden window
+    if (isDesktopApp()) {
+      try {
+        const res = await printDesktopHtml(printableHtml);
+        if (res.success) return;
+      } catch (e) {
+        console.warn("Desktop native print failed, falling back to iframe:", e);
+      }
+    }
+
+    // Web browsers & Electron fallback: Hidden iframe printing with pure A4 HTML
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "-9999px";
+    iframe.style.left = "-9999px";
+    iframe.style.width = "210mm";
+    iframe.style.height = "297mm";
+    iframe.style.border = "none";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(printableHtml);
+      doc.close();
+
+      setTimeout(() => {
         try {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
-        } catch {
-          window.print();
+        } catch (e) {
+          console.error("Iframe print execution error:", e);
+        } finally {
+          setTimeout(() => {
+            iframe.remove();
+          }, 4000);
         }
-        setTimeout(() => {
-          iframe.remove();
-        }, 2000);
-      };
+      }, 350);
       return;
     }
-    window.print();
+
+    // Absolute fallback: new window print
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printableHtml);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
   }
 
   const hasAllergies = Boolean(prescriptionData?.patient.allergies?.trim());
@@ -359,21 +418,33 @@ export function PrescriptionViewModal({
               </div>
             </div>
           ) : !prescriptionData ? null : viewMode === "pdf" ? (
-            /* EMBEDDED PDF VIEWER CONTAINER */
-            <div className="h-[75vh] w-full flex flex-col rounded-2xl border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+            /* PDF DIGITAL A4 DOCUMENT HUB */
+            <div className="w-full flex flex-col rounded-2xl border border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 shadow-xl overflow-hidden">
               {/* TOP PDF BAR */}
-              <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800 border-b border-slate-700 text-xs text-white">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-slate-800 border-b border-slate-700 text-xs text-white">
                 <div className="flex items-center gap-2">
+                  <div className="size-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="font-semibold text-teal-300">
                     {lang === "hi" ? "अधिकृत डिजिटल पर्चा (PDF)" : "Official Digital Rx (PDF)"}
                   </span>
-                  <span className="text-[11px] text-slate-400">· A4 Print Standard</span>
+                  <span className="text-[11px] text-slate-300 hidden sm:inline">
+                    · A4 High-Resolution Print Standard
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={handleOpenSystemPdf}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                    title="Open in Adobe Acrobat Reader or Windows Edge PDF Viewer"
+                  >
+                    <Icon icon={faFilePdf} className="size-3 text-white" />
+                    <span>{lang === "hi" ? "रीडर में खोलें" : "Open in PDF App"}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleDownload}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white px-3 py-1 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white px-3 py-1.5 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
                   >
                     <Icon icon={faDownload} className="size-3" />
                     <span>{i18n.downloadPrescription}</span>
@@ -381,7 +452,7 @@ export function PrescriptionViewModal({
                   <button
                     type="button"
                     onClick={handlePrint}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 font-semibold text-xs transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
                   >
                     <Icon icon={faPrint} className="size-3" />
                     <span>{i18n.printPrescription}</span>
@@ -389,450 +460,42 @@ export function PrescriptionViewModal({
                 </div>
               </div>
 
-              {/* VIEWER AREA */}
-              <div className="flex-1 w-full h-full relative bg-slate-950 min-h-[500px]">
-                {isGeneratingPdf || !pdfBlobUrl ? (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-300 p-6 min-h-[400px]">
-                    <Icon icon={faSpinner} className="size-9 animate-spin text-teal-400 mb-3" />
-                    <p className="text-sm font-semibold text-white">
+              {/* DOCUMENT VIEW AREA - CLEAN CRISP DESK WITH SHADOWED A4 SHEET */}
+              <div className="flex-1 w-full bg-slate-200/90 dark:bg-slate-950/80 p-3 sm:p-6 overflow-y-auto max-h-[72vh] flex flex-col items-center">
+                {isGeneratingPdf && !prescriptionData ? (
+                  <div className="flex flex-col items-center justify-center h-full text-slate-600 dark:text-slate-300 p-8 min-h-[400px]">
+                    <Icon icon={faSpinner} className="size-9 animate-spin text-teal-600 dark:text-teal-400 mb-3" />
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">
                       {lang === "hi"
                         ? "पीडीएफ पर्चा तैयार किया जा रहा है..."
                         : "Preparing high-resolution PDF..."}
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       {lang === "hi"
                         ? "वेक्टर फॉन्ट एवं क्लिनिक लेआउट लोड हो रहा है"
                         : "Formatting vector fonts and letterhead"}
                     </p>
                   </div>
                 ) : (
-                  <object
-                    data={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
-                    type="application/pdf"
-                    className="w-full h-full border-0"
-                  >
-                    <iframe
-                      src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
-                      className="w-full h-full border-0"
-                      title="Prescription PDF Preview"
-                    >
-                      <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-200">
-                        <p className="font-semibold text-base mb-3">
-                          {lang === "hi"
-                            ? "पीडीएफ दस्तावेज़ तैयार है"
-                            : "PDF Document is ready"}
-                        </p>
-                        <div className="flex gap-3">
-                          <Button onClick={handleDownload} variant="primary">
-                            <Icon icon={faDownload} className="mr-1.5" />
-                            {i18n.downloadPrescription}
-                          </Button>
-                          <Button onClick={handlePrint} variant="secondary">
-                            <Icon icon={faPrint} className="mr-1.5" />
-                            {i18n.printPrescription}
-                          </Button>
-                        </div>
-                      </div>
-                    </iframe>
-                  </object>
+                  <div className="w-full max-w-3xl space-y-3">
+                    <div className="px-3 py-1.5 rounded-lg bg-white/90 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 shadow-2xs flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">
+                      <span className="font-medium flex items-center gap-1.5">
+                        <Icon icon={faCheck} className="size-3 text-emerald-600" />
+                        {lang === "hi" ? "A4 लेआउट सत्यापन पूर्ण" : "A4 Print Standard Document Ready"}
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {prescriptionData.filename}
+                      </span>
+                    </div>
+
+                    <PrescriptionPaperView data={prescriptionData} lang={lang} />
+                  </div>
                 )}
               </div>
             </div>
           ) : (
             /* PAPER RX VIEW */
-            <div className="max-w-3xl mx-auto rounded-xl border border-slate-200 bg-white p-6 sm:p-8 shadow-md text-slate-800 space-y-6">
-              {/* LETTERHEAD HEADER */}
-              <div className="flex flex-col sm:flex-row items-start justify-between gap-4 border-b-2 border-teal-600 pb-5">
-                <div className="flex items-start gap-3">
-                  {prescriptionData.clinic.logoUrl && (
-                    <img
-                      src={prescriptionData.clinic.logoUrl}
-                      alt={prescriptionData.clinic.name}
-                      className="h-20 w-auto max-w-[140px] rounded-lg object-contain border border-slate-100 shadow-2xs"
-                    />
-                  )}
-                  <div>
-                    <h1 className="font-display text-xl font-bold text-slate-900 leading-tight">
-                      {prescriptionData.clinic.name}
-                    </h1>
-                    <p className="text-xs text-slate-600 mt-0.5">
-                      {prescriptionData.clinic.address}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      <span className="font-semibold">Phone:</span> {prescriptionData.clinic.phone}
-                      {prescriptionData.clinic.email && (
-                        <span> | Email: {prescriptionData.clinic.email}</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Consulting Doctor Box */}
-                <div className="sm:text-right min-w-[200px]">
-                  <h3 className="font-display text-base font-bold text-slate-900">
-                    {lang === "hi" ? "डॉ. " : "Dr. "}
-                    {prescriptionData.doctor.name.replace(/^Dr\.?\s+/i, "")}
-                  </h3>
-                  {prescriptionData.doctor.specialty && (
-                    <p className="text-xs font-semibold text-teal-700">
-                      {translateDoctorSpecialty(prescriptionData.doctor.specialty, lang)}
-                    </p>
-                  )}
-                  {prescriptionData.doctor.qualifications && (
-                    <p className="text-[11px] text-slate-500">
-                      {prescriptionData.doctor.qualifications}
-                    </p>
-                  )}
-                  {prescriptionData.doctor.registrationNo && (
-                    <p className="text-[11px] font-mono text-slate-500">
-                      {lang === "hi" ? "पंजीकरण संख्या: " : "Reg. No: "}
-                      {prescriptionData.doctor.registrationNo}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* PATIENT INFO BANNER */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div>
-                    <span className="text-slate-500 block">
-                      {lang === "hi" ? "मरीज़ का नाम" : "Patient Name"}
-                    </span>
-                    <strong className="text-slate-900 font-semibold">
-                      {prescriptionData.patient.name}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">
-                      {lang === "hi" ? "विशिष्ट पहचान (UHID)" : "UHID / MRN"}
-                    </span>
-                    <span className="font-mono font-bold text-teal-800">
-                      {prescriptionData.patient.mrn}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">
-                      {lang === "hi" ? "उम्र / लिंग" : "Age / Gender"}
-                    </span>
-                    <span>
-                      {translateAge(prescriptionData.patient.age, lang)} /{" "}
-                      {translateGender(prescriptionData.patient.gender, lang)}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block">
-                      {lang === "hi" ? "दिनांक व टोकन" : "Date & Token"}
-                    </span>
-                    <span>
-                      {prescriptionData.date}{" "}
-                      {prescriptionData.tokenNumber && (
-                        <strong className="text-teal-700">
-                          ({lang === "hi" ? `टोकन #${prescriptionData.tokenNumber}` : `Token #${prescriptionData.tokenNumber}`})
-                        </strong>
-                      )}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Allergies / Chronic condition */}
-                <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex flex-wrap items-center gap-3 text-xs">
-                  {hasAllergies ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 border border-rose-200 px-2 py-0.5 font-bold text-rose-800">
-                      <Icon icon={faTriangleExclamation} className="size-3 text-rose-600" />
-                      {lang === "hi" ? "दवा एलर्जी: " : "Known Allergies: "}
-                      {prescriptionData.patient.allergies}
-                    </span>
-                  ) : (
-                    <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                      <Icon icon={faCheck} className="size-3 text-emerald-600" />
-                      {lang === "hi" ? "कोई ज्ञात दवा एलर्जी नहीं (NKDA)" : "Allergies: No Known Drug Allergies"}
-                    </span>
-                  )}
-                  {prescriptionData.patient.chronicConditions?.trim() ? (
-                    <span className="text-slate-600">
-                      {lang === "hi" ? "पूर्व चिकित्सा इतिहास: " : "Past History: "}
-                      <strong className="text-slate-800">
-                        {translatePastHistory(prescriptionData.patient.chronicConditions, lang)}
-                      </strong>
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* VITALS RIBBON */}
-              {prescriptionData.vitals && (
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-                    {lang === "hi" ? "शारीरिक माप:" : "Vitals:"}
-                  </span>
-                  {prescriptionData.vitals.bp && (
-                    <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      {lang === "hi" ? "रक्तचाप: " : "BP: "}
-                      {prescriptionData.vitals.bp} mmHg
-                    </span>
-                  )}
-                  {prescriptionData.vitals.pulse && (
-                    <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      {lang === "hi" ? "नाड़ी: " : "Pulse: "}
-                      {prescriptionData.vitals.pulse} bpm
-                    </span>
-                  )}
-                  {prescriptionData.vitals.weight && (
-                    <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      {lang === "hi" ? "वजन: " : "Weight: "}
-                      {prescriptionData.vitals.weight} kg
-                    </span>
-                  )}
-                  {prescriptionData.vitals.temp && (
-                    <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      {lang === "hi" ? "तापमान: " : "Temp: "}
-                      {prescriptionData.vitals.temp} °F
-                    </span>
-                  )}
-                  {prescriptionData.vitals.spo2 && (
-                    <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-slate-800 font-medium">
-                      {lang === "hi" ? "ऑक्सीजन: " : "SpO2: "}
-                      {prescriptionData.vitals.spo2} %
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* CLINICAL DIAGNOSIS & COMPLAINTS */}
-              <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-3.5 space-y-1.5 text-xs">
-                {prescriptionData.chiefComplaint && (
-                  <div>
-                    <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
-                      {lang === "hi" ? "मुख्य समस्या व लक्षण: " : "Chief Complaints: "}
-                    </span>
-                    <span className="text-slate-800">
-                      {translateChiefComplaint(prescriptionData.chiefComplaint, lang)}
-                    </span>
-                  </div>
-                )}
-                <div>
-                  <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
-                    {lang === "hi" ? "चिकित्सीय निदान: " : "Clinical Diagnosis: "}
-                  </span>
-                  <strong className="text-slate-900 font-bold text-sm">
-                    {translateDiagnosis(prescriptionData.diagnosis, lang) || (lang === "hi" ? "परीक्षण मूल्यांकन दर्ज" : "Clinical assessment recorded")}
-                  </strong>
-                </div>
-              </div>
-
-              {/* OUTPATIENT PRESCRIPTION & MEDICINES TABLE */}
-              <div>
-                <div className="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
-                  <div className="flex items-center gap-2">
-                    <span className="font-serif italic font-bold text-2xl text-teal-800">℞</span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                      {i18n.scheduleTitle} ({prescriptionData.medicines.length})
-                    </span>
-                  </div>
-                  <span className="text-[11px] font-normal text-slate-500">
-                    {i18n.scheduleSubtitle}
-                  </span>
-                </div>
-
-                <div className="overflow-hidden rounded-xl border border-slate-200 shadow-xs">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 text-[11px] uppercase tracking-wider">
-                      <tr>
-                        <th className="py-2.5 px-3">{i18n.medicines}</th>
-                        <th className="py-2.5 px-3 text-center w-24">{i18n.morning}</th>
-                        <th className="py-2.5 px-3 text-center w-24">{i18n.afternoon}</th>
-                        <th className="py-2.5 px-3 text-center w-24">{i18n.evening}</th>
-                        <th className="py-2.5 px-3 text-center w-24">{i18n.night}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {prescriptionData.medicines.map((med, idx) => {
-                        const genericSalt =
-                          med.genericName?.trim() || getGenericCompositionForDrug(med.name);
-                        const sched = parseDoseSchedule(med.frequency);
-                        const subDetails = [
-                          translateDosage(med.dosage, lang),
-                          translateRoute(med.route, lang),
-                          translateDuration(med.duration, lang),
-                          translateInstructions(med.instructions, lang),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ");
-
-                        return (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-2.5 px-3">
-                              <div className="font-bold text-slate-900 text-sm">
-                                {idx + 1}. {med.name}
-                              </div>
-                              {genericSalt && genericSalt.toLowerCase() !== med.name.toLowerCase() ? (
-                                <div className="text-[11px] font-medium text-teal-700 mt-0.5">
-                                  {genericSalt}
-                                </div>
-                              ) : null}
-                              {subDetails ? (
-                                <div className="text-xs text-slate-600 mt-1">
-                                  {subDetails}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span
-                                className={cn(
-                                  "font-bold font-mono text-sm",
-                                  sched.morning !== "—" ? "text-sky-600" : "text-slate-400"
-                                )}
-                              >
-                                {sched.morning}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span
-                                className={cn(
-                                  "font-bold font-mono text-sm",
-                                  sched.afternoon !== "—" ? "text-sky-600" : "text-slate-400"
-                                )}
-                              >
-                                {sched.afternoon}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span
-                                className={cn(
-                                  "font-bold font-mono text-sm",
-                                  sched.evening !== "—" ? "text-sky-600" : "text-slate-400"
-                                )}
-                              >
-                                {sched.evening}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-center">
-                              <span
-                                className={cn(
-                                  "font-bold font-mono text-sm",
-                                  sched.night !== "—" ? "text-sky-600" : "text-slate-400"
-                                )}
-                              >
-                                {sched.night}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* BANDAGES, PLASTERS & SUPPORTS */}
-              {((prescriptionData.plasterOrBandages && prescriptionData.plasterOrBandages.length > 0) ||
-                prescriptionData.plasterAdvice) && (
-                <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 p-4 space-y-3">
-                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
-                    <Icon icon={faBandage} className="size-3.5 text-indigo-600 dark:text-indigo-400" />
-                    <span>{i18n.plastersAndBandagesTitle}</span>
-                  </div>
-
-                  {prescriptionData.plasterOrBandages && prescriptionData.plasterOrBandages.length > 0 && (
-                    <div className="grid gap-2">
-                      {prescriptionData.plasterOrBandages.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900/50 shadow-2xs text-xs"
-                        >
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-slate-900 dark:text-white">
-                              {translatePlasterName(item.name, lang)}
-                            </span>
-                            {item.site && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium">
-                                {lang === "hi" ? "अंग: " : "Site: "}
-                                {translatePlasterSite(item.site, lang)}
-                              </span>
-                            )}
-                            {item.duration && (
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-semibold border border-amber-200 dark:border-amber-900/60">
-                                {lang === "hi" ? "अवधि: " : "Duration: "}
-                                {translatePlasterDuration(item.duration, lang)}
-                              </span>
-                            )}
-                          </div>
-                          {item.instructions && (
-                            <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-semibold bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded">
-                              {translatePlasterInstruction(item.instructions, lang)}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {prescriptionData.plasterAdvice && (
-                    <div className="p-3 rounded-lg bg-white/90 dark:bg-slate-800/90 border border-indigo-200 dark:border-indigo-900/50 text-xs">
-                      <div className="font-bold text-indigo-900 dark:text-indigo-300 mb-1 flex items-center gap-1.5">
-                        <span>{i18n.plasterCareAdviceTitle}:</span>
-                      </div>
-                      <div className="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line pl-1">
-                        {translateAdviceText(prescriptionData.plasterAdvice, lang)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ADVICE & INSTRUCTIONS */}
-              {prescriptionData.advice && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
-                    <Icon icon={faNotesMedical} className="size-3.5 text-teal-700" />
-                    <span>{i18n.adviceTitle}</span>
-                  </div>
-                  <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-line pl-1">
-                    {translateAdviceText(prescriptionData.advice, lang)}
-                  </div>
-                </div>
-              )}
-
-              {/* FOLLOW-UP REVIEW */}
-              {prescriptionData.followUp && (
-                <div className="flex items-center justify-between rounded-xl border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Icon icon={faCalendarCheck} className="size-3.5 text-sky-700" />
-                    <span className="font-semibold text-slate-700">{i18n.followUpTitle}:</span>
-                    <strong className="text-sky-900 font-bold">
-                      {translateFollowUp(prescriptionData.followUp, lang)}
-                    </strong>
-                  </div>
-                  <span className="text-slate-500 text-[11px]">
-                    {i18n.followUpBring}
-                  </span>
-                </div>
-              )}
-
-              {/* FOOTER & DOCTOR SIGNATURE */}
-              <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-end justify-between gap-6 text-xs text-slate-500">
-                <div className="max-w-md">
-                  <p>{i18n.disclaimer}</p>
-                </div>
-                <div className="text-center sm:text-right w-52 space-y-1">
-                  <div className="h-10 border-b border-dashed border-slate-400"></div>
-                  <div className="text-xs font-bold text-slate-900">
-                    {lang === "hi" ? "डॉ. " : "Dr. "}
-                    {prescriptionData.doctor.name.replace(/^Dr\.?\s+/i, "")}
-                  </div>
-                  {prescriptionData.doctor.registrationNo && (
-                    <div className="text-[11px] font-mono text-slate-500">
-                      {lang === "hi" ? "पंजीकरण संख्या: " : "Reg. No: "}
-                      {prescriptionData.doctor.registrationNo}
-                    </div>
-                  )}
-                  <div className="text-[10px] text-teal-800 font-semibold uppercase">
-                    {i18n.doctorSignature}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <PrescriptionPaperView data={prescriptionData} lang={lang} />
           )}
         </div>
 

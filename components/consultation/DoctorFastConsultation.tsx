@@ -447,6 +447,22 @@ export function DoctorFastConsultation({
     });
   };
 
+  const handleUpdatePlasterItem = (
+    id: string,
+    updates: Partial<PlasterBandageItem>
+  ) => {
+    const nextList = plasterOrBandages.map((it) =>
+      it.id === id ? { ...it, ...updates } : it
+    );
+    onClinicalChange({
+      ...clinical,
+      treatmentPlan: {
+        ...treatmentPlan,
+        plasterOrBandages: nextList,
+      },
+    });
+  };
+
   const handlePlasterAdviceChange = (text: string) => {
     onClinicalChange({
       ...clinical,
@@ -2279,49 +2295,174 @@ export function DoctorFastConsultation({
           </div>
         )}
 
-        {/* Currently Prescribed Bandages & Plasters Table / List */}
+        {/* Currently Prescribed Bandages & Plasters Table / List (Fully Editable) */}
         {plasterOrBandages.length > 0 && (
           <div className="mb-3 space-y-2">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
-              Active Prescribed Applications ({plasterOrBandages.length}):
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                Active Prescribed Applications ({plasterOrBandages.length}):
+              </div>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                Click any field to edit name, body site, duration, or instructions
+              </span>
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-2.5">
               {plasterOrBandages.map((item, idx) => (
                 <div
                   key={item.id || idx}
-                  className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border border-indigo-200/80 bg-indigo-50/30 dark:bg-slate-800/80 dark:border-slate-700 shadow-2xs"
+                  className="p-3 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-white dark:bg-slate-800/90 shadow-2xs space-y-2.5"
                 >
-                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                    <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-[10px]">
-                      #{idx + 1}
-                    </span>
-                    <strong className="text-xs font-bold text-slate-900 dark:text-white">
-                      {item.name}
-                    </strong>
-                    {item.site && (
-                      <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">
-                        📍 {item.site}
+                  {/* Top row: Index badge, Editable Item Name input, and Delete button */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-[10px] shrink-0">
+                        #{idx + 1}
                       </span>
-                    )}
-                    {item.duration && (
-                      <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800">
-                        ⏱️ {item.duration}
-                      </span>
-                    )}
-                    {item.instructions && (
-                      <span className="text-[11px] font-medium text-indigo-800 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
-                        📋 {item.instructions}
-                      </span>
-                    )}
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) =>
+                          handleUpdatePlasterItem(item.id, { name: e.target.value })
+                        }
+                        placeholder="Appliance / Bandage Name"
+                        className="w-full text-xs font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        title="Edit appliance / bandage name"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePlasterItem(item.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Remove this appliance/bandage"
+                    >
+                      <Icon icon={faTrashCan} className="size-3.5 text-rose-500" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePlasterItem(item.id)}
-                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                    title="Remove this appliance/bandage"
-                  >
-                    <Icon icon={faTrashCan} className="size-3 text-rose-500" />
-                  </button>
+
+                  {/* Editable Fields Grid: Body Site, Duration, Wear Instructions */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/50">
+                    {/* Body Site */}
+                    <div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                          📍 Body Site / Side
+                        </label>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = (item.site || "Ankle").replace(/^(Right|Left|Bilateral)\s+/i, "");
+                              handleUpdatePlasterItem(item.id, { site: `Right ${base}` });
+                            }}
+                            className="text-[9px] px-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 transition-colors"
+                          >
+                            Right
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = (item.site || "Ankle").replace(/^(Right|Left|Bilateral)\s+/i, "");
+                              handleUpdatePlasterItem(item.id, { site: `Left ${base}` });
+                            }}
+                            className="text-[9px] px-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 transition-colors"
+                          >
+                            Left
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = (item.site || "Ankle").replace(/^(Right|Left|Bilateral)\s+/i, "");
+                              handleUpdatePlasterItem(item.id, { site: `Bilateral ${base}` });
+                            }}
+                            className="text-[9px] px-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 transition-colors"
+                          >
+                            Both
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        list={`plaster-sites-${item.id}`}
+                        value={item.site || ""}
+                        onChange={(e) =>
+                          handleUpdatePlasterItem(item.id, { site: e.target.value })
+                        }
+                        placeholder="e.g. Right Ankle, Left Wrist..."
+                        className="w-full text-[11px] font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <datalist id={`plaster-sites-${item.id}`}>
+                        {PRESET_PLASTER_SITES.map((site) => (
+                          <option key={site} value={site} />
+                        ))}
+                      </datalist>
+                    </div>
+
+                    {/* Duration */}
+                    <div>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <label className="text-[10px] font-bold text-amber-800 dark:text-amber-400">
+                          ⏱️ Duration
+                        </label>
+                        <div className="flex gap-1">
+                          {["2w", "3w", "4w", "6w"].map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => {
+                                const map: Record<string, string> = {
+                                  "2w": "2 weeks",
+                                  "3w": "3 weeks",
+                                  "4w": "4 weeks",
+                                  "6w": "6 weeks",
+                                };
+                                handleUpdatePlasterItem(item.id, { duration: map[d] });
+                              }}
+                              className="text-[9px] px-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/60 transition-colors"
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        list={`plaster-durations-${item.id}`}
+                        value={item.duration || ""}
+                        onChange={(e) =>
+                          handleUpdatePlasterItem(item.id, { duration: e.target.value })
+                        }
+                        placeholder="e.g. 3 weeks, 10 days..."
+                        className="w-full text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                      <datalist id={`plaster-durations-${item.id}`}>
+                        {PRESET_PLASTER_DURATIONS.map((dur) => (
+                          <option key={dur} value={dur} />
+                        ))}
+                      </datalist>
+                    </div>
+
+                    {/* Wear Instructions */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-indigo-800 dark:text-indigo-400 mb-0.5">
+                        📋 Wear Instructions / Precautions
+                      </label>
+                      <input
+                        type="text"
+                        list={`plaster-instructions-${item.id}`}
+                        value={item.instructions || ""}
+                        onChange={(e) =>
+                          handleUpdatePlasterItem(item.id, { instructions: e.target.value })
+                        }
+                        placeholder="e.g. Strict Non-Weight Bearing (NWB)..."
+                        className="w-full text-[11px] font-medium text-indigo-900 dark:text-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      />
+                      <datalist id={`plaster-instructions-${item.id}`}>
+                        {PRESET_PLASTER_INSTRUCTIONS.map((inst) => (
+                          <option key={inst} value={inst} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
