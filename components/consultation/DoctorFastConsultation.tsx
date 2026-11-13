@@ -174,6 +174,24 @@ const PRESET_PLASTERS = [
   { name: "Sterile Antiseptic Dressing", defaultSite: "Wound Site", defaultDuration: "3 days", defaultInstructions: "Keep clean and strictly dry" },
 ];
 
+function getPlasterPresetDetails(name: string) {
+  const match = PRESET_PLASTERS.find(
+    (p) => p.name.toLowerCase() === name.trim().toLowerCase()
+  );
+  if (match) {
+    return {
+      site: match.defaultSite,
+      duration: match.defaultDuration,
+      instructions: match.defaultInstructions,
+    };
+  }
+  return {
+    site: "Affected Site",
+    duration: "3 weeks",
+    instructions: "As advised by doctor",
+  };
+}
+
 const PRESET_PLASTER_SITES = [
   "Right Ankle",
   "Left Ankle",
@@ -359,6 +377,19 @@ export function DoctorFastConsultation({
   const [newPlasterInstructions, setNewPlasterInstructions] = useState("");
   const [plasterNotice, setPlasterNotice] = useState<string | null>(null);
 
+  // Bandages, Plasters & Supports Dropdown States
+  const [plasterMenuOpen, setPlasterMenuOpen] = useState(false);
+  const [plasterSearch, setPlasterSearch] = useState("");
+  const [newPlasterSuggestionInput, setNewPlasterSuggestionInput] = useState("");
+  const plasterMenuRef = useRef<HTMLDivElement>(null);
+
+  // Plaster Care Advice Dropdown States
+  const [plasterAdviceMenuOpen, setPlasterAdviceMenuOpen] = useState(false);
+  const [plasterAdviceSearch, setPlasterAdviceSearch] = useState("");
+  const [newPlasterAdviceSuggestionInput, setNewPlasterAdviceSuggestionInput] = useState("");
+  const [plasterAdviceNotice, setPlasterAdviceNotice] = useState<string | null>(null);
+  const plasterAdviceMenuRef = useRef<HTMLDivElement>(null);
+
   const treatmentPlan = clinical.treatmentPlan ?? {};
   const plasterOrBandages = treatmentPlan.plasterOrBandages ?? [];
   const plasterAdvice = treatmentPlan.plasterAdvice ?? "";
@@ -496,6 +527,34 @@ export function DoctorFastConsultation({
     toggleFavorite: toggleAdviceFavorite,
   } = useClinicalRecommendations("advice", defaultAdviceList);
 
+  const defaultPlasterPresets = useMemo(
+    () => PRESET_PLASTERS.map((p) => p.name),
+    []
+  );
+
+  const {
+    allOptions: plasterOptions,
+    isFavorite: isPlasterFavorite,
+    isCustom: isPlasterCustom,
+    addCustom: addCustomPlaster,
+    removeCustom: removeCustomPlaster,
+    toggleFavorite: togglePlasterFavorite,
+  } = useClinicalRecommendations("plaster_applications", defaultPlasterPresets);
+
+  const defaultPlasterAdviceList = useMemo(
+    () => PLASTER_ADVICE_PRESETS,
+    []
+  );
+
+  const {
+    allOptions: plasterAdviceOptions,
+    isFavorite: isPlasterAdviceFavorite,
+    isCustom: isPlasterAdviceCustom,
+    addCustom: addCustomPlasterAdvice,
+    removeCustom: removeCustomPlasterAdvice,
+    toggleFavorite: togglePlasterAdviceFavorite,
+  } = useClinicalRecommendations("plaster_care_advice", defaultPlasterAdviceList);
+
   // Click outside listener for suggestion menus
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -511,6 +570,12 @@ export function DoctorFastConsultation({
       }
       if (adviceRef.current && !adviceRef.current.contains(target)) {
         setAdviceMenuOpen(false);
+      }
+      if (plasterMenuRef.current && !plasterMenuRef.current.contains(target)) {
+        setPlasterMenuOpen(false);
+      }
+      if (plasterAdviceMenuRef.current && !plasterAdviceMenuRef.current.contains(target)) {
+        setPlasterAdviceMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -537,6 +602,20 @@ export function DoctorFastConsultation({
     if (!q) return adviceOptions;
     return adviceOptions.filter((a) => a.toLowerCase().includes(q));
   }, [adviceFilter, adviceOptions]);
+
+  // Filtered plaster applications for dropdown
+  const filteredPlasterOptions = useMemo(() => {
+    const q = plasterSearch.trim().toLowerCase();
+    if (!q) return plasterOptions;
+    return plasterOptions.filter((s) => s.toLowerCase().includes(q));
+  }, [plasterSearch, plasterOptions]);
+
+  // Filtered plaster precautions for dropdown
+  const filteredPlasterAdviceOptions = useMemo(() => {
+    const q = plasterAdviceSearch.trim().toLowerCase();
+    if (!q) return plasterAdviceOptions;
+    return plasterAdviceOptions.filter((s) => s.toLowerCase().includes(q));
+  }, [plasterAdviceSearch, plasterAdviceOptions]);
 
   // Load drugs catalog
   useEffect(() => {
@@ -1933,7 +2012,7 @@ export function DoctorFastConsultation({
 
       {/* CARD: BANDAGES, PLASTERS & ORTHOPEDIC SUPPORTS WITH DEDICATED ADVICE */}
       <div className="rounded-2xl border-2 border-indigo-200/90 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm">
-        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/20 dark:bg-indigo-950 dark:text-indigo-300">
               <Icon icon={faBandage} className="size-3.5" />
@@ -1958,26 +2037,239 @@ export function DoctorFastConsultation({
             </div>
           </div>
 
-          {(plasterOrBandages.length > 0 || plasterAdvice?.trim()) && (
-            <button
-              type="button"
-              onClick={() => {
-                onClinicalChange({
-                  ...clinical,
-                  treatmentPlan: {
-                    ...treatmentPlan,
-                    plasterOrBandages: [],
-                    plasterAdvice: "",
-                  },
-                });
-              }}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors border border-rose-200/80"
-              title="Clear all bandages, plasters, and plaster advice"
-            >
-              <Icon icon={faTrashCan} className="size-2.5" />
-              <span>Clear All</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Plaster Suggestions Dropdown Trigger */}
+            <div className="relative" ref={plasterMenuRef}>
+              <button
+                type="button"
+                onClick={() => setPlasterMenuOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-800 hover:bg-indigo-100 hover:border-indigo-300 transition-colors shadow-2xs cursor-pointer dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300"
+              >
+                <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Suggestions ({plasterOptions.length})</span>
+                <Icon icon={plasterMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-indigo-600 dark:text-indigo-400" />
+              </button>
+
+              {/* Plaster Suggestions Dropdown Menu */}
+              {plasterMenuOpen && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-indigo-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
+                  <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-slate-800 px-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                      Bandage & Plaster Presets
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPlasterMenuOpen(false)}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                    >
+                      Done ✕
+                    </button>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative mb-2">
+                    <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
+                    <input
+                      type="text"
+                      value={plasterSearch}
+                      onChange={(e) => setPlasterSearch(e.target.value)}
+                      placeholder="Search presets (POP, cast, crepe, collar, belt)..."
+                      className="h-7 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 pl-7 pr-6 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                      autoFocus
+                    />
+                    {plasterSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setPlasterSearch("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <Icon icon={faXmark} className="size-2.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Doctor Custom Suggestion Add Box */}
+                  <div className="p-2 bg-indigo-50/80 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 rounded-lg mb-2">
+                    <div className="text-[10px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>+ Add Doctor Custom Application</span>
+                      <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-normal">Saves for future visits</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={newPlasterSuggestionInput}
+                        onChange={(e) => setNewPlasterSuggestionInput(e.target.value)}
+                        placeholder="e.g. Scaphoid Cast, U-Slab, Patella Brace..."
+                        className="h-7 flex-1 rounded border border-indigo-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newPlasterSuggestionInput.trim()) {
+                            e.preventDefault();
+                            const name = newPlasterSuggestionInput.trim();
+                            addCustomPlaster(name);
+                            const presetDetails = getPlasterPresetDetails(name);
+                            handleAddPlasterItem({
+                              name,
+                              site: presetDetails.site,
+                              duration: presetDetails.duration,
+                              instructions: presetDetails.instructions,
+                            });
+                            setNewPlasterSuggestionInput("");
+                            setPlasterNotice(`Saved "${name}" for future visits ✓`);
+                            setTimeout(() => setPlasterNotice(null), 3000);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const name = newPlasterSuggestionInput.trim();
+                          if (name) {
+                            addCustomPlaster(name);
+                            const presetDetails = getPlasterPresetDetails(name);
+                            handleAddPlasterItem({
+                              name,
+                              site: presetDetails.site,
+                              duration: presetDetails.duration,
+                              instructions: presetDetails.instructions,
+                            });
+                            setNewPlasterSuggestionInput("");
+                            setPlasterNotice(`Saved "${name}" for future visits ✓`);
+                            setTimeout(() => setPlasterNotice(null), 3000);
+                          }
+                        }}
+                        disabled={!newPlasterSuggestionInput.trim()}
+                        className="h-7 px-2.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Options List */}
+                  <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                    {filteredPlasterOptions.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-500">
+                        No matching presets found. Type above to add a custom one.
+                      </div>
+                    ) : (
+                      filteredPlasterOptions.map((name, idx) => {
+                        const isApplied = plasterOrBandages.some(
+                          (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
+                        );
+                        const isFav = isPlasterFavorite(name);
+                        const isCust = isPlasterCustom(name);
+                        const details = getPlasterPresetDetails(name);
+                        return (
+                          <div
+                            key={idx}
+                            className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                              isApplied
+                                ? "bg-indigo-50 dark:bg-indigo-950/60 font-bold text-indigo-950 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800"
+                                : "text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => togglePlasterFavorite(name)}
+                              className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                              title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                            >
+                              <Icon
+                                icon={faStar}
+                                className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isApplied) {
+                                  const targetItem = plasterOrBandages.find(
+                                    (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
+                                  );
+                                  if (targetItem) handleRemovePlasterItem(targetItem.id);
+                                } else {
+                                  handleAddPlasterItem({
+                                    name,
+                                    site: details.site,
+                                    duration: details.duration,
+                                    instructions: details.instructions,
+                                  });
+                                }
+                              }}
+                              className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                            >
+                              <span className="text-xs text-slate-800 dark:text-slate-100 break-words block leading-snug">
+                                {name}
+                              </span>
+                              <span className="text-[10px] text-slate-400 block">
+                                {details.duration} · {details.site}
+                              </span>
+                            </button>
+                            {isCust && (
+                              <button
+                                type="button"
+                                onClick={() => removeCustomPlaster(name)}
+                                className="p-1 text-slate-300 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="Delete custom recommendation"
+                              >
+                                <Icon icon={faTrashCan} className="size-2.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isApplied) {
+                                  const targetItem = plasterOrBandages.find(
+                                    (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
+                                  );
+                                  if (targetItem) handleRemovePlasterItem(targetItem.id);
+                                } else {
+                                  handleAddPlasterItem({
+                                    name,
+                                    site: details.site,
+                                    duration: details.duration,
+                                    instructions: details.instructions,
+                                  });
+                                }
+                              }}
+                              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                isApplied
+                                  ? "bg-indigo-600 text-white shadow-2xs"
+                                  : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200"
+                              }`}
+                            >
+                              {isApplied ? "✓ Added" : "+ Add"}
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {(plasterOrBandages.length > 0 || plasterAdvice?.trim()) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClinicalChange({
+                    ...clinical,
+                    treatmentPlan: {
+                      ...treatmentPlan,
+                      plasterOrBandages: [],
+                      plasterAdvice: "",
+                    },
+                  });
+                }}
+                className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors border border-rose-200/80"
+                title="Clear all bandages, plasters, and plaster advice"
+              >
+                <Icon icon={faTrashCan} className="size-2.5" />
+                <span>Clear All</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {plasterNotice && (
@@ -1986,45 +2278,6 @@ export function DoctorFastConsultation({
             <span>{plasterNotice}</span>
           </div>
         )}
-
-        {/* 1-Tap Quick Presets Carousel / Grid */}
-        <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-            <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600" />
-            <span>1-Tap Popular Applications (click to add):</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {PRESET_PLASTERS.map((preset, pIdx) => {
-              const isApplied = plasterOrBandages.some(
-                (it) => it.name.toLowerCase() === preset.name.toLowerCase()
-              );
-              return (
-                <button
-                  key={pIdx}
-                  type="button"
-                  onClick={() =>
-                    handleAddPlasterItem({
-                      name: preset.name,
-                      site: preset.defaultSite,
-                      duration: preset.defaultDuration,
-                      instructions: preset.defaultInstructions,
-                    })
-                  }
-                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-bold transition-all cursor-pointer ${
-                    isApplied
-                      ? "bg-indigo-100 border-indigo-400 text-indigo-950 font-bold shadow-2xs"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400 hover:bg-indigo-50/70 hover:text-indigo-900 shadow-2xs active:scale-95"
-                  }`}
-                >
-                  <span>{preset.name}</span>
-                  <span className="text-[9px] text-slate-400 font-normal">
-                    ({preset.defaultDuration})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Currently Prescribed Bandages & Plasters Table / List */}
         {plasterOrBandages.length > 0 && (
@@ -2122,8 +2375,10 @@ export function DoctorFastConsultation({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && newPlasterName.trim()) {
                       e.preventDefault();
+                      const name = newPlasterName.trim();
+                      addCustomPlaster(name);
                       handleAddPlasterItem({
-                        name: newPlasterName,
+                        name,
                         site: newPlasterSite,
                         duration: newPlasterDuration,
                         instructions: newPlasterInstructions,
@@ -2140,8 +2395,10 @@ export function DoctorFastConsultation({
                   size="sm"
                   onClick={() => {
                     if (newPlasterName.trim()) {
+                      const name = newPlasterName.trim();
+                      addCustomPlaster(name);
                       handleAddPlasterItem({
-                        name: newPlasterName,
+                        name,
                         site: newPlasterSite,
                         duration: newPlasterDuration,
                         instructions: newPlasterInstructions,
@@ -2176,42 +2433,197 @@ export function DoctorFastConsultation({
                 प्लास्टर एवं पट्टी की सावधानियां
               </span>
             </div>
-            {plasterAdvice?.trim() && (
-              <button
-                type="button"
-                onClick={() => handlePlasterAdviceChange("")}
-                className="text-[10px] font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
-              >
-                Clear Advice
-              </button>
-            )}
-          </div>
 
-          <p className="text-[11px] text-slate-600 dark:text-slate-400 mb-2">
-            Click any precaution to add to the patient prescription, or customize directly below:
-          </p>
-
-          {/* Preset Advice Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
-            {PLASTER_ADVICE_PRESETS.map((adviceItem, aIdx) => {
-              const isIncluded = Boolean(plasterAdvice?.includes(adviceItem));
-              return (
+            <div className="flex items-center gap-2">
+              {plasterAdvice?.trim() && (
                 <button
-                  key={aIdx}
                   type="button"
-                  onClick={() => handleTogglePlasterAdviceTag(adviceItem)}
-                  className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10.5px] font-medium transition-all text-left cursor-pointer ${
-                    isIncluded
-                      ? "bg-indigo-600 text-white border-indigo-700 font-bold shadow-2xs"
-                      : "bg-white dark:bg-slate-800 border-indigo-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-indigo-50 hover:border-indigo-400 shadow-2xs active:scale-98"
-                  }`}
+                  onClick={() => handlePlasterAdviceChange("")}
+                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                  title="Clear plaster advice"
                 >
-                  <span>{isIncluded ? "✓" : "+"}</span>
-                  <span>{adviceItem}</span>
+                  <Icon icon={faTrashCan} className="size-2.5" />
+                  <span>Clear</span>
                 </button>
-              );
-            })}
+              )}
+
+              {/* Plaster Advice Suggestions Dropdown Trigger */}
+              <div className="relative" ref={plasterAdviceMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setPlasterAdviceMenuOpen((v) => !v)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white/90 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-indigo-800 dark:text-indigo-300 hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-2xs cursor-pointer"
+                >
+                  <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Precautions ({plasterAdviceOptions.length})</span>
+                  <Icon icon={plasterAdviceMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-indigo-600 dark:text-indigo-400" />
+                </button>
+
+                {/* Plaster Advice Suggestions Dropdown Menu */}
+                {plasterAdviceMenuOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-indigo-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
+                    <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-slate-800 px-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+                        Care Instructions & Precautions
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPlasterAdviceMenuOpen(false)}
+                        className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                      >
+                        Done ✕
+                      </button>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="relative mb-2">
+                      <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
+                      <input
+                        type="text"
+                        value={plasterAdviceSearch}
+                        onChange={(e) => setPlasterAdviceSearch(e.target.value)}
+                        placeholder="Search precautions (dry, elevate, swelling)..."
+                        className="h-7 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 pl-7 pr-6 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
+                        autoFocus
+                      />
+                      {plasterAdviceSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setPlasterAdviceSearch("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <Icon icon={faXmark} className="size-2.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Doctor Custom Precaution Add Box */}
+                    <div className="p-2 bg-indigo-50/80 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 rounded-lg mb-2">
+                      <div className="text-[10px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider mb-1 flex items-center justify-between">
+                        <span>+ Add Doctor Custom Precaution</span>
+                        <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-normal">Saves for future visits</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={newPlasterAdviceSuggestionInput}
+                          onChange={(e) => setNewPlasterAdviceSuggestionInput(e.target.value)}
+                          placeholder="e.g. Keep dressing clean, do not drive with cast..."
+                          className="h-7 flex-1 rounded border border-indigo-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newPlasterAdviceSuggestionInput.trim()) {
+                              e.preventDefault();
+                              const text = newPlasterAdviceSuggestionInput.trim();
+                              addCustomPlasterAdvice(text);
+                              const current = plasterAdvice?.trim() ?? "";
+                              const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                              handlePlasterAdviceChange(next);
+                              setNewPlasterAdviceSuggestionInput("");
+                              setPlasterAdviceNotice(`Saved precaution for future visits ✓`);
+                              setTimeout(() => setPlasterAdviceNotice(null), 3000);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const text = newPlasterAdviceSuggestionInput.trim();
+                            if (text) {
+                              addCustomPlasterAdvice(text);
+                              const current = plasterAdvice?.trim() ?? "";
+                              const next = current ? `${current}\n• ${text}` : `• ${text}`;
+                              handlePlasterAdviceChange(next);
+                              setNewPlasterAdviceSuggestionInput("");
+                              setPlasterAdviceNotice(`Saved precaution for future visits ✓`);
+                              setTimeout(() => setPlasterAdviceNotice(null), 3000);
+                            }
+                          }}
+                          disabled={!newPlasterAdviceSuggestionInput.trim()}
+                          className="h-7 px-2.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Options List */}
+                    <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                      {filteredPlasterAdviceOptions.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-slate-500">
+                          No matching precautions found. Type above to add a custom one.
+                        </div>
+                      ) : (
+                        filteredPlasterAdviceOptions.map((text, idx) => {
+                          const isIncluded = Boolean(plasterAdvice?.includes(text));
+                          const isFav = isPlasterAdviceFavorite(text);
+                          const isCust = isPlasterAdviceCustom(text);
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                                isIncluded
+                                  ? "bg-indigo-50 dark:bg-indigo-950/60 font-bold text-indigo-950 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800"
+                                  : "text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => togglePlasterAdviceFavorite(text)}
+                                className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                              >
+                                <Icon
+                                  icon={faStar}
+                                  className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePlasterAdviceTag(text)}
+                                className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                              >
+                                <span className="text-xs text-slate-800 dark:text-slate-100 break-words block leading-snug">
+                                  {text}
+                                </span>
+                              </button>
+                              {isCust && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeCustomPlasterAdvice(text)}
+                                  className="p-1 text-slate-300 hover:text-rose-600 transition-colors cursor-pointer"
+                                  title="Delete custom recommendation"
+                                >
+                                  <Icon icon={faTrashCan} className="size-2.5" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePlasterAdviceTag(text)}
+                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                  isIncluded
+                                    ? "bg-indigo-600 text-white shadow-2xs"
+                                    : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200"
+                                }`}
+                              >
+                                {isIncluded ? "✓ Added" : "+ Add"}
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
+
+          {plasterAdviceNotice && (
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 animate-in fade-in">
+              <Icon icon={faCheckCircle} className="size-3 text-emerald-600 shrink-0" />
+              <span>{plasterAdviceNotice}</span>
+            </div>
+          )}
 
           {/* Editable Plaster Advice Textarea */}
           <Textarea
