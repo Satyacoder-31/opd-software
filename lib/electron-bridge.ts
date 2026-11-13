@@ -58,3 +58,4 @@ export async function printDesktopHtml(
   }
   return { success: false, error: "Desktop environment not available" };
 }
+

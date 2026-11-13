@@ -348,31 +348,6 @@ export function PrescriptionViewModal({
               </button>
             </div>
 
-            {/* Print & Download - Highly visible, vibrant and always prominent */}
-            <Button
-              type="button"
-              size="sm"
-              onClick={handlePrint}
-              disabled={loading || !prescriptionData}
-              title="Print Prescription (Ctrl+P)"
-              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 shadow-xs cursor-pointer"
-            >
-              <Icon icon={faPrint} className="size-3 text-white" />
-              <span>{i18n.printPrescription}</span>
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleDownload}
-              disabled={loading || !prescriptionData}
-              title="Download Prescription PDF"
-              className="h-8 gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 shadow-xs cursor-pointer"
-            >
-              <Icon icon={faDownload} className="size-3 text-white" />
-              <span>{i18n.downloadPrescription}</span>
-            </Button>
-
             {/* Close */}
             <button
               type="button"

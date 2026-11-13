@@ -6,10 +6,8 @@ import { FontAwesomeIcon as Icon } from "@fortawesome/react-fontawesome";
 import {
   faEye,
   faFileContract,
-  faDownload,
   faPrint,
 } from "@fortawesome/free-solid-svg-icons";
-import { generatePrescriptionPdf } from "@/actions/prescriptions";
 import { generateMedicalCertificatePdf } from "@/actions/consultations";
 import { Button } from "@/components/ui/Button";
 import { downloadBase64Pdf } from "@/lib/utils";
@@ -37,22 +35,7 @@ export function ConsultationDocumentActions({
   const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
   const [rxAutoPrint, setRxAutoPrint] = useState(false);
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
-  const { isPending, run } = usePendingAction<
-    "prescription" | "prescription-hi" | "certificate"
-  >();
-
-  function handlePrescriptionDownload(lang: "en" | "hi" = "en") {
-    setError(null);
-    const key = lang === "hi" ? "prescription-hi" : "prescription";
-    void run(async () => {
-      const result = await generatePrescriptionPdf(consultationId, lang);
-      if (!result.success) {
-        setError(result.error);
-        return;
-      }
-      downloadBase64Pdf(result.data.pdfBase64, result.data.filename);
-    }, key);
-  }
+  const { isPending, run } = usePendingAction<"certificate">();
 
   function handleCertificateDownload() {
     setError(null);
@@ -125,28 +108,6 @@ export function ConsultationDocumentActions({
           >
             <Icon icon={faFileContract} className="text-xs text-teal-600" />
             Outpatient summary
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => handlePrescriptionDownload("en")}
-            loading={isPending("prescription")}
-            title="Download Prescription PDF (English)"
-            className="shrink-0 gap-1.5"
-          >
-            <Icon icon={faDownload} className="text-xs text-slate-500" />
-            Download Rx
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => handlePrescriptionDownload("hi")}
-            loading={isPending("prescription-hi")}
-            className="shrink-0 border-sky-300 text-sky-800 hover:bg-sky-50 font-medium gap-1.5"
-            title="Download Hindi Prescription PDF"
-          >
-            <Icon icon={faDownload} className="text-xs text-sky-600" />
-            Download Rx (Hindi)
           </Button>
         </>
       )}

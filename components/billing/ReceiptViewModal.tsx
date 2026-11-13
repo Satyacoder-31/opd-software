@@ -346,31 +346,6 @@ export function ReceiptViewModal({
               </button>
             </div>
 
-            {/* Quick Print & Download - Prominent & high contrast */}
-            <Button
-              type="button"
-              size="sm"
-              onClick={handlePrint}
-              disabled={loading || !receiptData}
-              title="Print Receipt (Ctrl+P)"
-              className="h-8 gap-1.5 text-xs font-bold text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 disabled:opacity-50 shadow-xs cursor-pointer"
-            >
-              <Icon icon={faPrint} className="size-3 text-white" />
-              <span>{i18n.printReceipt}</span>
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleDownload}
-              disabled={loading || !receiptData}
-              title="Download Receipt PDF"
-              className="h-8 gap-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 shadow-xs cursor-pointer"
-            >
-              <Icon icon={faDownload} className="size-3 text-white" />
-              <span>{i18n.downloadReceipt}</span>
-            </Button>
-
             {/* Close Button */}
             <button
               type="button"
