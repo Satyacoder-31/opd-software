@@ -19,6 +19,7 @@ import {
   translatePastHistory,
   translateDoctorSpecialty,
   translateChiefComplaint,
+  translateExaminationFindings,
   translateDiagnosis,
   translateDosage,
   translateRoute,
@@ -212,8 +213,8 @@ export function PrescriptionPaperView({
         </div>
       )}
 
-      {/* CLINICAL DIAGNOSIS & COMPLAINTS */}
-      <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-3.5 space-y-1.5 text-xs">
+      {/* CLINICAL FINDINGS, DIAGNOSIS, COMPLAINTS & INVESTIGATIONS */}
+      <div className="rounded-xl border border-teal-100 bg-teal-50/40 p-3.5 space-y-2 text-xs">
         {data.chiefComplaint && (
           <div>
             <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
@@ -224,15 +225,35 @@ export function PrescriptionPaperView({
             </span>
           </div>
         )}
+        {data.clinicalFindings && (
+          <div>
+            <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
+              {lang === "hi" ? "परीक्षण एवं निष्कर्ष: " : "Clinical Findings: "}
+            </span>
+            <span className="text-slate-800 whitespace-pre-line">
+              {translateExaminationFindings(data.clinicalFindings, lang)}
+            </span>
+          </div>
+        )}
         <div>
           <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
-            {lang === "hi" ? "चिकित्सीय निदान: " : "Clinical Diagnosis: "}
+            {lang === "hi" ? "संभावित चिकित्सीय निदान: " : "Provisional / Clinical Diagnosis: "}
           </span>
           <strong className="text-slate-900 font-bold text-sm whitespace-pre-line">
             {translateDiagnosis(data.diagnosis, lang) ||
               (lang === "hi" ? "परीक्षण मूल्यांकन दर्ज" : "Clinical assessment recorded")}
           </strong>
         </div>
+        {data.investigations && (
+          <div className="pt-1.5 border-t border-teal-200/60">
+            <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
+              {lang === "hi" ? "जांच एवं एक्स-रे निर्देश: " : "Investigations Advised: "}
+            </span>
+            <span className="text-slate-900 font-semibold whitespace-pre-line ml-1">
+              {data.investigations}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* OUTPATIENT PRESCRIPTION & MEDICINES TABLE */}

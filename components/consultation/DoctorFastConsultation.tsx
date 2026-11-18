@@ -139,6 +139,23 @@ const FAST_EXAM_CHIPS: QuickTag[] = [
   { label: "Heel Tenderness (Plantar)", text: "Tender plantar fascia insertion at calcaneal tubercle, Windlass test positive." },
 ];
 
+// Crisp, readable investigations / imaging tags
+const FAST_INVESTIGATION_CHIPS: QuickTag[] = [
+  { label: "X-ray Left Ankle (4d Twist)", text: "X-ray Left Ankle – if indicated by clinical examination" },
+  { label: "Digital X-Ray Left Ankle", text: "Digital X-Ray Left Ankle (AP & Lat)" },
+  { label: "Digital X-Ray Right Ankle", text: "Digital X-Ray Right Ankle (AP & Lat)" },
+  { label: "Digital X-Ray Bilateral Knees", text: "Digital X-Ray Bilateral Knees (AP & Lat - Standing)" },
+  { label: "Digital X-Ray Lumbar Spine", text: "Digital X-Ray Lumbar Spine (AP & Lat)" },
+  { label: "Digital X-Ray Cervical Spine", text: "Digital X-Ray Cervical Spine (AP & Lat)" },
+  { label: "MRI Lumbo-Sacral Spine", text: "MRI Lumbo-Sacral Spine with Screening of Whole Spine" },
+  { label: "Serum Uric Acid", text: "Serum Uric Acid (Hyperuricemia / Gout Screen)" },
+  { label: "CBC & ESR", text: "Complete Blood Count (CBC) with ESR" },
+  { label: "CRP Quantitative", text: "C-Reactive Protein (CRP) Quantitative" },
+  { label: "RA Factor & Anti-CCP", text: "Rheumatoid Factor (RA) & Anti-CCP Antibodies" },
+  { label: "Calcium & Vitamin D3", text: "Serum Calcium & 25-Hydroxy Vitamin D3" },
+  { label: "HbA1c & Blood Sugar", text: "HbA1c with Fasting Blood Sugar (FBS)" },
+];
+
 // Crisp, readable advice tags
 const FAST_ADVICE_CHIPS: QuickTag[] = [
   { label: "Rest & Protection", text: "Rest and protection" },
@@ -374,6 +391,12 @@ export function DoctorFastConsultation({
   const [examNotice, setExamNotice] = useState<string | null>(null);
   const examRef = useRef<HTMLDivElement>(null);
 
+  const [investigationMenuOpen, setInvestigationMenuOpen] = useState(false);
+  const [newInvestigationInput, setNewInvestigationInput] = useState("");
+  const [investigationSearch, setInvestigationSearch] = useState("");
+  const [investigationNotice, setInvestigationNotice] = useState<string | null>(null);
+  const investigationRef = useRef<HTMLDivElement>(null);
+
   const [adviceMenuOpen, setAdviceMenuOpen] = useState(false);
   const [adviceFilter, setAdviceFilter] = useState("");
   const [newAdviceInput, setNewAdviceInput] = useState("");
@@ -519,6 +542,45 @@ export function DoctorFastConsultation({
   const defaultExamList = useMemo(() => FAST_EXAM_CHIPS.map((c) => c.text), []);
   const defaultAdviceList = useMemo(() => FAST_ADVICE_CHIPS.map((c) => c.text), []);
 
+  const defaultInvestigationList = useMemo(
+    () => [
+      "X-ray Left Ankle – if indicated by clinical examination",
+      "Digital X-Ray Left Ankle (AP & Lat)",
+      "Digital X-Ray Right Ankle (AP & Lat)",
+      "Digital X-Ray Bilateral Knees (AP & Lat - Standing)",
+      "Digital X-Ray Lumbar Spine (AP & Lat)",
+      "Digital X-Ray Cervical Spine (AP & Lat)",
+      "Digital X-Ray Right Shoulder (AP & Axillary)",
+      "Digital X-Ray Left Shoulder (AP & Axillary)",
+      "Digital X-Ray Pelvis with Both Hips (AP)",
+      "Digital X-Ray Right Wrist (AP & Lat)",
+      "Digital X-Ray Left Wrist (AP & Lat)",
+      "Digital X-Ray Right Foot (AP & Oblique)",
+      "Digital X-Ray Left Foot (AP & Oblique)",
+      "MRI Lumbo-Sacral Spine with Screening of Whole Spine",
+      "MRI Cervical Spine with Screening of Whole Spine",
+      "MRI Right Knee Joint (Cruciate Ligaments & Meniscus)",
+      "MRI Left Knee Joint (Cruciate Ligaments & Meniscus)",
+      "MRI Right Shoulder Joint (Rotator Cuff Tear Protocol)",
+      "MRI Left Shoulder Joint (Rotator Cuff Tear Protocol)",
+      "Complete Blood Count (CBC) with ESR",
+      "C-Reactive Protein (CRP) Quantitative",
+      "Serum Uric Acid (Hyperuricemia / Gout Screen)",
+      "Rheumatoid Factor (RA) & Anti-CCP Antibodies",
+      "Serum Calcium & 25-Hydroxy Vitamin D3",
+      "Serum Alkaline Phosphatase (ALP)",
+      "HbA1c with Fasting Blood Sugar (FBS)",
+      "Renal Function Test (RFT) / Urea & Creatinine",
+      "Liver Function Test (LFT)",
+      "Serum Electrolytes (Na+, K+, Cl-)",
+      "Urine Routine & Microscopic Examination",
+      "DEXA Bone Mineral Density Scan (Spine & Hip)",
+      "Color Doppler Ultrasound - Venous (DVT Protocol)",
+      "USG Musculoskeletal (Tendon & Soft Tissue)",
+    ],
+    []
+  );
+
   // Clinical Recommendations Hooks (Syncs across Fast OPD & Full Hospital Tabs)
   const {
     allOptions: complaintsOptions,
@@ -546,6 +608,15 @@ export function DoctorFastConsultation({
     removeCustom: removeCustomExam,
     toggleFavorite: toggleExamFavorite,
   } = useClinicalRecommendations("examination", defaultExamList);
+
+  const {
+    allOptions: investigationOptions,
+    isFavorite: isInvestigationFavorite,
+    isCustom: isInvestigationCustom,
+    addCustom: addCustomInvestigation,
+    removeCustom: removeCustomInvestigation,
+    toggleFavorite: toggleInvestigationFavorite,
+  } = useClinicalRecommendations("investigations", defaultInvestigationList);
 
   const {
     allOptions: adviceOptions,
@@ -597,6 +668,9 @@ export function DoctorFastConsultation({
       if (examRef.current && !examRef.current.contains(target)) {
         setExamMenuOpen(false);
       }
+      if (investigationRef.current && !investigationRef.current.contains(target)) {
+        setInvestigationMenuOpen(false);
+      }
       if (adviceRef.current && !adviceRef.current.contains(target)) {
         setAdviceMenuOpen(false);
       }
@@ -624,6 +698,13 @@ export function DoctorFastConsultation({
     if (!q) return diagnosisOptions;
     return diagnosisOptions.filter((d) => d.toLowerCase().includes(q));
   }, [newDiagnosisInput, diagnosisOptions]);
+
+  // Filtered investigations for dropdown list
+  const filteredInvestigations = useMemo(() => {
+    const q = investigationSearch.trim().toLowerCase();
+    if (!q) return investigationOptions;
+    return investigationOptions.filter((inv) => inv.toLowerCase().includes(q));
+  }, [investigationSearch, investigationOptions]);
 
   // Filtered advice for dropdown
   const filteredAdvice = useMemo(() => {
@@ -674,17 +755,32 @@ export function DoctorFastConsultation({
     });
   }
 
+  // Parse individual chief complaints into clean array
+  const selectedComplaintsList = useMemo(() => {
+    const raw = clinical.chiefComplaint?.trim() ?? "";
+    if (!raw) return [];
+    return raw
+      .split(/\n|;|,|•/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [clinical.chiefComplaint]);
+
   // Handle toggling symptoms (append or remove cleanly)
-  function handleToggleSymptom(tag: QuickTag) {
-    const current = clinical.chiefComplaint?.trim() ?? "";
-    if (current.includes(tag.text)) {
-      const next = current
-        .replace(new RegExp(`;?\\s*${escapeRegex(tag.text)}`, "g"), "")
-        .replace(/^;\s*/, "")
-        .trim();
+  function handleToggleSymptom(tag: QuickTag | string) {
+    const text = typeof tag === "string" ? tag.trim() : tag.text.trim();
+    if (!text) return;
+    const isPresent = selectedComplaintsList.some(
+      (c) => c.toLowerCase() === text.toLowerCase()
+    );
+    if (isPresent) {
+      const remaining = selectedComplaintsList.filter(
+        (c) => c.toLowerCase() !== text.toLowerCase()
+      );
+      const next = remaining.length > 0 ? remaining.join("; ") : "";
       onClinicalChange({ ...clinical, chiefComplaint: next });
     } else {
-      const next = current ? `${current}; ${tag.text}` : tag.text;
+      const nextList = [...selectedComplaintsList, text];
+      const next = nextList.join("; ");
       onClinicalChange({ ...clinical, chiefComplaint: next });
     }
   }
@@ -694,7 +790,7 @@ export function DoctorFastConsultation({
     const raw = clinical.diagnosis?.trim() ?? "";
     if (!raw) return [];
     return raw
-      .split(/\n|;|•/)
+      .split(/\n|;|,|•/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
   }, [clinical.diagnosis]);
@@ -703,12 +799,10 @@ export function DoctorFastConsultation({
   function handleToggleDiagnosis(text: string) {
     const cleanText = text.trim();
     if (!cleanText) return;
-    const current = clinical.diagnosis?.trim() ?? "";
 
-    const isPresent =
-      selectedDiagnosesList.some(
-        (d) => d.toLowerCase() === cleanText.toLowerCase()
-      ) || current.toLowerCase().includes(cleanText.toLowerCase());
+    const isPresent = selectedDiagnosesList.some(
+      (d) => d.toLowerCase() === cleanText.toLowerCase()
+    );
 
     if (isPresent) {
       const remaining = selectedDiagnosesList.filter(
@@ -718,19 +812,9 @@ export function DoctorFastConsultation({
         remaining.length > 0 ? remaining.map((d) => `• ${d}`).join("\n") : "";
       onClinicalChange({ ...clinical, diagnosis: next });
     } else {
-      if (!current) {
-        onClinicalChange({ ...clinical, diagnosis: `• ${cleanText}` });
-      } else if (current.includes("•") || current.includes("\n")) {
-        const next = current.startsWith("•")
-          ? `${current}\n• ${cleanText}`
-          : `• ${current}\n• ${cleanText}`;
-        onClinicalChange({ ...clinical, diagnosis: next });
-      } else {
-        onClinicalChange({
-          ...clinical,
-          diagnosis: `• ${current}\n• ${cleanText}`,
-        });
-      }
+      const nextList = [...selectedDiagnosesList, cleanText];
+      const next = nextList.map((d) => `• ${d}`).join("\n");
+      onClinicalChange({ ...clinical, diagnosis: next });
     }
   }
 
@@ -739,13 +823,28 @@ export function DoctorFastConsultation({
     handleToggleDiagnosis(tag.text);
   }
 
+  // Parse individual examination findings into clean array
+  const selectedFindingsList = useMemo(() => {
+    const raw = clinical.examination?.jointsAndParts?.trim() ?? "";
+    if (!raw) return [];
+    return raw
+      .split(/\n|;|,|•/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [clinical.examination?.jointsAndParts]);
+
   // Handle toggling exam notes
-  function handleToggleExamNote(tag: QuickTag) {
-    const current = clinical.examination?.jointsAndParts?.trim() ?? "";
-    if (current.includes(tag.text)) {
-      const next = current
-        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(tag.text)}`, "g"), "")
-        .trim();
+  function handleToggleExamNote(tag: QuickTag | string) {
+    const text = typeof tag === "string" ? tag.trim() : tag.text.trim();
+    if (!text) return;
+    const isPresent = selectedFindingsList.some(
+      (f) => f.toLowerCase() === text.toLowerCase()
+    );
+    if (isPresent) {
+      const remaining = selectedFindingsList.filter(
+        (f) => f.toLowerCase() !== text.toLowerCase()
+      );
+      const next = remaining.length > 0 ? remaining.map((f) => `• ${f}`).join("\n") : "";
       onClinicalChange({
         ...clinical,
         examination: {
@@ -754,7 +853,8 @@ export function DoctorFastConsultation({
         },
       });
     } else {
-      const next = current ? `${current}\n• ${tag.text}` : `• ${tag.text}`;
+      const nextList = [...selectedFindingsList, text];
+      const next = nextList.map((f) => `• ${f}`).join("\n");
       onClinicalChange({
         ...clinical,
         examination: {
@@ -762,6 +862,52 @@ export function DoctorFastConsultation({
           jointsAndParts: next,
         },
       });
+    }
+  }
+
+  // Investigations state & handlers
+  const investigationText = useMemo(() => {
+    const imaging = clinical.investigationResults?.imaging?.trim() ?? "";
+    const labs = clinical.investigationResults?.labs?.trim() ?? "";
+    const other = clinical.investigationResults?.other?.trim() ?? "";
+    const parts = [imaging, labs, other].filter(Boolean);
+    return parts.join("\n");
+  }, [clinical.investigationResults]);
+
+  function handleInvestigationTextChange(val: string) {
+    onClinicalChange({
+      ...clinical,
+      investigationResults: {
+        ...(clinical.investigationResults ?? {}),
+        imaging: val,
+      },
+    });
+  }
+
+  const selectedInvestigationsList = useMemo(() => {
+    if (!investigationText) return [];
+    return investigationText
+      .split(/\n|;|,|•/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [investigationText]);
+
+  function handleToggleInvestigation(text: string) {
+    const clean = text.trim();
+    if (!clean) return;
+    const isPresent = selectedInvestigationsList.some(
+      (inv) => inv.toLowerCase() === clean.toLowerCase()
+    );
+    if (isPresent) {
+      const remaining = selectedInvestigationsList.filter(
+        (inv) => inv.toLowerCase() !== clean.toLowerCase()
+      );
+      const next = remaining.length > 0 ? remaining.map((s) => `• ${s}`).join("\n") : "";
+      handleInvestigationTextChange(next);
+    } else {
+      const nextList = [...selectedInvestigationsList, clean];
+      const next = nextList.map((s) => `• ${s}`).join("\n");
+      handleInvestigationTextChange(next);
     }
   }
 
@@ -829,7 +975,7 @@ export function DoctorFastConsultation({
 
   // Apply 1-Click Super Template
   function handleApplySuperTemplate(template: ClinicalTemplate) {
-    // Fill symptoms, diagnosis, exam, medicines, advice, follow-up
+    // Fill symptoms, diagnosis, exam, investigations, medicines, advice, follow-up
     const nextClinical: ConsultationClinicalData = {
       ...clinical,
       chiefComplaint: template.chiefComplaint || clinical.chiefComplaint || template.name,
@@ -837,6 +983,10 @@ export function DoctorFastConsultation({
       examination: {
         ...clinical.examination,
         jointsAndParts: template.examination || clinical.examination?.jointsAndParts,
+      },
+      investigationResults: {
+        ...(clinical.investigationResults ?? {}),
+        imaging: template.investigations || clinical.investigationResults?.imaging || "",
       },
       advice: template.advice || advice,
     };
@@ -854,7 +1004,7 @@ export function DoctorFastConsultation({
     if (template.followUp) onFollowUpChange(template.followUp);
 
     setTemplateNotice(
-      `✓ Loaded "${template.name}" template with clinical findings, ${template.medicines.length} medicines, advice, and follow-up!`
+      `✓ Loaded "${template.name}" template with clinical findings, investigations, ${template.medicines.length} medicines, advice, and follow-up!`
     );
     setTimeout(() => setTemplateNotice(null), 5000);
   }
@@ -1247,19 +1397,31 @@ export function DoctorFastConsultation({
         })()}
       </div>
 
-      {/* TWO COLUMN GRID: CHIEF COMPLAINTS & DIAGNOSIS */}
+      {/* ROW 1: CHIEF COMPLAINTS & CLINICAL FINDINGS (PHYSICAL EXAMINATION) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* CARD 1: CHIEF COMPLAINTS & SYMPTOMS */}
-        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative">
+        {/* CARD 1: CHIEF COMPLAINTS */}
+        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={symptomsRef}>
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
                 <span className="flex size-7 items-center justify-center rounded-lg bg-purple-50 text-purple-700 ring-1 ring-purple-500/20">
                   <Icon icon={faStethoscope} className="size-3.5" />
                 </span>
-                <span className="text-xs font-bold text-slate-900 tracking-tight">
-                  Chief Complaints
-                </span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 tracking-tight">
+                      1. Chief Complaints
+                    </span>
+                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/60">
+                      लक्षण व समस्याएं
+                    </span>
+                  </div>
+                </div>
+                {selectedComplaintsList.length > 0 && (
+                  <span className="text-[10px] font-bold text-purple-700 bg-purple-100/80 px-1.5 py-0.2 rounded">
+                    {selectedComplaintsList.length}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -1276,7 +1438,7 @@ export function DoctorFastConsultation({
                 )}
 
                 {/* Suggestions Dropdown Trigger */}
-                <div className="relative" ref={symptomsRef}>
+                <div className="relative">
                   <button
                     type="button"
                     onClick={() => setSymptomsMenuOpen((v) => !v)}
@@ -1289,9 +1451,9 @@ export function DoctorFastConsultation({
 
                   {/* Dropdown Menu */}
                   {symptomsMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-blue-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5">
+                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-purple-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
                       {/* Search Bar */}
-                      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
                         <div className="relative flex-1">
                           <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
                           <input
@@ -1299,7 +1461,7 @@ export function DoctorFastConsultation({
                             value={symptomSearch}
                             onChange={(e) => setSymptomSearch(e.target.value)}
                             placeholder="Search symptoms (knee, back, fever)..."
-                            className="h-7 w-full rounded-md border border-slate-200 bg-slate-50 pl-7 pr-6 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none"
+                            className="h-7 w-full rounded-md border border-slate-200 bg-slate-50 pl-7 pr-6 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-purple-500 focus:outline-none"
                             autoFocus
                           />
                           {symptomSearch && (
@@ -1322,10 +1484,10 @@ export function DoctorFastConsultation({
                       </div>
 
                       {/* Doctor Custom Symptom Add Box */}
-                      <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-lg mb-2">
-                        <div className="text-[10px] font-bold text-blue-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <div className="p-2 bg-purple-50/80 border border-purple-200 rounded-lg mb-2">
+                        <div className="text-[10px] font-bold text-purple-900 uppercase tracking-wider mb-1 flex items-center justify-between">
                           <span>+ Add Doctor Custom Symptom</span>
-                          <span className="text-[9px] text-blue-600 font-normal">Saves for future visits</span>
+                          <span className="text-[9px] text-purple-600 font-normal">Saves for future visits</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <input
@@ -1333,15 +1495,13 @@ export function DoctorFastConsultation({
                             value={newComplaintInput}
                             onChange={(e) => setNewComplaintInput(e.target.value)}
                             placeholder="e.g. Pain in shoulder during gym..."
-                            className="h-7 flex-1 rounded border border-blue-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="h-7 flex-1 rounded border border-purple-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && newComplaintInput.trim()) {
                                 e.preventDefault();
                                 const text = newComplaintInput.trim();
                                 addCustomComplaint(text);
-                                const current = clinical.chiefComplaint?.trim() ?? "";
-                                const next = current ? `${current}; ${text}` : text;
-                                onClinicalChange({ ...clinical, chiefComplaint: next });
+                                handleToggleSymptom(text);
                                 setNewComplaintInput("");
                                 setComplaintNotice("Added & saved for future ✓");
                                 setTimeout(() => setComplaintNotice(null), 3000);
@@ -1354,16 +1514,14 @@ export function DoctorFastConsultation({
                               const text = newComplaintInput.trim();
                               if (text) {
                                 addCustomComplaint(text);
-                                const current = clinical.chiefComplaint?.trim() ?? "";
-                                const next = current ? `${current}; ${text}` : text;
-                                onClinicalChange({ ...clinical, chiefComplaint: next });
+                                handleToggleSymptom(text);
                                 setNewComplaintInput("");
                                 setComplaintNotice("Added & saved for future ✓");
                                 setTimeout(() => setComplaintNotice(null), 3000);
                               }
                             }}
                             disabled={!newComplaintInput.trim()}
-                            className="h-7 px-2.5 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                            className="h-7 px-2.5 rounded bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
                           >
                             + Add
                           </button>
@@ -1378,7 +1536,9 @@ export function DoctorFastConsultation({
                           </div>
                         ) : (
                           filteredSymptoms.map((text, idx) => {
-                            const isAdded = Boolean(clinical.chiefComplaint?.includes(text));
+                            const isAdded = selectedComplaintsList.some(
+                              (c) => c.toLowerCase() === text.trim().toLowerCase()
+                            );
                             const isFav = isComplaintFavorite(text);
                             const isCust = isComplaintCustom(text);
                             return (
@@ -1386,7 +1546,7 @@ export function DoctorFastConsultation({
                                 key={idx}
                                 className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
                                   isAdded
-                                    ? "bg-blue-50 font-bold text-blue-950 border border-blue-200"
+                                    ? "bg-purple-50 font-bold text-purple-950 border border-purple-200"
                                     : "text-slate-700 hover:bg-slate-100 font-medium"
                                 }`}
                               >
@@ -1403,24 +1563,12 @@ export function DoctorFastConsultation({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const current = clinical.chiefComplaint?.trim() ?? "";
-                                    if (current.includes(text)) {
-                                      const next = current
-                                        .replace(new RegExp(`;?\\s*${escapeRegex(text)}`, "g"), "")
-                                        .replace(/^;\s*/, "")
-                                        .trim();
-                                      onClinicalChange({ ...clinical, chiefComplaint: next });
-                                    } else {
-                                      const next = current ? `${current}; ${text}` : text;
-                                      onClinicalChange({ ...clinical, chiefComplaint: next });
-                                    }
-                                  }}
+                                  onClick={() => handleToggleSymptom(text)}
                                   className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
                                 >
                                   <span className="text-xs text-slate-800 break-words block">{text}</span>
                                   {isCust && (
-                                    <span className="text-[9px] font-bold text-blue-700 bg-blue-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                    <span className="text-[9px] font-bold text-purple-700 bg-purple-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
                                       Doctor Custom
                                     </span>
                                   )}
@@ -1437,21 +1585,9 @@ export function DoctorFastConsultation({
                                 )}
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const current = clinical.chiefComplaint?.trim() ?? "";
-                                    if (current.includes(text)) {
-                                      const next = current
-                                        .replace(new RegExp(`;?\\s*${escapeRegex(text)}`, "g"), "")
-                                        .replace(/^;\s*/, "")
-                                        .trim();
-                                      onClinicalChange({ ...clinical, chiefComplaint: next });
-                                    } else {
-                                      const next = current ? `${current}; ${text}` : text;
-                                      onClinicalChange({ ...clinical, chiefComplaint: next });
-                                    }
-                                  }}
+                                  onClick={() => handleToggleSymptom(text)}
                                   className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                    isAdded ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                    isAdded ? "bg-purple-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                                   }`}
                                 >
                                   {isAdded ? "✓ Added" : "+ Add"}
@@ -1467,17 +1603,330 @@ export function DoctorFastConsultation({
               </div>
             </div>
 
+            {/* 1-Tap Quick Symptoms Chips */}
+            <div className="flex flex-wrap items-center gap-1 mb-2">
+              {(treatmentMode === "general" ? FAST_GENERAL_SYMPTOMS : FAST_ORTHO_SYMPTOMS).slice(0, 8).map((tag) => {
+                const isSelected = selectedComplaintsList.some(
+                  (c) => c.toLowerCase() === tag.text.toLowerCase()
+                );
+                return (
+                  <button
+                    key={tag.label}
+                    type="button"
+                    onClick={() => handleToggleSymptom(tag.text)}
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-purple-600 text-white shadow-2xs font-bold"
+                        : "bg-slate-100 text-slate-700 hover:bg-purple-50 hover:text-purple-800 border border-slate-200/80"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-purple-600"}`}
+                    />
+                    <span>{tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected Complaints Active Chips */}
+            {selectedComplaintsList.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {selectedComplaintsList.map((complaint, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-800 border border-purple-200"
+                  >
+                    <span>{complaint}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSymptom(complaint)}
+                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
+                      title="Remove complaint"
+                    >
+                      <Icon icon={faXmark} className="size-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <Textarea
               value={clinical.chiefComplaint ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, chiefComplaint: e.target.value })}
-              placeholder="Enter chief complaints (e.g. Joint pain, swelling, difficulty walking)..."
-              rows={4}
-              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+              placeholder="Enter chief complaints (e.g. Left ankle pain for 4 days; Swelling after twisting injury; Difficulty walking)..."
+              rows={3}
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
         </div>
 
-        {/* CARD 2: CLINICAL DIAGNOSIS */}
+        {/* CARD 2: CLINICAL FINDINGS / PHYSICAL EXAMINATION */}
+        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={examRef}>
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-500/20">
+                  <Icon icon={faBone} className="size-3.5" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 tracking-tight">
+                      2. Clinical Findings / Physical Exam
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
+                      परीक्षण एवं निष्कर्ष
+                    </span>
+                  </div>
+                </div>
+                {selectedFindingsList.length > 0 && (
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.2 rounded">
+                    {selectedFindingsList.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSetNormalExam}
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition-colors shadow-2xs"
+                  title="1-click mark examination as normal (NAD)"
+                >
+                  <Icon icon={faCheck} className="size-2.5 text-emerald-600" />
+                  <span>Normal / NAD</span>
+                </button>
+                {clinical.examination?.jointsAndParts?.trim() && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onClinicalChange({
+                        ...clinical,
+                        examination: {
+                          ...clinical.examination,
+                          jointsAndParts: "",
+                        },
+                      })
+                    }
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                    title="Clear findings"
+                  >
+                    <Icon icon={faTrashCan} className="size-2.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+
+                {/* Findings Suggestions Dropdown Trigger */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setExamMenuOpen((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Icon icon={faBone} className="size-2.5 text-amber-700" />
+                    <span>Presets ({examOptions.length})</span>
+                    <Icon icon={examMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-amber-600" />
+                  </button>
+
+                  {examMenuOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
+                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-slate-800 px-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                          Preset Joint Findings
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setExamMenuOpen(false)}
+                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
+                        >
+                          Done ✕
+                        </button>
+                      </div>
+
+                      {/* Doctor Custom Exam Finding Add Box */}
+                      <div className="p-2 bg-amber-50/80 border border-amber-200 rounded-lg mb-2">
+                        <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>+ Add Doctor Custom Exam Finding</span>
+                          <span className="text-[9px] text-amber-600 font-normal">Saves for future visits</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={newExamInput}
+                            onChange={(e) => setNewExamInput(e.target.value)}
+                            placeholder="e.g. Lateral ankle tenderness, mild swelling..."
+                            className="h-7 flex-1 rounded border border-amber-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newExamInput.trim()) {
+                                e.preventDefault();
+                                const text = newExamInput.trim();
+                                addCustomExam(text);
+                                handleToggleExamNote(text);
+                                setNewExamInput("");
+                                setExamNotice("Added to findings & saved for future ✓");
+                                setTimeout(() => setExamNotice(null), 3000);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = newExamInput.trim();
+                              if (text) {
+                                addCustomExam(text);
+                                handleToggleExamNote(text);
+                                setNewExamInput("");
+                                setExamNotice("Added to findings & saved for future ✓");
+                                setTimeout(() => setExamNotice(null), 3000);
+                              }
+                            }}
+                            disabled={!newExamInput.trim()}
+                            className="h-7 px-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                        {examOptions.map((text, idx) => {
+                          const isAdded = selectedFindingsList.some(
+                            (f) => f.toLowerCase() === text.trim().toLowerCase()
+                          );
+                          const isFav = isExamFavorite(text);
+                          const isCust = isExamCustom(text);
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                                isAdded
+                                  ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
+                                  : "text-slate-700 hover:bg-slate-100 font-medium"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => toggleExamFavorite(text)}
+                                className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                              >
+                                <Icon
+                                  icon={faStar}
+                                  className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                                />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleExamNote(text)}
+                                className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                              >
+                                <span className="text-xs text-slate-800 break-words block">{text}</span>
+                                {isCust && (
+                                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                    Doctor Custom
+                                  </span>
+                                )}
+                              </button>
+                              {isCust && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeCustomExam(text)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                  title="Delete custom exam finding"
+                                >
+                                  <Icon icon={faTrashCan} className="size-2.5" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleExamNote(text)}
+                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                  isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                }`}
+                              >
+                                {isAdded ? "✓ Added" : "+ Add"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 1-Tap Quick Findings Chips */}
+            <div className="flex flex-wrap items-center gap-1 mb-2">
+              {FAST_EXAM_CHIPS.slice(0, 8).map((chip) => {
+                const isSelected = selectedFindingsList.some(
+                  (f) => f.toLowerCase() === chip.text.toLowerCase()
+                );
+                return (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => handleToggleExamNote(chip.text)}
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-amber-600 text-white shadow-2xs font-bold"
+                        : "bg-slate-100 text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200/80"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-amber-600"}`}
+                    />
+                    <span>{chip.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Selected Findings Active Chips */}
+            {selectedFindingsList.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {selectedFindingsList.map((finding, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 border border-amber-200"
+                  >
+                    <span>{finding}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleExamNote(finding)}
+                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
+                      title="Remove finding"
+                    >
+                      <Icon icon={faXmark} className="size-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <Textarea
+              value={clinical.examination?.jointsAndParts ?? ""}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  examination: {
+                    ...clinical.examination,
+                    jointsAndParts: e.target.value,
+                  },
+                })
+              }
+              placeholder="Enter physical examination findings (e.g. Lateral ankle tenderness; Mild swelling; Pain during movement)..."
+              rows={3}
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ROW 2: PROVISIONAL DIAGNOSIS & INVESTIGATIONS ADVISED */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* CARD 3: PROVISIONAL / CLINICAL DIAGNOSIS */}
         <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={diagnosisRef}>
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -1485,9 +1934,16 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20">
                   <Icon icon={faNotesMedical} className="size-3.5" />
                 </span>
-                <span className="text-xs font-bold text-slate-900 tracking-tight">
-                  Clinical Diagnosis
-                </span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 tracking-tight">
+                      3. Provisional Diagnosis
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60">
+                      संभावित चिकित्सीय निदान
+                    </span>
+                  </div>
+                </div>
                 {selectedDiagnosesList.length > 0 && (
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">
                     {selectedDiagnosesList.length}
@@ -1506,6 +1962,7 @@ export function DoctorFastConsultation({
                     <span>Clear</span>
                   </button>
                 )}
+                {/* Suggestions Dropdown */}
                 <div className="relative">
                   <button
                     type="button"
@@ -1653,13 +2110,79 @@ export function DoctorFastConsultation({
               </div>
             </div>
 
-            {/* Selected Diagnoses Chips */}
+            {/* 1-Tap Quick Diagnosis Chips */}
+            <div className="flex flex-wrap items-center gap-1 mb-2">
+              {(treatmentMode === "general" ? FAST_GENERAL_DIAGNOSES : FAST_ORTHO_DIAGNOSES).slice(0, 8).map((tag) => {
+                const isSelected = selectedDiagnosesList.some(
+                  (d) => d.toLowerCase() === tag.text.toLowerCase()
+                );
+                return (
+                  <button
+                    key={tag.label}
+                    type="button"
+                    onClick={() => handleToggleDiagnosis(tag.text)}
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-emerald-600 text-white shadow-2xs font-bold"
+                        : "bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 border border-slate-200/80"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-emerald-600"}`}
+                    />
+                    <span>{tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Inline Add Diagnosis Input Box for rapid multi-diagnosis entry */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <input
+                type="text"
+                value={newDiagnosisInput}
+                onChange={(e) => setNewDiagnosisInput(e.target.value)}
+                placeholder="Type multiple diagnoses & press Enter (e.g. Left Ankle Sprain)..."
+                className="h-7 flex-1 rounded border border-emerald-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newDiagnosisInput.trim()) {
+                    e.preventDefault();
+                    const text = newDiagnosisInput.trim();
+                    addCustomDiagnosis(text);
+                    handleToggleDiagnosis(text);
+                    setNewDiagnosisInput("");
+                    setDiagnosisNotice("Diagnosis added ✓");
+                    setTimeout(() => setDiagnosisNotice(null), 2500);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const text = newDiagnosisInput.trim();
+                  if (text) {
+                    addCustomDiagnosis(text);
+                    handleToggleDiagnosis(text);
+                    setNewDiagnosisInput("");
+                    setDiagnosisNotice("Diagnosis added ✓");
+                    setTimeout(() => setDiagnosisNotice(null), 2500);
+                  }
+                }}
+                disabled={!newDiagnosisInput.trim()}
+                className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+              >
+                + Add
+              </button>
+            </div>
+
+            {/* Selected Diagnoses Active Chips */}
             {selectedDiagnosesList.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
+              <div className="flex flex-wrap gap-1 mb-2">
                 {selectedDiagnosesList.map((diag, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800"
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200"
                   >
                     <span>{diag}</span>
                     <button
@@ -1678,273 +2201,302 @@ export function DoctorFastConsultation({
             <Textarea
               value={clinical.diagnosis ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, diagnosis: e.target.value })}
-              placeholder="Enter clinical diagnosis (e.g. Left Ankle Sprain, Bilateral Knee OA)..."
-              rows={4}
+              placeholder="Enter clinical diagnosis (e.g. Left Ankle Sprain)..."
+              rows={3}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* CARD 4: INVESTIGATIONS ADVISED */}
+        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={investigationRef}>
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-700 ring-1 ring-sky-500/20">
+                  <Icon icon={faFlaskVial} className="size-3.5" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 tracking-tight">
+                      4. Investigations Advised
+                    </span>
+                    <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/60">
+                      जांच एवं एक्स-रे निर्देश
+                    </span>
+                  </div>
+                </div>
+                {selectedInvestigationsList.length > 0 && (
+                  <span className="text-[10px] font-bold text-sky-700 bg-sky-100/80 px-1.5 py-0.2 rounded">
+                    {selectedInvestigationsList.length}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {investigationText.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => handleInvestigationTextChange("")}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
+                    title="Clear investigations"
+                  >
+                    <Icon icon={faTrashCan} className="size-2.5" />
+                    <span>Clear</span>
+                  </button>
+                )}
+                {/* Suggestions Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setInvestigationMenuOpen((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50/80 px-2.5 py-1 text-xs font-bold text-sky-800 hover:bg-sky-100 hover:border-sky-300 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Icon icon={faFlaskVial} className="size-2.5 text-sky-600" />
+                    <span>Lab / X-Ray Catalog ({investigationOptions.length})</span>
+                    <Icon icon={investigationMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-sky-600" />
+                  </button>
+
+                  {/* Investigation Dropdown Menu */}
+                  {investigationMenuOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-sky-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
+                      <div className="px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-700 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-2">
+                        <span>All Investigations & Imaging ({filteredInvestigations.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setInvestigationMenuOpen(false)}
+                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          Close ✕
+                        </button>
+                      </div>
+
+                      {/* Doctor Custom Test / Filter Box */}
+                      <div className="p-2 bg-sky-50/80 border border-sky-200 rounded-lg mb-2">
+                        <div className="text-[10px] font-bold text-sky-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>+ Search or Add Test / X-Ray</span>
+                          <span className="text-[9px] text-sky-600 font-normal">Saves for future visits</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={newInvestigationInput}
+                            onChange={(e) => {
+                              setNewInvestigationInput(e.target.value);
+                              setInvestigationSearch(e.target.value);
+                            }}
+                            placeholder="Type test name (e.g. Digital X-Ray Left Ankle, CBC)..."
+                            className="h-7 flex-1 rounded border border-sky-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newInvestigationInput.trim()) {
+                                e.preventDefault();
+                                const text = newInvestigationInput.trim();
+                                addCustomInvestigation(text);
+                                handleToggleInvestigation(text);
+                                setNewInvestigationInput("");
+                                setInvestigationSearch("");
+                                setInvestigationNotice("Added investigation ✓");
+                                setTimeout(() => setInvestigationNotice(null), 2500);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const text = newInvestigationInput.trim();
+                              if (text) {
+                                addCustomInvestigation(text);
+                                handleToggleInvestigation(text);
+                                setNewInvestigationInput("");
+                                setInvestigationSearch("");
+                                setInvestigationNotice("Added investigation ✓");
+                                setTimeout(() => setInvestigationNotice(null), 2500);
+                              }
+                            }}
+                            disabled={!newInvestigationInput.trim()}
+                            className="h-7 px-2.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Test Options List */}
+                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                        {filteredInvestigations.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-500">
+                            No matching test found. Type above to add a custom test.
+                          </div>
+                        ) : (
+                          filteredInvestigations.map((text, idx) => {
+                            const isAdded = selectedInvestigationsList.some(
+                              (inv) => inv.toLowerCase() === text.trim().toLowerCase()
+                            );
+                            const isFav = isInvestigationFavorite(text);
+                            const isCust = isInvestigationCustom(text);
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                                  isAdded
+                                    ? "bg-sky-50 font-bold text-sky-950 border border-sky-200"
+                                    : "text-slate-800 hover:bg-slate-50 hover:text-sky-900 font-medium"
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => toggleInvestigationFavorite(text)}
+                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                                >
+                                  <Icon
+                                    icon={faStar}
+                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                                  />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleInvestigation(text)}
+                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                                >
+                                  <span className="text-xs text-slate-900 font-semibold break-words block">{text}</span>
+                                  {isCust && (
+                                    <span className="text-[9px] font-bold text-sky-700 bg-sky-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                      Doctor Custom
+                                    </span>
+                                  )}
+                                </button>
+                                {isCust && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCustomInvestigation(text)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                    title="Delete custom test"
+                                  >
+                                    <Icon icon={faTrashCan} className="size-2.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleInvestigation(text)}
+                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                    isAdded
+                                      ? "bg-sky-600 text-white"
+                                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                  }`}
+                                >
+                                  {isAdded ? "✓ Added" : "+ Add"}
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* 1-Tap Quick Investigation Chips */}
+            <div className="flex flex-wrap items-center gap-1 mb-2">
+              {FAST_INVESTIGATION_CHIPS.slice(0, 8).map((chip) => {
+                const isSelected = selectedInvestigationsList.some(
+                  (inv) => inv.toLowerCase() === chip.text.toLowerCase()
+                );
+                return (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => handleToggleInvestigation(chip.text)}
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-sky-600 text-white shadow-2xs font-bold"
+                        : "bg-slate-100 text-slate-700 hover:bg-sky-50 hover:text-sky-900 border border-slate-200/80"
+                    }`}
+                  >
+                    <Icon
+                      icon={isSelected ? faCheck : faPlus}
+                      className={`size-2.5 ${isSelected ? "text-white" : "text-sky-600"}`}
+                    />
+                    <span>{chip.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Inline Add Investigation Input Box */}
+            <div className="flex items-center gap-1.5 mb-2">
+              <input
+                type="text"
+                value={newInvestigationInput}
+                onChange={(e) => setNewInvestigationInput(e.target.value)}
+                placeholder="Type test name & press Enter (e.g. X-ray Left Ankle, CBC)..."
+                className="h-7 flex-1 rounded border border-sky-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newInvestigationInput.trim()) {
+                    e.preventDefault();
+                    const text = newInvestigationInput.trim();
+                    addCustomInvestigation(text);
+                    handleToggleInvestigation(text);
+                    setNewInvestigationInput("");
+                    setInvestigationNotice("Test added ✓");
+                    setTimeout(() => setInvestigationNotice(null), 2500);
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const text = newInvestigationInput.trim();
+                  if (text) {
+                    addCustomInvestigation(text);
+                    handleToggleInvestigation(text);
+                    setNewInvestigationInput("");
+                    setInvestigationNotice("Test added ✓");
+                    setTimeout(() => setInvestigationNotice(null), 2500);
+                  }
+                }}
+                disabled={!newInvestigationInput.trim()}
+                className="h-7 px-2.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+              >
+                + Add
+              </button>
+            </div>
+
+            {/* Selected Investigations Active Chips */}
+            {selectedInvestigationsList.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {selectedInvestigationsList.map((inv, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800 border border-sky-200"
+                  >
+                    <span>{inv}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleInvestigation(inv)}
+                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
+                      title="Remove investigation"
+                    >
+                      <Icon icon={faXmark} className="size-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <Textarea
+              value={investigationText}
+              onChange={(e) => handleInvestigationTextChange(e.target.value)}
+              placeholder="Enter diagnostic tests & imaging orders (e.g. X-ray Left Ankle – if indicated by clinical examination)..."
+              rows={3}
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
             />
           </div>
         </div>
       </div>
 
-      {/* QUICK EXAMINATION & LOCAL FINDINGS */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm relative">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-500/20">
-              <Icon icon={faBone} className="size-3.5" />
-            </span>
-            <span className="text-xs font-bold text-slate-900 tracking-tight">
-              Physical Examination
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSetNormalExam}
-              className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition-colors shadow-2xs"
-              title="1-click mark examination as normal"
-            >
-              <Icon icon={faCheck} className="size-2.5 text-emerald-600" />
-              <span>Normal / NAD</span>
-            </button>
-
-            {/* Findings Suggestions Dropdown Trigger */}
-            <div className="relative" ref={examRef}>
-              <button
-                type="button"
-                onClick={() => setExamMenuOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs cursor-pointer"
-              >
-                <Icon icon={faBone} className="size-2.5 text-amber-700" />
-                <span>Preset Findings ({examOptions.length})</span>
-                <Icon icon={examMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-amber-600" />
-              </button>
-
-              {examMenuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5">
-                  <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 px-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                      Preset Joint Findings
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setExamMenuOpen(false)}
-                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
-                    >
-                      Done ✕
-                    </button>
-                  </div>
-
-                  {/* Doctor Custom Exam Finding Add Box */}
-                  <div className="p-2 bg-amber-50/80 border border-amber-200 rounded-lg mb-2">
-                    <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                      <span>+ Add Doctor Custom Exam Finding</span>
-                      <span className="text-[9px] text-amber-600 font-normal">Saves for future visits</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={newExamInput}
-                        onChange={(e) => setNewExamInput(e.target.value)}
-                        placeholder="e.g. Mild effusion in right suprapatellar pouch..."
-                        className="h-7 flex-1 rounded border border-amber-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && newExamInput.trim()) {
-                            e.preventDefault();
-                            const text = newExamInput.trim();
-                            addCustomExam(text);
-                            const current = clinical.examination?.jointsAndParts?.trim() ?? "";
-                            const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                            onClinicalChange({
-                              ...clinical,
-                              examination: {
-                                ...clinical.examination,
-                                jointsAndParts: next,
-                              },
-                            });
-                            setNewExamInput("");
-                            setExamNotice("Added to findings & saved for future ✓");
-                            setTimeout(() => setExamNotice(null), 3000);
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const text = newExamInput.trim();
-                          if (text) {
-                            addCustomExam(text);
-                            const current = clinical.examination?.jointsAndParts?.trim() ?? "";
-                            const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                            onClinicalChange({
-                              ...clinical,
-                              examination: {
-                                ...clinical.examination,
-                                jointsAndParts: next,
-                              },
-                            });
-                            setNewExamInput("");
-                            setExamNotice("Added to findings & saved for future ✓");
-                            setTimeout(() => setExamNotice(null), 3000);
-                          }
-                        }}
-                        disabled={!newExamInput.trim()}
-                        className="h-7 px-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                      >
-                        + Add
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                    {examOptions.map((text, idx) => {
-                      const isAdded = Boolean(clinical.examination?.jointsAndParts?.includes(text));
-                      const isFav = isExamFavorite(text);
-                      const isCust = isExamCustom(text);
-                      return (
-                        <div
-                          key={idx}
-                          className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                            isAdded
-                              ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
-                              : "text-slate-700 hover:bg-slate-100 font-medium"
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleExamFavorite(text)}
-                            className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                            title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                          >
-                            <Icon
-                              icon={faStar}
-                              className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const current = clinical.examination?.jointsAndParts?.trim() ?? "";
-                              if (current.includes(text)) {
-                                const next = current
-                                  .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
-                                  .trim();
-                                onClinicalChange({
-                                  ...clinical,
-                                  examination: {
-                                    ...clinical.examination,
-                                    jointsAndParts: next,
-                                  },
-                                });
-                              } else {
-                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                                onClinicalChange({
-                                  ...clinical,
-                                  examination: {
-                                    ...clinical.examination,
-                                    jointsAndParts: next,
-                                  },
-                                });
-                              }
-                            }}
-                            className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                          >
-                            <span className="text-xs text-slate-800 break-words block">{text}</span>
-                            {isCust && (
-                              <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                Doctor Custom
-                              </span>
-                            )}
-                          </button>
-                          {isCust && (
-                            <button
-                              type="button"
-                              onClick={() => removeCustomExam(text)}
-                              className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Delete custom exam finding"
-                            >
-                              <Icon icon={faTrashCan} className="size-2.5" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const current = clinical.examination?.jointsAndParts?.trim() ?? "";
-                              if (current.includes(text)) {
-                                const next = current
-                                  .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
-                                  .trim();
-                                onClinicalChange({
-                                  ...clinical,
-                                  examination: {
-                                    ...clinical.examination,
-                                    jointsAndParts: next,
-                                  },
-                                });
-                              } else {
-                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                                onClinicalChange({
-                                  ...clinical,
-                                  examination: {
-                                    ...clinical.examination,
-                                    jointsAndParts: next,
-                                  },
-                                });
-                              }
-                            }}
-                            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                              isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                            }`}
-                          >
-                            {isAdded ? "✓ Added" : "+ Add"}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {clinical.examination?.jointsAndParts?.trim() && (
-              <button
-                type="button"
-                onClick={() =>
-                  onClinicalChange({
-                    ...clinical,
-                    examination: {
-                      ...clinical.examination,
-                      jointsAndParts: "",
-                    },
-                  })
-                }
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                title="Clear exam findings"
-              >
-                <Icon icon={faTrashCan} className="size-2.5" />
-                <span>Clear</span>
-              </button>
-            )}
-          </div>
-        </div>
-        <Textarea
-          value={clinical.examination?.jointsAndParts ?? ""}
-          onChange={(e) =>
-            onClinicalChange({
-              ...clinical,
-              examination: {
-                ...clinical.examination,
-                jointsAndParts: e.target.value,
-              },
-            })
-          }
-          placeholder="Enter physical examination findings or select presets above..."
-          rows={3}
-          className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
-        />
-      </div>
-
-      {/* CARD 4: MEDICINES & PRESCRIPTION (Rx) - THE DOCTOR'S HEART */}
+      {/* ROW 3: CARD 5: TREATMENT PLAN · PRESCRIBED MEDICINES (Rx) */}
       <div className="rounded-2xl border-2 border-purple-200/90 dark:border-purple-900/60 bg-white dark:bg-slate-900 p-3 md:p-4 shadow-sm">
         <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-200/80 mb-3">
           <div className="flex items-center gap-2">
@@ -1952,9 +2504,14 @@ export function DoctorFastConsultation({
               <Icon icon={faPills} className="size-3.5" />
             </span>
             <div>
-              <span className="text-sm font-extrabold text-slate-950">
-                Prescription Medicines
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-slate-950">
+                  5. Treatment Plan · Prescribed Medicines (Rx)
+                </span>
+                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/60">
+                  उपचार योजना · औषधियां
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500">
                 {medicines.filter((m) => m.name?.trim()).length} medicine{medicines.filter((m) => m.name?.trim()).length === 1 ? "" : "s"} prescribed
               </p>
@@ -2100,7 +2657,7 @@ export function DoctorFastConsultation({
         </div>
       </div>
 
-      {/* CARD: BANDAGES, PLASTERS & ORTHOPEDIC SUPPORTS WITH DEDICATED ADVICE */}
+      {/* ROW 4: CARD 6: TREATMENT PLAN · BANDAGES, PLASTERS & SUPPORTS */}
       <div className="rounded-2xl border-2 border-indigo-200/90 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm">
         <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
           <div className="flex items-center gap-2">
@@ -2110,7 +2667,7 @@ export function DoctorFastConsultation({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">
-                  Bandages, Plasters & Supports
+                  6. Treatment Plan · Bandages, Plasters & Supports
                 </span>
                 <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-200/60">
                   प्लास्टर, पट्टी एवं सपोर्ट
@@ -2851,9 +3408,9 @@ export function DoctorFastConsultation({
         </div>
       </div>
 
-      {/* CARD 5: ADVICE & FOLLOW-UP */}
+      {/* ROW 5: CARD 7 & 8: ADVICE & FOLLOW-UP */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* ADVICE */}
+        {/* CARD 7: ADVICE */}
         <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -2861,9 +3418,16 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-800 ring-1 ring-amber-500/20">
                   <Icon icon={faNotesMedical} className="size-3.5" />
                 </span>
-                <span className="text-xs font-bold text-slate-900 tracking-tight">
-                  Advice & Recommendations
-                </span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 tracking-tight">
+                      7. Treatment Plan · Doctor's Advice
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
+                      सलाह एवं सावधानियां
+                    </span>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {advice?.trim() && (
@@ -3078,7 +3642,7 @@ export function DoctorFastConsultation({
           </div>
         </div>
 
-        {/* FOLLOW-UP */}
+        {/* CARD 8: FOLLOW-UP */}
         <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -3086,9 +3650,16 @@ export function DoctorFastConsultation({
                 <span className="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-800 ring-1 ring-sky-500/20">
                   <Icon icon={faClock} className="size-3.5" />
                 </span>
-                <span className="text-xs font-bold text-slate-900 tracking-tight">
-                  Follow-Up Timeframe
-                </span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 tracking-tight">
+                      8. Follow-Up Timeframe
+                    </span>
+                    <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/60">
+                      पुनः परामर्श / फॉलो-अप
+                    </span>
+                  </div>
+                </div>
               </div>
               {followUp?.trim() && (
                 <button

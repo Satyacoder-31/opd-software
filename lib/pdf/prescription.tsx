@@ -69,6 +69,10 @@ export type PrescriptionPdfProps = {
   vitals?: Vitals | null;
   /** Symptoms / Chief complaint. */
   chiefComplaint?: string | null;
+  /** Clinical findings & physical examination notes. */
+  clinicalFindings?: string | null;
+  /** Advised lab tests & imaging / X-ray orders. */
+  investigations?: string | null;
   /** OPD Queue Token Number. */
   tokenNumber?: number | null;
   /** Ayushman Bharat Health Account number. */
@@ -1516,13 +1520,33 @@ export function PrescriptionDocument(props: PrescriptionPdfProps) {
           {/* Patient Clinical Safety (Allergies), Chronic Conditions & Vitals */}
           <PatientSafetyAndVitals theme={theme} props={props} />
 
+          {/* Clinical Findings & Physical Examination */}
+          {props.clinicalFindings?.trim() ? (
+            <View style={{ marginTop: 8 }}>
+              <SectionTitle theme={theme}>{lang === "hi" ? "परीक्षण एवं निष्कर्ष" : "Clinical Findings"}</SectionTitle>
+              <Text style={{ fontSize: 8.5, color: colors.ink }}>
+                {props.clinicalFindings.trim()}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Provisional / Final Diagnosis */}
           <View style={{ marginTop: 10 }}>
-            <SectionTitle theme={theme}>{i18n.diagnosis}</SectionTitle>
+            <SectionTitle theme={theme}>{lang === "hi" ? "संभावित चिकित्सीय निदान" : i18n.diagnosis}</SectionTitle>
             <Text style={{ fontSize: 9.5, color: colors.ink, fontFamily: theme.bold }}>
               {translateDiagnosis(props.diagnosis, lang) || "—"}
             </Text>
           </View>
+
+          {/* Investigations Advised */}
+          {props.investigations?.trim() ? (
+            <View style={{ marginTop: 10, padding: 6, backgroundColor: "#f0fdfa", borderRadius: 4, borderWidth: 0.5, borderColor: "#ccfbf1" }}>
+              <SectionTitle theme={theme}>{lang === "hi" ? "जांच एवं एक्स-रे निर्देश" : "Investigations Advised"}</SectionTitle>
+              <Text style={{ fontSize: 8.5, color: colors.ink, fontFamily: theme.bold }}>
+                {props.investigations.trim()}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Outpatient Prescription & Medicines */}
           <View style={{ marginTop: 12 }}>

@@ -17,6 +17,7 @@ export type ClinicalTemplate = {
   chiefComplaint?: string;
   diagnosis?: string;
   examination?: string;
+  investigations?: string;
   medicines: Medicine[];
   advice?: string;
   followUp?: string;
@@ -392,6 +393,7 @@ export const COMMON_ILLNESS_TEMPLATES: readonly ClinicalTemplate[] = [
     chiefComplaint: "Left ankle pain for 4 days; Swelling after twisting injury; Difficulty walking",
     diagnosis: "Left Ankle Sprain",
     examination: "Lateral ankle tenderness, mild swelling, pain during movement. Neurovascular bundle intact.",
+    investigations: "X-ray Left Ankle – if indicated by clinical examination",
     medicines: [
       {
         name: "Aceclofenac 100 mg + Paracetamol 325 mg + Serratiopeptidase 15 mg",

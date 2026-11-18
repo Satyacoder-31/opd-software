@@ -327,7 +327,9 @@ export type PrescriptionViewData = {
   };
   tokenNumber?: number | null;
   chiefComplaint?: string | null;
+  clinicalFindings?: string | null;
   diagnosis: string;
+  investigations?: string | null;
   vitals?: any | null;
   medicines: Medicine[];
   plasterOrBandages?: PlasterBandageItem[];
@@ -377,6 +379,20 @@ export async function getPrescriptionViewData(
   const vitals = (consultation.vitals as any) ?? null;
   const formattedDate = formatPrescriptionDate(consultationDate);
 
+  const exam = consultation.examination as any;
+  const clinicalFindings =
+    (exam?.jointsAndParts?.trim() || (typeof consultation.examination === "string" ? consultation.examination.trim() : null)) ||
+    null;
+
+  const invResults = consultation.investigationResults as any;
+  const investigations = [
+    invResults?.imaging?.trim(),
+    invResults?.labs?.trim(),
+    invResults?.other?.trim(),
+  ]
+    .filter(Boolean)
+    .join("\n") || null;
+
   const pdfBytes = await renderPrescriptionPdf({
     clinicName: clinic.name,
     clinicPhone: clinic.phone,
@@ -400,10 +416,12 @@ export async function getPrescriptionViewData(
     ),
     vitals,
     chiefComplaint: consultation.chiefComplaint ?? undefined,
+    clinicalFindings: clinicalFindings ?? undefined,
     tokenNumber: consultation.appointment?.tokenNumber ?? undefined,
     abhaNumber: consultation.patient.abhaNumber ?? undefined,
     abhaAddress: consultation.patient.abhaAddress ?? undefined,
     diagnosis: consultation.diagnosis ?? "",
+    investigations: investigations ?? undefined,
     medicines,
     plasterOrBandages,
     plasterAdvice,
@@ -461,7 +479,9 @@ export async function getPrescriptionViewData(
       },
       tokenNumber: consultation.appointment?.tokenNumber ?? null,
       chiefComplaint: consultation.chiefComplaint,
+      clinicalFindings,
       diagnosis: consultation.diagnosis ?? "",
+      investigations,
       vitals,
       medicines,
       plasterOrBandages,

@@ -17,6 +17,7 @@ import {
   translateInstructions,
   translateAdviceText,
   translateFollowUp,
+  translateExaminationFindings,
   translatePlasterName,
   translatePlasterSite,
   translatePlasterDuration,
@@ -467,7 +468,7 @@ export function generatePrintablePrescriptionHtml(
         : ""
     }
 
-    <!-- CLINICAL DIAGNOSIS & COMPLAINTS -->
+    <!-- CLINICAL DIAGNOSIS, FINDINGS, COMPLAINTS & INVESTIGATIONS -->
     <div style="margin-top: 10px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; padding: 8px 12px; font-size: 11px;">
       ${
         data.chiefComplaint
@@ -477,12 +478,28 @@ export function generatePrintablePrescriptionHtml(
             </div>`
           : ""
       }
-      <div>
-        <strong style="text-transform: uppercase; color: #134e4a; font-size: 10px;">${lang === "hi" ? "चिकित्सीय निदान:" : "Clinical Diagnosis:"}</strong>
+      ${
+        data.clinicalFindings
+          ? `<div style="margin-bottom: 4px;">
+              <strong style="text-transform: uppercase; color: #134e4a; font-size: 10px;">${lang === "hi" ? "परीक्षण एवं निष्कर्ष:" : "Clinical Findings:"}</strong>
+              <span style="color: #0f172a; margin-left: 4px; white-space: pre-line;">${escapeHtml(translateExaminationFindings(data.clinicalFindings, lang))}</span>
+            </div>`
+          : ""
+      }
+      <div style="margin-bottom: ${data.investigations ? "4px" : "0"};">
+        <strong style="text-transform: uppercase; color: #134e4a; font-size: 10px;">${lang === "hi" ? "संभावित चिकित्सीय निदान:" : "Provisional / Clinical Diagnosis:"}</strong>
         <span style="color: #0f172a; font-weight: 700; font-size: 12px; margin-left: 4px; white-space: pre-line;">
           ${escapeHtml(translateDiagnosis(data.diagnosis, lang)) || (lang === "hi" ? "परीक्षण मूल्यांकन दर्ज" : "Clinical assessment recorded")}
         </span>
       </div>
+      ${
+        data.investigations
+          ? `<div style="padding-top: 4px; border-top: 1px dashed #99f6e4;">
+              <strong style="text-transform: uppercase; color: #134e4a; font-size: 10px;">${lang === "hi" ? "जांच एवं एक्स-रे निर्देश:" : "Investigations Advised:"}</strong>
+              <span style="color: #0f172a; font-weight: 600; margin-left: 4px; white-space: pre-line;">${escapeHtml(data.investigations)}</span>
+            </div>`
+          : ""
+      }
     </div>
 
     <!-- RX MEDICINES TABLE -->
