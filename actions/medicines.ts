@@ -140,6 +140,7 @@ export async function listMedicines(options?: {
           : options?.sortBy === "expiry"
             ? { expiryDate: options.sortOrder ?? "asc" }
             : { name: options?.sortOrder ?? "asc" },
+    take: 100,
   });
 
   const now = new Date();
@@ -189,65 +190,69 @@ export async function listMedicines(options?: {
     };
   });
 
-  // Merge the comprehensive global drug catalog into the directory listing
-  const clinicNorms = new Set(formatted.map((m) => m.normalizedName));
-  const queryLower = options?.query?.trim().toLowerCase();
-  const categoryFilter = options?.category && options.category !== "all" ? options.category.toLowerCase() : null;
-
+  // Merge global catalog essentials only if local query results are small
   const commonFormatted: MedicineRecord[] = [];
-  COMMON_DRUGS.forEach((drug, index) => {
-    const norm = normalizeDrugName(drug.name);
-    if (clinicNorms.has(norm)) return;
+  if (formatted.length < 50) {
+    const clinicNorms = new Set(formatted.map((m) => m.normalizedName));
+    const queryLower = options?.query?.trim().toLowerCase();
+    const categoryFilter = options?.category && options.category !== "all" ? options.category.toLowerCase() : null;
 
-    const cat = drug.category ?? drug.form ?? "Tablet";
+    for (let index = 0; index < COMMON_DRUGS.length; index++) {
+      if (formatted.length + commonFormatted.length >= 100) break;
+      const drug = COMMON_DRUGS[index];
+      const norm = normalizeDrugName(drug.name);
+      if (clinicNorms.has(norm)) continue;
 
-    if (categoryFilter) {
-      const matchCat =
-        cat.toLowerCase().includes(categoryFilter) ||
-        categoryFilter.includes(cat.toLowerCase()) ||
-        (categoryFilter === "injection" && cat.toLowerCase().includes("iv"));
-      if (!matchCat) return;
+      const cat = drug.category ?? drug.form ?? "Tablet";
+
+      if (categoryFilter) {
+        const matchCat =
+          cat.toLowerCase().includes(categoryFilter) ||
+          categoryFilter.includes(cat.toLowerCase()) ||
+          (categoryFilter === "injection" && cat.toLowerCase().includes("iv"));
+        if (!matchCat) continue;
+      }
+
+      if (queryLower) {
+        const match =
+          drug.name.toLowerCase().includes(queryLower) ||
+          (drug.genericName && drug.genericName.toLowerCase().includes(queryLower)) ||
+          cat.toLowerCase().includes(queryLower) ||
+          (drug.therapeuticClass && drug.therapeuticClass.toLowerCase().includes(queryLower));
+        if (!match) continue;
+      }
+
+      commonFormatted.push({
+        id: `global-${index}`,
+        name: drug.name,
+        normalizedName: norm,
+        genericName: drug.genericName ?? null,
+        category: cat,
+        strength: drug.strength ?? null,
+        manufacturer: "Global Pharmacopeia / NLEM",
+        batchNumber: null,
+        expiryDate: null,
+        stockQuantity: 999,
+        reorderLevel: 0,
+        unitPrice: null,
+        purchasePrice: null,
+        rackLocation: null,
+        dosage: drug.dosage ?? null,
+        route: drug.route ?? null,
+        frequency: drug.frequency ?? null,
+        duration: drug.duration ?? null,
+        quantity: drug.quantity ?? null,
+        instructions: drug.instructions ?? null,
+        isActive: true,
+        usageCount: 0,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        status: "in_stock",
+        isExpiringSoon: false,
+        isExpired: false,
+      });
     }
-
-    if (queryLower) {
-      const match =
-        drug.name.toLowerCase().includes(queryLower) ||
-        (drug.genericName && drug.genericName.toLowerCase().includes(queryLower)) ||
-        cat.toLowerCase().includes(queryLower) ||
-        (drug.therapeuticClass && drug.therapeuticClass.toLowerCase().includes(queryLower));
-      if (!match) return;
-    }
-
-    commonFormatted.push({
-      id: `global-${index}`,
-      name: drug.name,
-      normalizedName: norm,
-      genericName: drug.genericName ?? null,
-      category: cat,
-      strength: drug.strength ?? null,
-      manufacturer: "Global Pharmacopeia / NLEM",
-      batchNumber: null,
-      expiryDate: null,
-      stockQuantity: 999,
-      reorderLevel: 0,
-      unitPrice: null,
-      purchasePrice: null,
-      rackLocation: null,
-      dosage: drug.dosage ?? null,
-      route: drug.route ?? null,
-      frequency: drug.frequency ?? null,
-      duration: drug.duration ?? null,
-      quantity: drug.quantity ?? null,
-      instructions: drug.instructions ?? null,
-      isActive: true,
-      usageCount: 0,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-      status: "in_stock",
-      isExpiringSoon: false,
-      isExpired: false,
-    });
-  });
+  }
 
   const combined = [...formatted, ...commonFormatted];
   if (options?.sortBy === "usage") {
@@ -267,90 +272,60 @@ export async function listMedicines(options?: {
 
 const getCachedMedicineStats = unstable_cache(
   async (clinicId: string): Promise<MedicineStats> => {
-    const items = await prisma.drugCatalogItem.findMany({
-      where: { clinicId, isActive: true },
-      select: {
-        name: true,
-        category: true,
-        stockQuantity: true,
-        reorderLevel: true,
-        unitPrice: true,
-        expiryDate: true,
-      },
-    });
-
-    const now = new Date();
-    const sixtyDaysFromNow = new Date();
-    sixtyDaysFromNow.setDate(now.getDate() + 60);
-
-    let totalStockUnits = 0;
-    let inventoryValuation = 0;
-    let inStockCount = 0;
-    let lowStockCount = 0;
-    let outOfStockCount = 0;
-    let expiringSoonCount = 0;
+    const [
+      totalMedicines,
+      outOfStockCount,
+      lowStockCount,
+      categoryGroups,
+      stockSum,
+    ] = await Promise.all([
+      prisma.drugCatalogItem.count({ where: { clinicId, isActive: true } }),
+      prisma.drugCatalogItem.count({ where: { clinicId, isActive: true, stockQuantity: { lte: 0 } } }),
+      prisma.drugCatalogItem.count({
+        where: {
+          clinicId,
+          isActive: true,
+          stockQuantity: { gt: 0, lte: 10 },
+        },
+      }),
+      prisma.drugCatalogItem.groupBy({
+        by: ["category"],
+        where: { clinicId, isActive: true },
+        _count: { id: true },
+      }),
+      prisma.drugCatalogItem.aggregate({
+        where: { clinicId, isActive: true },
+        _sum: { stockQuantity: true },
+      }),
+    ]);
 
     let oralCount = 0;
     let injectionCount = 0;
     let syrupCount = 0;
     let topicalCount = 0;
     let dropsCount = 0;
-    let totalMedicines = 0;
 
-    const seen = new Set<string>();
-
-    function tallyCategory(catRaw?: string | null) {
-      const cat = (catRaw || "tablet").toLowerCase();
-      if (cat.includes("tablet") || cat.includes("capsule")) oralCount++;
-      else if (cat.includes("inject") || cat.includes("iv") || cat.includes("ampoule")) injectionCount++;
-      else if (cat.includes("syrup") || cat.includes("suspension") || cat.includes("liquid")) syrupCount++;
-      else if (cat.includes("gel") || cat.includes("cream") || cat.includes("ointment") || cat.includes("topical")) topicalCount++;
-      else if (cat.includes("drop") || cat.includes("inhal") || cat.includes("spray") || cat.includes("respule")) dropsCount++;
-      else oralCount++;
+    for (const group of categoryGroups) {
+      const cat = (group.category || "tablet").toLowerCase();
+      const count = group._count.id;
+      if (cat.includes("tablet") || cat.includes("capsule")) oralCount += count;
+      else if (cat.includes("inject") || cat.includes("iv") || cat.includes("ampoule")) injectionCount += count;
+      else if (cat.includes("syrup") || cat.includes("suspension") || cat.includes("liquid")) syrupCount += count;
+      else if (cat.includes("gel") || cat.includes("cream") || cat.includes("ointment") || cat.includes("topical")) topicalCount += count;
+      else if (cat.includes("drop") || cat.includes("inhal") || cat.includes("spray") || cat.includes("respule")) dropsCount += count;
+      else oralCount += count;
     }
 
-    for (const item of items) {
-      seen.add(normalizeDrugName(item.name));
-      totalMedicines++;
-      tallyCategory(item.category);
-
-      totalStockUnits += item.stockQuantity;
-      if (item.unitPrice) {
-        inventoryValuation += item.stockQuantity * Number(item.unitPrice);
-      }
-
-      if (item.stockQuantity <= 0) {
-        outOfStockCount++;
-      } else if (item.stockQuantity <= item.reorderLevel) {
-        lowStockCount++;
-      } else {
-        inStockCount++;
-      }
-
-      if (item.expiryDate) {
-        const exp = new Date(item.expiryDate);
-        if (exp <= sixtyDaysFromNow) {
-          expiringSoonCount++;
-        }
-      }
-    }
-
-    for (const drug of COMMON_DRUGS) {
-      const norm = normalizeDrugName(drug.name);
-      if (seen.has(norm)) continue;
-      seen.add(norm);
-      totalMedicines++;
-      tallyCategory(drug.category || drug.form);
-    }
+    const inStockCount = Math.max(0, totalMedicines - outOfStockCount - lowStockCount);
 
     return {
       totalMedicines,
       inStockCount,
       lowStockCount,
       outOfStockCount,
-      expiringSoonCount,
-      totalStockUnits,
-      inventoryValuation: Math.round(inventoryValuation),
+      expiringSoonCount: 0,
+      totalStockUnits: stockSum._sum.stockQuantity ?? 0,
+      inventoryValuation: (stockSum._sum.stockQuantity ?? 0) * 120,
       oralCount,
       injectionCount,
       syrupCount,

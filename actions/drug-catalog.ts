@@ -8,6 +8,7 @@ import { permissionDenied, requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   buildDrugSuggestions,
+  defaultsForClinicEntry,
   normalizeDrugName,
   type DrugSuggestion,
 } from "@/lib/drug-catalog";
@@ -93,6 +94,68 @@ export async function listDrugSuggestions(): Promise<DrugSuggestion[]> {
   }));
 
   return buildDrugSuggestions(serialized);
+}
+
+export async function searchDrugCatalogOnline(
+  query: string
+): Promise<DrugSuggestion[]> {
+  const session = await requireSessionUser();
+  if (!can(session, "drugs.search")) return [];
+  const q = query.trim();
+  if (!q || q.length < 2) return [];
+
+  const items = await prisma.drugCatalogItem.findMany({
+    where: {
+      clinicId: session.clinicId,
+      isActive: true,
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { genericName: { contains: q, mode: "insensitive" } },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      normalizedName: true,
+      usageCount: true,
+      stockQuantity: true,
+      reorderLevel: true,
+      genericName: true,
+      category: true,
+      strength: true,
+      batchNumber: true,
+      expiryDate: true,
+      unitPrice: true,
+      dosage: true,
+      route: true,
+      frequency: true,
+      duration: true,
+      quantity: true,
+      instructions: true,
+    },
+    orderBy: [{ usageCount: "desc" }, { name: "asc" }],
+    take: 30,
+  });
+
+  return items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    source: "clinic" as const,
+    usageCount: item.usageCount,
+    stockQuantity: item.stockQuantity,
+    reorderLevel: item.reorderLevel,
+    genericName: item.genericName,
+    category: item.category,
+    strength: item.strength,
+    batchNumber: item.batchNumber,
+    expiryDate: item.expiryDate,
+    unitPrice: item.unitPrice ? Number(item.unitPrice) : null,
+    defaults: defaultsForClinicEntry({
+      ...item,
+      normalizedName: item.normalizedName,
+      unitPrice: item.unitPrice ? Number(item.unitPrice) : null,
+    }),
+  }));
 }
 
 export async function listClinicDrugItems() {

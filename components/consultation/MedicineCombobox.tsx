@@ -8,6 +8,7 @@ import {
   normalizeDrugName,
   type DrugSuggestion,
 } from "@/lib/drug-catalog";
+import { searchDrugCatalogOnline } from "@/actions/drug-catalog";
 import {
   isFavoriteMedicine,
   loadFavoriteMedicines,
@@ -103,16 +104,47 @@ export function MedicineCombobox({
   const [recents, setRecents] = useState<string[]>([]);
 
   const favorites = controlledFavorites ?? internalFavorites;
+  const [serverMatches, setServerMatches] = useState<DrugSuggestion[]>([]);
 
   useEffect(() => {
     setInternalFavorites(loadFavoriteMedicines());
     setRecents(loadRecentMedicines());
   }, []);
 
+  useEffect(() => {
+    const trimmed = value.trim();
+    if (trimmed.length < 2) {
+      setServerMatches([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void searchDrugCatalogOnline(trimmed)
+        .then((items) => {
+          setServerMatches(items || []);
+        })
+        .catch(() => {});
+    }, 180);
+
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  const allSuggestions = useMemo(() => {
+    if (serverMatches.length === 0) return suggestions;
+    const seen = new Set(suggestions.map((s) => s.id));
+    const combined = [...suggestions];
+    for (const item of serverMatches) {
+      if (!seen.has(item.id)) {
+        combined.push(item);
+      }
+    }
+    return combined;
+  }, [suggestions, serverMatches]);
+
   const query = value.trim();
   const catalogMatches = useMemo(
-    () => filterDrugSuggestions(suggestions, value, 10),
-    [suggestions, value]
+    () => filterDrugSuggestions(allSuggestions, value, 12),
+    [allSuggestions, value]
   );
 
   const browseItems = useMemo(() => {
