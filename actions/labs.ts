@@ -69,6 +69,7 @@ const DEFAULT_CLINICAL_LAB_TESTS = [
   { name: "Digital X-Ray Left Hip Joint (AP & Lat)", code: "XR-HIP-L", sampleType: "Imaging / X-Ray", feeAmount: 600 },
   { name: "Digital X-Ray Right Ankle (AP & Lat)", code: "XR-ANKLE-R", sampleType: "Imaging / X-Ray", feeAmount: 600 },
   { name: "Digital X-Ray Left Ankle (AP & Lat)", code: "XR-ANKLE-L", sampleType: "Imaging / X-Ray", feeAmount: 600 },
+  { name: "X-ray Left Ankle – if indicated by clinical examination", code: "XR-ANKLE-L-CLIN", sampleType: "Imaging / X-Ray", feeAmount: 600 },
   { name: "Digital X-Ray Right Foot (AP & Oblique)", code: "XR-FOOT-R", sampleType: "Imaging / X-Ray", feeAmount: 600 },
   { name: "Digital X-Ray Left Foot (AP & Oblique)", code: "XR-FOOT-L", sampleType: "Imaging / X-Ray", feeAmount: 600 },
   { name: "Digital X-Ray Right Wrist & Hand (AP & Obl)", code: "XR-WRIST-R", sampleType: "Imaging / X-Ray", feeAmount: 600 },

@@ -6,6 +6,9 @@
 export type ClinicalTreatmentMode = "orthopedics" | "general" | "all";
 
 export const ORTHOPEDIC_CHIEF_COMPLAINTS = [
+  "Left ankle pain for 4 days",
+  "Swelling after twisting injury",
+  "Difficulty walking",
   "Pain in right knee joint aggravated by walking and climbing stairs",
   "Pain in left knee joint with morning stiffness and crepitus",
   "Bilateral knee pain with joint stiffness and difficulty sitting cross-legged",
@@ -334,6 +337,10 @@ export const JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS = [
   "Fingers (Trigger finger): Palpable tender nodule over A1 pulley of right ring finger, audible click and mechanical catching on active extension.",
 
   // Ankle & Foot
+  "Left ankle: Lateral ankle tenderness, mild swelling, pain during movement. Normal bony alignment, neurovascular bundle intact.",
+  "Lateral ankle tenderness",
+  "Mild swelling",
+  "Pain during movement",
   "Right ankle: Lateral malleolar edema, tenderness over anterior talofibular ligament (ATFL), anterior drawer test negative, neurovascular bundle intact.",
   "Bilateral feet (Plantar fasciitis): Marked point tenderness over medial calcaneal tuberosity at plantar fascia insertion, Windlass test positive, tight Achilles-gastrocnemius complex.",
   "Achilles tendinitis: Tenderness and nodular thickening 3-4 cm proximal to calcaneal insertion, pain on passive dorsiflexion, Thompson calf-squeeze test negative (intact tendon).",
@@ -351,6 +358,7 @@ export const JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS = [
 export const OTHER_EXAM_RECOMMENDATIONS = JOINTS_AND_PARTS_EXAM_RECOMMENDATIONS;
 
 export const ORTHOPEDIC_DIAGNOSIS_RECOMMENDATIONS = [
+  "Left Ankle Sprain",
   "Bilateral Knee Osteoarthritis (Grade II-III Kellgren-Lawrence)",
   "Acute Lumbar Spondylosis with L4-L5 Disc Protrusion and Sciatica",
   "Cervical Spondylosis with Paravertebral Muscle Spasm",
@@ -454,6 +462,7 @@ export const DURATION_PRESETS = [
 ] as const;
 
 export const ORTHOPEDIC_ADVICE_RECOMMENDATIONS = [
+  "• Rest and protection\n• Ice application\n• Compression and elevation\n• Supportive ankle brace if indicated",
   "• Avoid squatting, sitting cross-legged, and frequent stair climbing.\n• Apply ice pack for 15 mins twice daily during acute flare.\n• Wear comfortable, well-cushioned footwear.\n• Isometric quadriceps exercises once acute pain subsides.",
   "• Sleep on a firm mattress with pillow under knees.\n• Strictly avoid lifting heavy weights and forward bending from the waist.\n• Use a lumbar support cushion while sitting.\n• Core stability exercises after pain subsides.",
   "• R.I.C.E. protocol:\n  - Rest: Minimize weight bearing\n  - Ice: Cold pack for 15 mins 3 times a day\n  - Compression: Crepe bandage wrap\n  - Elevation: Keep limb elevated above heart level.",
@@ -490,6 +499,7 @@ export function getAdviceRecommendations(
 }
 
 export const ORTHOPEDIC_FOLLOW_UP_RECOMMENDATIONS = [
+  "Review after 5–7 days (X-ray Left Ankle if indicated by clinical examination).",
   "Review after 7 days for clinical assessment and mobility review.",
   "Review after 2 weeks with fresh X-ray imaging reports.",
   "Review with MRI imaging reports.",
@@ -529,6 +539,10 @@ export function getFollowUpRecommendations(
 /* ---------------- ADVICE SECTION DETAILED RECOMMENDATIONS ---------------- */
 
 export const ADVICE_GENERAL_PRECAUTIONS = [
+  "Rest and protection: Avoid high impact, twisting, and prolonged weight-bearing.",
+  "Ice application: Cold pack for 15-20 minutes 3-4 times daily over swollen joint.",
+  "Compression and elevation: Supportive wrap / brace and elevate limb above heart level when resting.",
+  "Supportive ankle brace if indicated for joint stabilization during ambulation.",
   "Avoid squatting, sitting cross-legged (palathi), and repeated stair climbing. Use western commode.",
   "Ergonomic sitting: high-backed chair with lumbar support cushion. Avoid slumping; take a 5-min walk break every 45 mins.",
   "Strictly avoid lifting heavy weights (> 5 kg) and bending forward from waist; bend knees when picking objects from floor.",
@@ -664,6 +678,7 @@ export const TREATMENT_PLAN_COUNSELING_RECOMMENDATIONS = [
 ] as const;
 
 export const TREATMENT_PLAN_CONSERVATIVE_RECOMMENDATIONS = [
+  "R.I.C.E. & Functional Support: Rest and protection, Ice application, Compression and elevation, Supportive ankle brace if indicated.",
   "Comprehensive non-surgical pathway: oral analgesics & anti-inflammatory course, daily supervised physical therapy (isometric strengthening), ergonomic modifications, firm footwear, periodic review.",
   "Interventional conservative: Intra-articular PRP / Hyaluronic acid injection administered under aseptic technique; active rest for 48 hours followed by home exercise protocol.",
 ] as const;
@@ -688,6 +703,7 @@ export const IMAGING_RESULTS_RECOMMENDATIONS = [
   "X-ray Lumbar Spine (AP & Lateral): Degenerative changes with L4-L5 disc space narrowing and anterior osteophyte formation. No spondylolisthesis or bony erosion.",
   "X-ray Cervical Spine (AP & Lateral): Straightening of cervical spine with loss of normal lordosis secondary to muscle spasm. C5-C6 disc space reduction.",
   "X-ray Chest (PA View): Normal cardiac silhouette, clear bilateral lung parenchyma, normal costophrenic angles. No active pulmonary infiltration.",
+  "X-ray Left Ankle (AP & Lateral) – if indicated by clinical examination: No cortical breach or dislocation seen. Normal mortise joint alignment; mild soft tissue swelling over lateral aspect.",
   "X-ray Right Ankle (AP & Lateral): No fracture or dislocation seen. Normal mortise joint alignment. Soft tissue swelling noted over lateral malleolar region.",
   "MRI Lumbo-Sacral Spine: L4-L5 posterior disc extrusion causing thecal sac indentation and right L5 nerve root impingement. Facet joint arthropathy noted.",
   "MRI Right Knee: Complex tear of posterior horn of medial meniscus. Intact ACL, PCL, and collateral ligaments. Mild joint effusion.",

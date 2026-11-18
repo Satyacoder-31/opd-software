@@ -515,13 +515,15 @@ export function translateInstructions(inst?: string | null, lang: PdfLanguage = 
 /**
  * Translates orthopedic & clinical diagnosis into natural Hindi.
  */
-export function translateDiagnosis(diag?: string | null, lang: PdfLanguage = "en"): string {
-  if (!diag) return "—";
-  if (lang !== "hi") return diag;
-
-  const d = diag.trim();
+function translateSingleDiagnosis(d: string): string {
   const lower = d.toLowerCase();
 
+  if (lower.includes("left ankle sprain")) {
+    return "बाएं टखने में मोच एवं लिगामेंट खिंचाव (Left Ankle Sprain)";
+  }
+  if (lower.includes("right ankle sprain")) {
+    return "दाहिने टखने में मोच एवं लिगामेंट खिंचाव (Right Ankle Sprain)";
+  }
   if (lower.includes("bilateral knee osteoarthritis") || lower.includes("both knees")) {
     return "दोनों घुटनों का ऑस्टियोआर्थराइटिस (जोड़ों का घिसना)";
   }
@@ -587,6 +589,28 @@ export function translateDiagnosis(diag?: string | null, lang: PdfLanguage = "en
   }
 
   return d;
+}
+
+export function translateDiagnosis(diag?: string | null, lang: PdfLanguage = "en"): string {
+  if (!diag) return "—";
+  if (lang !== "hi") return diag;
+
+  const d = diag.trim();
+  if (d.includes("\n")) {
+    return d
+      .split("\n")
+      .map((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return "";
+        const bullet = trimmed.startsWith("•") ? "• " : "";
+        const clean = trimmed.replace(/^[•\-\*]\s*/, "");
+        return `${bullet}${translateSingleDiagnosis(clean)}`;
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return translateSingleDiagnosis(d);
 }
 
 /**

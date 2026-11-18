@@ -228,7 +228,7 @@ export function PrescriptionPaperView({
           <span className="font-bold uppercase tracking-wider text-teal-900 text-[11px]">
             {lang === "hi" ? "चिकित्सीय निदान: " : "Clinical Diagnosis: "}
           </span>
-          <strong className="text-slate-900 font-bold text-sm">
+          <strong className="text-slate-900 font-bold text-sm whitespace-pre-line">
             {translateDiagnosis(data.diagnosis, lang) ||
               (lang === "hi" ? "परीक्षण मूल्यांकन दर्ज" : "Clinical assessment recorded")}
           </strong>

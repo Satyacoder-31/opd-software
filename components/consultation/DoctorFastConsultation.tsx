@@ -80,6 +80,9 @@ function escapeRegex(str: string): string {
 
 // Crisp, readable symptom tags (short label + rich clinical text)
 const FAST_ORTHO_SYMPTOMS: QuickTag[] = [
+  { label: "Left Ankle Pain (4d)", text: "Left ankle pain for 4 days" },
+  { label: "Swelling Post-Twist", text: "Swelling after twisting injury" },
+  { label: "Difficulty Walking", text: "Difficulty walking" },
   { label: "Right Knee Pain", text: "Pain in right knee joint aggravated by walking" },
   { label: "Left Knee Pain", text: "Pain in left knee joint with morning stiffness" },
   { label: "Bilateral Knee", text: "Bilateral knee pain, difficulty squatting" },
@@ -102,13 +105,14 @@ const FAST_GENERAL_SYMPTOMS: QuickTag[] = [
 
 // Crisp, readable diagnosis tags (short label + rich clinical text)
 const FAST_ORTHO_DIAGNOSES: QuickTag[] = [
+  { label: "Left Ankle Sprain", text: "Left Ankle Sprain" },
   { label: "Bilateral Knee OA", text: "Bilateral Osteoarthritis Knee (Grade 2/3) with Joint Flare" },
   { label: "Right Knee OA", text: "Osteoarthritis Right Knee Joint" },
   { label: "Lumbar Spondylosis", text: "Lumbar Spondylosis with L4-L5 Radiculopathy (Sciatica)" },
   { label: "Acute Back Strain", text: "Acute Mechanical Lower Back Strain with Muscle Spasm" },
   { label: "Cervical Spondylosis", text: "Cervical Spondylosis with Trapezius Muscle Spasm" },
   { label: "Frozen Shoulder", text: "Adhesive Capsulitis of Right Shoulder (Frozen Shoulder)" },
-  { label: "Ankle Sprain", text: "Acute Lateral Ankle Ligament Sprain (Grade 1/2)" },
+  { label: "Ankle Sprain (Lateral)", text: "Acute Lateral Ankle Ligament Sprain (Grade 1/2)" },
   { label: "Plantar Fasciitis", text: "Plantar Fasciitis (Bilateral)" },
   { label: "Tennis Elbow", text: "Lateral Epicondylitis (Tennis Elbow)" },
 ];
@@ -124,6 +128,9 @@ const FAST_GENERAL_DIAGNOSES: QuickTag[] = [
 
 // Crisp, readable exam finding tags
 const FAST_EXAM_CHIPS: QuickTag[] = [
+  { label: "Lateral Ankle Tender", text: "Lateral ankle tenderness" },
+  { label: "Mild Swelling", text: "Mild swelling" },
+  { label: "Pain with Movement", text: "Pain during movement" },
   { label: "Knee OA (Crepitus/Tender)", text: "Medial joint line tenderness (+), joint crepitus on passive flexion, ROM 0-110°, no joint effusion." },
   { label: "Lumbar Spasm (SLR+)", text: "Paravertebral muscle spasm present, tenderness at L4-L5, SLR positive at 60°." },
   { label: "Cervical Paraspinal Spasm", text: "Cervical paraspinal tenderness, restricted lateral rotation, Spurling test negative." },
@@ -134,6 +141,10 @@ const FAST_EXAM_CHIPS: QuickTag[] = [
 
 // Crisp, readable advice tags
 const FAST_ADVICE_CHIPS: QuickTag[] = [
+  { label: "Rest & Protection", text: "Rest and protection" },
+  { label: "Ice Application", text: "Ice application" },
+  { label: "Compression & Elevation", text: "Compression and elevation" },
+  { label: "Supportive Ankle Brace", text: "Supportive ankle brace if indicated" },
   { label: "Avoid Squatting/Stairs", text: "Avoid squatting, sitting cross-legged, and frequent stair climbing." },
   { label: "Ice Pack (15 min)", text: "Apply cold / ice pack for 15 minutes twice daily during acute flare." },
   { label: "Hot Water Fomentation", text: "Hot water fomentation twice daily before gentle stretching." },
@@ -146,6 +157,7 @@ const FAST_ADVICE_CHIPS: QuickTag[] = [
 
 // Crisp follow-up timeframes
 const FAST_FOLLOW_UPS: QuickTag[] = [
+  { label: "5-7 Days", text: "Review after 5–7 days" },
   { label: "3 Days", text: "Review after 3 days" },
   { label: "5 Days", text: "Review after 5 days" },
   { label: "7 Days (1 Wk)", text: "Review after 7 days (1 week)" },
@@ -157,6 +169,7 @@ const FAST_FOLLOW_UPS: QuickTag[] = [
 
 // Quick Presets for Bandages, Plasters & Orthopedic Supports
 const PRESET_PLASTERS = [
+  { name: "Supportive Ankle Brace", defaultSite: "Left Ankle", defaultDuration: "2 weeks", defaultInstructions: "Supportive ankle brace if indicated; wear while standing/walking" },
   { name: "POP Slab (Below Knee)", defaultSite: "Right Ankle", defaultDuration: "3 weeks", defaultInstructions: "Strict Non-Weight Bearing (NWB)" },
   { name: "POP Slab (Above Knee)", defaultSite: "Right Leg", defaultDuration: "4 weeks", defaultInstructions: "Strict Non-Weight Bearing (NWB)" },
   { name: "POP Slab (Below Elbow / Wrist)", defaultSite: "Left Wrist", defaultDuration: "3 weeks", defaultInstructions: "Keep elevated, do not wet" },
@@ -605,12 +618,12 @@ export function DoctorFastConsultation({
     return complaintsOptions.filter((s) => s.toLowerCase().includes(q));
   }, [symptomSearch, complaintsOptions]);
 
-  // Filtered diagnoses for auto-suggest
+  // Filtered diagnoses for dropdown list
   const filteredDiagnoses = useMemo(() => {
-    const q = (clinical.diagnosis ?? "").trim().toLowerCase();
+    const q = newDiagnosisInput.trim().toLowerCase();
     if (!q) return diagnosisOptions;
     return diagnosisOptions.filter((d) => d.toLowerCase().includes(q));
-  }, [clinical.diagnosis, diagnosisOptions]);
+  }, [newDiagnosisInput, diagnosisOptions]);
 
   // Filtered advice for dropdown
   const filteredAdvice = useMemo(() => {
@@ -676,14 +689,54 @@ export function DoctorFastConsultation({
     }
   }
 
-  // Handle setting/clearing diagnosis
-  function handleSelectDiagnosis(tag: QuickTag) {
+  // Parse individual diagnoses into a clean array
+  const selectedDiagnosesList = useMemo(() => {
+    const raw = clinical.diagnosis?.trim() ?? "";
+    if (!raw) return [];
+    return raw
+      .split(/\n|;|•/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }, [clinical.diagnosis]);
+
+  // Handle toggling multiple diagnoses (add or remove cleanly without wiping existing)
+  function handleToggleDiagnosis(text: string) {
+    const cleanText = text.trim();
+    if (!cleanText) return;
     const current = clinical.diagnosis?.trim() ?? "";
-    if (current.toLowerCase() === tag.text.toLowerCase()) {
-      onClinicalChange({ ...clinical, diagnosis: "" });
+
+    const isPresent =
+      selectedDiagnosesList.some(
+        (d) => d.toLowerCase() === cleanText.toLowerCase()
+      ) || current.toLowerCase().includes(cleanText.toLowerCase());
+
+    if (isPresent) {
+      const remaining = selectedDiagnosesList.filter(
+        (d) => d.toLowerCase() !== cleanText.toLowerCase()
+      );
+      const next =
+        remaining.length > 0 ? remaining.map((d) => `• ${d}`).join("\n") : "";
+      onClinicalChange({ ...clinical, diagnosis: next });
     } else {
-      onClinicalChange({ ...clinical, diagnosis: tag.text });
+      if (!current) {
+        onClinicalChange({ ...clinical, diagnosis: `• ${cleanText}` });
+      } else if (current.includes("•") || current.includes("\n")) {
+        const next = current.startsWith("•")
+          ? `${current}\n• ${cleanText}`
+          : `• ${current}\n• ${cleanText}`;
+        onClinicalChange({ ...clinical, diagnosis: next });
+      } else {
+        onClinicalChange({
+          ...clinical,
+          diagnosis: `• ${current}\n• ${cleanText}`,
+        });
+      }
     }
+  }
+
+  // Handle setting/clearing diagnosis from quick tags
+  function handleSelectDiagnosis(tag: QuickTag) {
+    handleToggleDiagnosis(tag.text);
   }
 
   // Handle toggling exam notes
@@ -1435,6 +1488,11 @@ export function DoctorFastConsultation({
                 <span className="text-xs font-bold text-slate-900 tracking-tight">
                   Clinical Diagnosis
                 </span>
+                {selectedDiagnosesList.length > 0 && (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">
+                    {selectedDiagnosesList.length}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 {clinical.diagnosis?.trim() && (
@@ -1448,166 +1506,182 @@ export function DoctorFastConsultation({
                     <span>Clear</span>
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setDiagnosisMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
-                >
-                  <Icon icon={faWandMagicSparkles} className="size-2.5 text-emerald-600" />
-                  <span>Suggestions ({diagnosisOptions.length})</span>
-                  <Icon icon={diagnosisMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-emerald-600" />
-                </button>
-              </div>
-            </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setDiagnosisMenuOpen((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Icon icon={faWandMagicSparkles} className="size-2.5 text-emerald-600" />
+                    <span>Suggestions ({diagnosisOptions.length})</span>
+                    <Icon icon={diagnosisMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-emerald-600" />
+                  </button>
 
-            {/* Smart Diagnosis Input with Real-Time Auto-Suggest */}
-            <div className="relative">
-              <Input
-                value={clinical.diagnosis ?? ""}
-                onChange={(e) => {
-                  onClinicalChange({ ...clinical, diagnosis: e.target.value });
-                  setDiagnosisMenuOpen(true);
-                }}
-                onFocus={() => setDiagnosisMenuOpen(true)}
-                placeholder="Search or enter clinical diagnosis..."
-                className="h-10 text-xs font-bold text-slate-900 border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors pr-8"
-              />
-              {clinical.diagnosis ? (
-                <button
-                  type="button"
-                  onClick={() => onClinicalChange({ ...clinical, diagnosis: "" })}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                  title="Clear"
-                >
-                  <Icon icon={faXmark} className="size-3" />
-                </button>
-              ) : null}
-
-              {/* Autocomplete Dropdown List */}
-              {diagnosisMenuOpen && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-72 overflow-y-auto rounded-xl border border-emerald-200 bg-white p-2 shadow-2xl ring-1 ring-black/5">
-                  <div className="px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center justify-between border-b border-slate-100 mb-1.5">
-                    <span>Suggested Diagnoses ({filteredDiagnoses.length})</span>
-                    <button
-                      type="button"
-                      onClick={() => setDiagnosisMenuOpen(false)}
-                      className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      Close ✕
-                    </button>
-                  </div>
-
-                  {/* Doctor Custom Diagnosis Add Box */}
-                  <div className="p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg mb-2">
-                    <div className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                      <span>+ Add Doctor Custom Diagnosis</span>
-                      <span className="text-[9px] text-emerald-600 font-normal">Saves for future visits</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={newDiagnosisInput}
-                        onChange={(e) => setNewDiagnosisInput(e.target.value)}
-                        placeholder="e.g. Lumbar Canal Stenosis..."
-                        className="h-7 flex-1 rounded border border-emerald-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && newDiagnosisInput.trim()) {
-                            e.preventDefault();
-                            const text = newDiagnosisInput.trim();
-                            addCustomDiagnosis(text);
-                            onClinicalChange({ ...clinical, diagnosis: text });
-                            setNewDiagnosisInput("");
-                            setDiagnosisMenuOpen(false);
-                            setDiagnosisNotice("Saved & applied diagnosis ✓");
-                            setTimeout(() => setDiagnosisNotice(null), 3000);
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const text = newDiagnosisInput.trim();
-                          if (text) {
-                            addCustomDiagnosis(text);
-                            onClinicalChange({ ...clinical, diagnosis: text });
-                            setNewDiagnosisInput("");
-                            setDiagnosisMenuOpen(false);
-                            setDiagnosisNotice("Saved & applied diagnosis ✓");
-                            setTimeout(() => setDiagnosisNotice(null), 3000);
-                          }
-                        }}
-                        disabled={!newDiagnosisInput.trim()}
-                        className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                      >
-                        + Add
-                      </button>
-                    </div>
-                  </div>
-
-                  {filteredDiagnoses.length === 0 ? (
-                    <div className="p-3 text-center text-xs text-slate-500">
-                      No matching presets. You can continue typing custom diagnosis or add it above.
-                    </div>
-                  ) : (
-                    filteredDiagnoses.map((text, idx) => {
-                      const isSelected = clinical.diagnosis?.trim().toLowerCase() === text.toLowerCase();
-                      const isFav = isDiagnosisFavorite(text);
-                      const isCust = isDiagnosisCustom(text);
-                      return (
-                        <div
-                          key={idx}
-                          className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                            isSelected
-                              ? "bg-emerald-50 font-bold text-emerald-950 border border-emerald-200"
-                              : "text-slate-800 hover:bg-slate-50 hover:text-emerald-900 font-medium"
-                          }`}
+                  {/* Autocomplete Dropdown List */}
+                  {diagnosisMenuOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-emerald-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
+                      <div className="px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-2">
+                        <span>Suggested Diagnoses ({filteredDiagnoses.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setDiagnosisMenuOpen(false)}
+                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
                         >
-                          <button
-                            type="button"
-                            onClick={() => toggleDiagnosisFavorite(text)}
-                            className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                            title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                          >
-                            <Icon
-                              icon={faStar}
-                              className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                            />
-                          </button>
+                          Close ✕
+                        </button>
+                      </div>
+
+                      {/* Doctor Custom Diagnosis Add & Filter Box */}
+                      <div className="p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg mb-2">
+                        <div className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider mb-1 flex items-center justify-between">
+                          <span>+ Search / Add Custom Diagnosis</span>
+                          <span className="text-[9px] text-emerald-600 font-normal">Saves for future visits</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={newDiagnosisInput}
+                            onChange={(e) => setNewDiagnosisInput(e.target.value)}
+                            placeholder="Type to filter or add custom (e.g. Left Ankle Sprain)..."
+                            className="h-7 flex-1 rounded border border-emerald-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newDiagnosisInput.trim()) {
+                                e.preventDefault();
+                                const text = newDiagnosisInput.trim();
+                                addCustomDiagnosis(text);
+                                handleToggleDiagnosis(text);
+                                setNewDiagnosisInput("");
+                                setDiagnosisNotice("Saved & applied diagnosis ✓");
+                                setTimeout(() => setDiagnosisNotice(null), 3000);
+                              }
+                            }}
+                          />
                           <button
                             type="button"
                             onClick={() => {
-                              onClinicalChange({ ...clinical, diagnosis: text });
-                              setDiagnosisMenuOpen(false);
+                              const text = newDiagnosisInput.trim();
+                              if (text) {
+                                addCustomDiagnosis(text);
+                                handleToggleDiagnosis(text);
+                                setNewDiagnosisInput("");
+                                setDiagnosisNotice("Saved & applied diagnosis ✓");
+                                setTimeout(() => setDiagnosisNotice(null), 3000);
+                              }
                             }}
-                            className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                            disabled={!newDiagnosisInput.trim()}
+                            className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
                           >
-                            <span className="text-xs text-slate-900 font-semibold break-words block">{text}</span>
-                            {isCust && (
-                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                Doctor Custom
-                              </span>
-                            )}
+                            + Add
                           </button>
-                          {isCust && (
-                            <button
-                              type="button"
-                              onClick={() => removeCustomDiagnosis(text)}
-                              className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Delete custom diagnosis"
-                            >
-                              <Icon icon={faTrashCan} className="size-2.5" />
-                            </button>
-                          )}
-                          {isSelected && (
-                            <Icon icon={faCheck} className="size-3 text-emerald-600 shrink-0" />
-                          )}
                         </div>
-                      );
-                    })
+                      </div>
+
+                      {/* Diagnosis Options List */}
+                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
+                        {filteredDiagnoses.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-500">
+                            No matching presets. You can add it using the box above.
+                          </div>
+                        ) : (
+                          filteredDiagnoses.map((text, idx) => {
+                            const isAdded = selectedDiagnosesList.some(
+                              (d) => d.toLowerCase() === text.trim().toLowerCase()
+                            );
+                            const isFav = isDiagnosisFavorite(text);
+                            const isCust = isDiagnosisCustom(text);
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                                  isAdded
+                                    ? "bg-emerald-50 font-bold text-emerald-950 border border-emerald-200"
+                                    : "text-slate-800 hover:bg-slate-50 hover:text-emerald-900 font-medium"
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => toggleDiagnosisFavorite(text)}
+                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
+                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                                >
+                                  <Icon
+                                    icon={faStar}
+                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
+                                  />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDiagnosis(text)}
+                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
+                                >
+                                  <span className="text-xs text-slate-900 font-semibold break-words block">{text}</span>
+                                  {isCust && (
+                                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
+                                      Doctor Custom
+                                    </span>
+                                  )}
+                                </button>
+                                {isCust && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeCustomDiagnosis(text)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                    title="Delete custom diagnosis"
+                                  >
+                                    <Icon icon={faTrashCan} className="size-2.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDiagnosis(text)}
+                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
+                                    isAdded
+                                      ? "bg-emerald-600 text-white"
+                                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
+                                  }`}
+                                >
+                                  {isAdded ? "✓ Added" : "+ Add"}
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Selected Diagnoses Chips */}
+            {selectedDiagnosesList.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {selectedDiagnosesList.map((diag, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800"
+                  >
+                    <span>{diag}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleDiagnosis(diag)}
+                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
+                      title="Remove diagnosis"
+                    >
+                      <Icon icon={faXmark} className="size-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <Textarea
+              value={clinical.diagnosis ?? ""}
+              onChange={(e) => onClinicalChange({ ...clinical, diagnosis: e.target.value })}
+              placeholder="Enter clinical diagnosis (e.g. Left Ankle Sprain, Bilateral Knee OA)..."
+              rows={4}
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+            />
           </div>
         </div>
       </div>

@@ -479,7 +479,7 @@ export function generatePrintablePrescriptionHtml(
       }
       <div>
         <strong style="text-transform: uppercase; color: #134e4a; font-size: 10px;">${lang === "hi" ? "चिकित्सीय निदान:" : "Clinical Diagnosis:"}</strong>
-        <span style="color: #0f172a; font-weight: 700; font-size: 12px; margin-left: 4px;">
+        <span style="color: #0f172a; font-weight: 700; font-size: 12px; margin-left: 4px; white-space: pre-line;">
           ${escapeHtml(translateDiagnosis(data.diagnosis, lang)) || (lang === "hi" ? "परीक्षण मूल्यांकन दर्ज" : "Clinical assessment recorded")}
         </span>
       </div>
