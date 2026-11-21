@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
+  faBars,
   faBolt,
   faBone,
   faBookmark,
+  faCalendarDays,
   faCheck,
   faCheckCircle,
   faChevronDown,
@@ -26,6 +28,7 @@ import {
   faRotate,
   faStar,
   faStethoscope,
+  faTableCells,
   faTemperatureHalf,
   faTrashCan,
   faTriangleExclamation,
@@ -368,6 +371,7 @@ export function DoctorFastConsultation({
   const [drugSuggestionsLoading, setDrugSuggestionsLoading] = useState(true);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
+  const centerContentRef = useRef<HTMLDivElement>(null);
 
   // Macro Text Modal State
   const [isMacroModalOpen, setIsMacroModalOpen] = useState(false);
@@ -1084,132 +1088,87 @@ export function DoctorFastConsultation({
   const superTemplates = getClinicalTemplatesBySpecialty(treatmentMode);
 
   return (
-    <div className="flex flex-col gap-3 p-3 md:p-5 max-w-7xl mx-auto font-sans bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
-      {/* APOLLO SOM EMR SUB-HEADER: PARAMETERS & CUSTOM TEMPLATES */}
-      <div className="sticky top-12 z-20 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-2 backdrop-blur shadow-xs">
+    <div className="flex flex-col h-full overflow-hidden font-sans bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+      {/* ========================================================================= */}
+      {/* CIRCLED 1: TOP PINNED SUBHEADER BAR (MATCHING APOLLO SOM EMR PHOTO)       */}
+      {/* ========================================================================= */}
+      <div className="shrink-0 flex items-center justify-between px-3 py-1.5 bg-[#f8f9fa] dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-20 shadow-2xs">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* All Parameters Button */}
+          {/* Hamburger ≡ Menu */}
           <button
             type="button"
             onClick={() => setCollapsedSections({})}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-2xs cursor-pointer"
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Toggle Menu / Expand All"
+          >
+            <Icon icon={faBars} className="size-3.5 text-slate-700 dark:text-slate-300" />
+          </button>
+
+          {/* All Parameters */}
+          <button
+            type="button"
+            onClick={() => setCollapsedSections({})}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
             title="Expand / View all clinical parameters"
           >
-            <Icon icon={faFileLines} className="size-3 text-slate-500" />
+            <Icon icon={faTableCells} className="size-3 text-slate-500" />
             <span>All Parameters</span>
           </button>
 
-          {/* Custom Template Button (Exact Apollo SOM EMR Subheader Action) */}
+          {/* Custom Template */}
           <button
             type="button"
             onClick={() => {
               setTemplatesModalMode("apply");
               setIsTemplatesModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 px-3 py-1.5 text-xs font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
             title="Open Custom Templates & Clinical Protocols"
           >
             <Icon icon={faBookmark} className="size-3 text-purple-600 dark:text-purple-400" />
             <span>Custom Template</span>
           </button>
 
-          {/* Clear All Consultation Details */}
+          {/* Clear All Details */}
           <button
             type="button"
             onClick={handleClearAllDetails}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-2.5 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/40 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 transition-colors cursor-pointer shadow-2xs"
             title="Clear all consultation details entered"
           >
             <Icon icon={faTrashCan} className="size-2.5 text-rose-600" />
             <span>Clear All</span>
           </button>
-
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
-
-          {/* Section Quick Jump Pills */}
-          <div className="hidden lg:flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-complaints")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              Complaints
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-history")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              History
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-exam")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              Examination
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-diagnosis")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              Diagnosis
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-investigations")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              Investigations
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-medicines")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold text-purple-700 dark:text-purple-400"
-            >
-              Medicines ({medicines.filter((m) => m.name?.trim()).length})
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-advice")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              Advice
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-plan")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold text-indigo-700 dark:text-indigo-400"
-            >
-              Plan
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => scrollToSection("sec-followup")}
-              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-            >
-              Follow Up
-            </button>
-          </div>
         </div>
 
-        {/* Specialty Selector */}
-        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-          <span className="text-[10px] font-bold text-slate-500 uppercase">Specialty:</span>
-          <div className="inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700">
+        {/* Right side: Visits & AI Copilot & Specialty */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-followup")}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Patient Visits / Re-visits"
+          >
+            <Icon icon={faCalendarDays} className="size-3 text-slate-600 dark:text-slate-400" />
+            <span>Visits</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleOpenMacro("complaints", "all")}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
+            title="Clinician Copilot & Clinical Intelligence"
+          >
+            <Icon icon={faWandMagicSparkles} className="size-3 text-amber-500" />
+            <span>AI Copilot</span>
+          </button>
+
+          {/* Specialty Selector */}
+          <div className="inline-flex rounded bg-slate-200/70 dark:bg-slate-800 p-0.5 border border-slate-300 dark:border-slate-700">
             <button
               type="button"
               onClick={() => onTreatmentModeChange("orthopedics")}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
                 treatmentMode === "orthopedics"
                   ? "bg-indigo-600 text-white shadow-2xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
@@ -1220,7 +1179,7 @@ export function DoctorFastConsultation({
             <button
               type="button"
               onClick={() => onTreatmentModeChange("general")}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
                 treatmentMode === "general"
                   ? "bg-indigo-600 text-white shadow-2xs"
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
@@ -1231,6 +1190,155 @@ export function DoctorFastConsultation({
           </div>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* MIDDLE VIEWPORT: CIRCLED 2 LEFT VERTICAL RAIL + CENTER SCROLLABLE CONTENT */}
+      {/* ========================================================================= */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {/* CIRCLED 2: APOLLO SOM EMR LEFT VERTICAL ICON RAIL */}
+        <div className="w-10 sm:w-11 shrink-0 h-full bg-[#f1f3f5] dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col items-center py-2 gap-1 overflow-y-auto select-none z-10 shadow-xs">
+          {/* ^ Scroll to top */}
+          <button
+            type="button"
+            onClick={() => centerContentRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
+            className="p-1.5 rounded text-slate-500 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Scroll to top"
+          >
+            <Icon icon={faChevronUp} className="size-3.5" />
+          </button>
+          <div className="w-6 h-px bg-slate-300 dark:bg-slate-700 my-0.5" />
+
+          {/* Section Navigation Icons */}
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-complaints")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Chief Complaints"
+          >
+            <Icon icon={faFileLines} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-history")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="History of Present Illness"
+          >
+            <Icon icon={faClock} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-current-meds")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Current Medication"
+          >
+            <Icon icon={faPills} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-exam")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Physical Examination"
+          >
+            <Icon icon={faBone} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-exam-attachments")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Attachments & Reports"
+          >
+            <Icon icon={faPaperclip} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-diagnosis")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Diagnosis"
+          >
+            <Icon icon={faStethoscope} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-investigations")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Investigation Results"
+          >
+            <Icon icon={faFlaskVial} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-advised-investigations")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Advised Investigations"
+          >
+            <Icon icon={faFileContract} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-plasters")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Bandages, Plasters & Supports"
+          >
+            <Icon icon={faBandage} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-procedures")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Procedures Performed"
+          >
+            <Icon icon={faPen} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-medicines")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Medicines / Prescriptions"
+          >
+            <Icon icon={faPills} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-advice")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Advice & Precautions"
+          >
+            <Icon icon={faHeartPulse} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-plan")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Treatment Plan"
+          >
+            <Icon icon={faNotesMedical} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-followup")}
+            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Follow Up"
+          >
+            <Icon icon={faClock} className="size-3.5" />
+          </button>
+
+          <div className="w-6 h-px bg-slate-300 dark:bg-slate-700 my-0.5" />
+          {/* v Scroll to bottom */}
+          <button
+            type="button"
+            onClick={() => centerContentRef.current?.scrollTo({ top: 999999, behavior: "smooth" })}
+            className="p-1.5 rounded text-slate-500 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Scroll to bottom"
+          >
+            <Icon icon={faChevronDown} className="size-3.5" />
+          </button>
+        </div>
+
+        {/* CENTER SCROLLABLE CLINICAL CONTENT */}
+        <div
+          ref={centerContentRef}
+          className="flex-1 h-full overflow-y-auto px-3 sm:px-6 py-4 space-y-4"
+        >
 
       {/* REVISIT NOTIFICATION (IF RETURNING PATIENT) */}
       {previousVisit && (
@@ -1366,137 +1474,6 @@ export function DoctorFastConsultation({
       {/* ========================================================================= */}
       {/* APOLLO SOM EMR COLLAPSIBLE CLINICAL ACCORDIONS                            */}
       {/* ========================================================================= */}
-
-      
-      {/* TWO-COLUMN LAYOUT: LEFT SECTION ICON RAIL + MAIN CLINICAL CARDS */}
-      <div className="flex items-start gap-3 w-full">
-        {/* APOLLO SOM EMR LEFT VERTICAL ICON RAIL */}
-        <div className="w-10 sm:w-11 shrink-0 hidden md:flex flex-col items-center gap-1.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl sticky top-28 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Scroll to top"
-          >
-            <Icon icon={faChevronUp} className="size-3.5" />
-          </button>
-          <div className="w-6 h-px bg-slate-200 dark:bg-slate-700 my-0.5" />
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-complaints")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Complaints"
-          >
-            <Icon icon={faFileLines} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-history")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="History of Present Illness"
-          >
-            <Icon icon={faClock} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-current-meds")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Current Medication"
-          >
-            <Icon icon={faPills} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-exam")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Physical Examination"
-          >
-            <Icon icon={faBone} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-exam-attachments")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Attachments"
-          >
-            <Icon icon={faPaperclip} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-diagnosis")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Diagnosis"
-          >
-            <Icon icon={faStethoscope} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-investigations")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Investigation Results"
-          >
-            <Icon icon={faFlaskVial} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-advised-investigations")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Advised Investigations"
-          >
-            <Icon icon={faFileContract} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-plasters")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Bandages, Plasters & Supports"
-          >
-            <Icon icon={faBandage} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-procedures")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Procedures Performed"
-          >
-            <Icon icon={faStethoscope} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-medicines")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Medicines"
-          >
-            <Icon icon={faPills} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-advice")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Advice"
-          >
-            <Icon icon={faHeartPulse} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-plan")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Treatment Plan"
-          >
-            <Icon icon={faNotesMedical} className="size-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => scrollToSection("sec-followup")}
-            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            title="Follow Up"
-          >
-            <Icon icon={faClock} className="size-3.5" />
-          </button>
-        </div>
-
-        {/* MAIN COLUMN OF CLINICAL ACCORDIONS */}
-        <div className="flex-1 min-w-0 space-y-3">
 
       {/* SECTION 1: COMPLAINTS */}
       <div id="sec-complaints" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">

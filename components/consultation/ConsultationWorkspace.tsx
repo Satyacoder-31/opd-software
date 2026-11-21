@@ -576,9 +576,9 @@ export function ConsultationWorkspace({
           : null;
 
   return (
-    <PageShell className="min-h-0">
+    <div className="flex flex-col h-[calc(100dvh-7rem)] md:h-[calc(100dvh-3.8rem)] overflow-hidden bg-slate-50/50 dark:bg-slate-950 font-sans">
       {/* APOLLO SOM EMR PATIENT BANNER (MATCHING PHOTO) */}
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5">
+      <div className="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Patient Details */}
           <div className="flex items-center gap-3 flex-wrap">
@@ -641,9 +641,26 @@ export function ConsultationWorkspace({
             </button>
             <button
               type="button"
-              className="px-4 py-1 rounded-full text-xs font-bold bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-2xs"
+              onClick={() => handleToggleViewMode("fast")}
+              className={`px-4 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                workspaceViewMode === "fast"
+                  ? "bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-2xs"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent"
+              }`}
             >
               Consultation
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleViewMode("hospital")}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                workspaceViewMode === "hospital"
+                  ? "bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-2xs"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent"
+              }`}
+              title="Full Hospital Multi-Tab Mode"
+            >
+              Hospital Tabs
             </button>
           </div>
 
@@ -656,51 +673,14 @@ export function ConsultationWorkspace({
       </div>
 
       {message ? (
-        <div className="px-4 pb-2 md:px-6">
+        <div className="shrink-0 px-4 py-1">
           <Banner variant={messageType === "error" ? "error" : "info"}>
             {message}
           </Banner>
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 border-b border-border bg-card">
-        {/* VIEW MODE SELECTOR (FAST OPD VS DETAILED HOSPITAL) */}
-        <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-white/95 px-3 py-2 backdrop-blur md:px-4 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Consultation Mode:
-            </span>
-            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => handleToggleViewMode("fast")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${workspaceViewMode === "fast"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
-                  }`}
-                title="Doctor Fast Track: Everything on 1 clean, fast screen with 1-click super templates and dosing chips"
-              >
-                <Icon icon={faBolt} className="size-3 text-amber-300" />
-                <span>⚡ Doctor Fast OPD (1-Screen)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleToggleViewMode("hospital")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${workspaceViewMode === "hospital"
-                    ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-700"
-                    : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
-                  }`}
-                title="Full Hospital Mode: Multi-tab layout for complex surgery planning, systemic exams, and certificates"
-              >
-                <Icon icon={faFileLines} className="size-3 text-slate-500" />
-                <span>📑 Full Hospital Tabs</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Bottom docked bar holds all actions (Print, View, Summary, Save, Complete) */}
-        </div>
-
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {workspaceViewMode === "fast" ? (
           <DoctorFastConsultation
             consultationId={consultationId}
@@ -1044,10 +1024,12 @@ export function ConsultationWorkspace({
         )}
       </div>
 
-      {/* Sticky footer actions */}
-      <div className="sticky bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur">
+      {/* ========================================================================= */}
+      {/* CIRCLED 3: BOTTOM DOCKED ACTION BAR (MATCHING APOLLO SOM EMR PHOTO)       */}
+      {/* ========================================================================= */}
+      <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur px-3 py-2 sm:px-4 sm:py-2 z-20 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         {message && messageType === "error" && (
-          <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-xs font-semibold text-destructive flex items-center justify-between gap-2 animate-in fade-in">
+          <div className="border-b border-destructive/20 bg-destructive/10 px-3 py-1.5 mb-1.5 rounded text-xs font-semibold text-destructive flex items-center justify-between gap-2 animate-in fade-in">
             <span>{message}</span>
             <button
               type="button"
@@ -1060,76 +1042,98 @@ export function ConsultationWorkspace({
           </div>
         )}
         {message && messageType === "success" && (
-          <div className="border-b border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-semibold text-emerald-700 flex items-center gap-2 animate-in fade-in">
+          <div className="border-b border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 mb-1.5 rounded text-xs font-semibold text-emerald-700 flex items-center gap-2 animate-in fade-in">
             <Icon icon={faCheckCircle} className="size-3.5 shrink-0" />
             <span>{message}</span>
           </div>
         )}
-        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 md:px-4">
-          <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-            {/* Quick anchors matching Apollo SOM EMR */}
-            <div className="hidden sm:flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsSummaryViewOpen(true)}
-                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
-                title="View Outpatient Summary"
-              >
-                OP Summary
-              </button>
-              <span className="text-slate-300 dark:text-slate-700">·</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const el = document.getElementById("sec-medicines");
-                  if (el) el.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
-                title="Jump to Prescriptions"
-              >
-                Prescriptions
-              </button>
-              <span className="text-slate-300 dark:text-slate-700">·</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const el =
-                    document.getElementById("sec-advised-investigations") ||
-                    document.getElementById("sec-investigations");
-                  if (el) el.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
-                title="Jump to Investigations"
-              >
-                Investigation
-              </button>
-            </div>
-            <span className="hidden md:inline text-slate-300 dark:text-slate-700">·</span>
-            <div className="hidden lg:block text-[11px] text-slate-400">
-              <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+S</kbd> Save draft ·{" "}
-              <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+↵</kbd> Complete visit
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 ml-auto">
-            {/* Save as Template (Exact Apollo SOM EMR Action) */}
-            <Button
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left side quick anchors matching Apollo SOM EMR */}
+          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-10 gap-1.5 font-bold text-purple-700 dark:text-purple-300 bg-purple-50/80 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 hover:bg-purple-100 shadow-2xs cursor-pointer"
+              onClick={() => setIsSummaryViewOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+              title="View Apollo Outpatient Summary"
+            >
+              <Icon icon={faFileContract} className="size-3 text-teal-600" />
+              <span>OP Summary</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTemplateModalMode("apply");
+                setIsTemplateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+              title="Recommendation List & Clinical Protocols"
+            >
+              <Icon icon={faFileLines} className="size-3 text-indigo-600" />
+              <span>Recommendation List</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("sec-medicines");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+              title="Jump to Prescriptions"
+            >
+              <Icon icon={faPills} className="size-3 text-purple-600" />
+              <span>Prescriptions</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el =
+                  document.getElementById("sec-advised-investigations") ||
+                  document.getElementById("sec-investigations");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+              title="Jump to Investigations"
+            >
+              <Icon icon={faFlaskVial} className="size-3 text-sky-600" />
+              <span>Investigation</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleSaveDraft();
+                setRxModalLang("en");
+                setRxAutoPrint(true);
+                setIsRxViewOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+              title="Print Prescription (English)"
+            >
+              <Icon icon={faPrint} className="size-3 text-slate-600" />
+              <span>Print</span>
+            </button>
+          </div>
+
+          {/* Right side actions matching Apollo SOM EMR */}
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {/* Save as Template (Exact Apollo SOM EMR button shape and styling) */}
+            <button
+              type="button"
               onClick={() => {
                 setTemplateModalMode("save");
                 setIsTemplateModalOpen(true);
               }}
+              className="min-h-9 px-3.5 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
               title="Save current consultation clinical findings and prescriptions as a custom reusable template"
             >
               <Icon icon={faBookmark} className="size-3 text-purple-600" />
-              Save as Template
-            </Button>
+              <span>Save as Template</span>
+            </button>
+
             <Button
               type="button"
               size="sm"
-              className="min-h-10 gap-1.5 font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer"
+              className="min-h-9 gap-1.5 font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer text-xs"
               onClick={() => {
                 handleSaveDraft();
                 setRxModalLang("en");
@@ -1141,10 +1145,11 @@ export function ConsultationWorkspace({
               <Icon icon={faPrint} className="size-3 text-white" />
               Print Rx
             </Button>
+
             <Button
               type="button"
               size="sm"
-              className="min-h-10 gap-1.5 font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer"
+              className="min-h-9 gap-1.5 font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer text-xs"
               onClick={() => {
                 handleSaveDraft();
                 setRxModalLang("hi");
@@ -1156,11 +1161,12 @@ export function ConsultationWorkspace({
               <Icon icon={faPrint} className="size-3 text-white" />
               पर्चा प्रिंट (Hindi)
             </Button>
+
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-10 gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs"
+              className="min-h-9 gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs text-xs"
               onClick={() => {
                 setRxModalLang("en");
                 setRxAutoPrint(false);
@@ -1169,56 +1175,32 @@ export function ConsultationWorkspace({
               title="View full prescription in English"
             >
               <Icon icon={faEye} className="size-3 text-indigo-600" />
-              View Rx (EN)
+              View Rx
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-10 gap-1.5 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs"
-              onClick={() => {
-                setRxModalLang("hi");
-                setRxAutoPrint(false);
-                setIsRxViewOpen(true);
-              }}
-              title="पर्चा देखें (Hindi Prescription Preview)"
-            >
-              <Icon icon={faEye} className="size-3 text-teal-600" />
-              पर्चा देखें (Hindi)
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-10 gap-1.5 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800 hover:bg-teal-100 shadow-2xs"
-              onClick={() => setIsSummaryViewOpen(true)}
-              title="View Apollo standard Outpatient Summary & Prescription"
-            >
-              <Icon icon={faFileContract} className="size-3 text-teal-600" />
-              Summary
-            </Button>
+
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              className="min-h-10 gap-1.5"
+              className="min-h-9 gap-1.5 text-xs"
               onClick={handleSaveDraft}
               loading={isPending("save")}
               disabled={isPending("complete")}
             >
-              <Icon icon={faCloudArrowUp} className="size-3.5" />
+              <Icon icon={faCloudArrowUp} className="size-3 text-slate-600" />
               Save draft
             </Button>
+
             <Button
               type="button"
               size="sm"
-              className="min-h-10 gap-1.5 bg-gradient-to-r from-primary to-primary/80 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 transition-shadow"
+              className="min-h-9 gap-1.5 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 cursor-pointer font-bold"
               onClick={handleCompleteVisit}
               loading={isPending("complete")}
               disabled={isPending("complete")}
             >
-              <Icon icon={faCheckCircle} className="size-3.5" />
-              {isPending("complete") ? "Completing visit..." : "Complete visit"}
+              <Icon icon={faCheckCircle} className="size-3" />
+              {isPending("complete") ? "Completing..." : "Complete visit"}
             </Button>
           </div>
         </div>
@@ -1255,6 +1237,6 @@ export function ConsultationWorkspace({
         onClose={() => setIsTemplateModalOpen(false)}
         onApplyTemplate={handleApplyTemplateWorkspace}
       />
-    </PageShell>
+    </div>
   );
 }
