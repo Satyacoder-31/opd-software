@@ -490,7 +490,53 @@ export function DoctorFastConsultation({
   const plasterAdvice = treatmentPlan.plasterAdvice ?? "";
 
   // History of present illness
-  const historyOfPresentIllness = (clinical.patientHistory as any)?.presentIllness || "NO FEVER, NO TRAUMA, NO OTHER JOINT PAIN.";
+  const historyOfPresentIllness = (clinical.patientHistory as any)?.presentIllness ?? "";
+
+  function handleClearAllDetails() {
+    if (window.confirm("Are you sure you want to clear all details entered in this consultation?")) {
+      onClinicalChange({
+        treatmentMode: clinical.treatmentMode ?? "orthopedics",
+        chiefComplaint: "",
+        diagnosis: "",
+        diagnosisCodes: [],
+        examination: { jointsAndParts: "" },
+        patientHistory: {
+          pastMedical: "",
+          pastSurgical: "",
+          allergies: "",
+          medications: "",
+          familyHistory: "",
+          socialHistory: "",
+          presentIllness: "",
+        } as any,
+        clinicalPresentation: { onset: "", duration: "" },
+        investigationResults: { labs: "", imaging: "", other: "" },
+        treatmentPlan: {
+          treatmentType: "",
+          proposedProcedure: "",
+          timingOrDate: "",
+          preOpClearance: "",
+          implantsRequired: "",
+          bloodProducts: "",
+          postOpIcuDays: "",
+          postOpWardDays: "",
+          anesthesiaPlanned: "",
+          laterality: "",
+          plasterOrBandages: [],
+          plasterAdvice: "",
+        },
+        vitals: {},
+        notes: "",
+        advice: "",
+        currentMedications: "",
+        planDetails: "",
+        proceduresPerformed: "",
+      } as any);
+      onMedicinesChange([]);
+      onAdviceChange("");
+      onFollowUpChange("");
+    }
+  }
 
   // Load drugs catalog
   useEffect(() => {
@@ -1067,6 +1113,17 @@ export function DoctorFastConsultation({
             <span>Custom Template</span>
           </button>
 
+          {/* Clear All Consultation Details */}
+          <button
+            type="button"
+            onClick={handleClearAllDetails}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-2.5 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-colors shadow-2xs cursor-pointer"
+            title="Clear all consultation details entered"
+          >
+            <Icon icon={faTrashCan} className="size-2.5 text-rose-600" />
+            <span>Clear All</span>
+          </button>
+
           <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
 
           {/* Section Quick Jump Pills */}
@@ -1175,57 +1232,6 @@ export function DoctorFastConsultation({
         </div>
       </div>
 
-      {/* QUICK TEMPLATES CAROUSEL BANNER */}
-      <div className="rounded-xl border border-purple-200 dark:border-purple-900/60 bg-gradient-to-r from-purple-50/70 via-indigo-50/40 to-purple-50/60 dark:from-purple-950/40 dark:via-slate-900 dark:to-purple-950/30 p-3 shadow-2xs">
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-2">
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
-              <Icon icon={faWandMagicSparkles} className="size-3" />
-            </span>
-            <span className="text-xs font-bold text-purple-950 dark:text-purple-200">
-              Clinical Quick Protocols
-            </span>
-            <span className="text-[10px] text-slate-500 hidden sm:inline">
-              1-click prefill complaints, diagnosis, exam, medicines & advice
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setTemplatesModalMode("apply");
-              setIsTemplatesModalOpen(true);
-            }}
-            className="text-[11px] font-bold text-purple-700 dark:text-purple-400 hover:underline cursor-pointer"
-          >
-            View All ({COMMON_ILLNESS_TEMPLATES.length}+) ➔
-          </button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-          {superTemplates.slice(0, 6).map((tpl) => (
-            <button
-              key={tpl.id}
-              type="button"
-              onClick={() => handleApplyTemplate(tpl)}
-              className="group inline-flex items-center gap-1.5 rounded-lg border border-indigo-200/90 dark:border-indigo-800 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-800 dark:text-slate-100 shadow-2xs hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/60 transition-all cursor-pointer active:scale-98"
-            >
-              <Icon icon={faBolt} className="size-2.5 text-amber-500 group-hover:scale-110 transition-transform" />
-              <span>{tpl.name}</span>
-              <span className="rounded bg-purple-100 dark:bg-purple-900/60 px-1 py-0.2 text-[9px] font-semibold text-purple-700 dark:text-purple-300">
-                {tpl.medicines.length} meds
-              </span>
-            </button>
-          ))}
-        </div>
-
-        {templateNotice && (
-          <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 animate-in fade-in">
-            <Icon icon={faCheckCircle} className="size-3.5 text-emerald-600 shrink-0" />
-            <span>{templateNotice}</span>
-          </div>
-        )}
-      </div>
-
       {/* REVISIT NOTIFICATION (IF RETURNING PATIENT) */}
       {previousVisit && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/70 dark:bg-sky-950/40 p-2.5 text-xs text-sky-950 dark:text-sky-200">
@@ -1266,11 +1272,22 @@ export function DoctorFastConsultation({
 
       {/* COMPACT VITALS BANNER */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-2xs">
-        <div className="flex items-center gap-2 mb-1.5">
-          <Icon icon={faHeartPulse} className="size-3 text-rose-500" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            Vital Signs
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-2">
+            <Icon icon={faHeartPulse} className="size-3 text-rose-500" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Vital Signs
+            </span>
+          </div>
+          {Object.values(vitals).some((v) => Boolean(v?.trim())) && (
+            <button
+              type="button"
+              onClick={() => onClinicalChange({ ...clinical, vitals: {} })}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+            >
+              Clear
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <div>
@@ -1992,7 +2009,17 @@ export function DoctorFastConsultation({
             {investigationText.trim() && (
               <button
                 type="button"
-                onClick={() => handleInvestigationTextChange("")}
+                onClick={() =>
+                  onClinicalChange({
+                    ...clinical,
+                    investigationResults: {
+                      ...(clinical.investigationResults ?? {}),
+                      labs: "",
+                      imaging: "",
+                      other: "",
+                    },
+                  })
+                }
                 className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
               >
                 Clear
@@ -2033,6 +2060,24 @@ export function DoctorFastConsultation({
           </div>
 
           <div className="flex items-center gap-2">
+            {Boolean((clinical.investigationResults as any)?.other?.trim()) && (
+              <button
+                type="button"
+                onClick={() =>
+                  onClinicalChange({
+                    ...clinical,
+                    investigationResults: {
+                      ...(clinical.investigationResults ?? {}),
+                      other: "",
+                    },
+                  })
+                }
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => toggleSection("otherTests")}
@@ -2046,7 +2091,7 @@ export function DoctorFastConsultation({
         {!collapsedSections.otherTests && (
           <div className="p-4">
             <Textarea
-              value={(clinical.investigationResults as any)?.other || "HBA1C, URIC ACID, VIT D3 TOTAL, VIT B12"}
+              value={(clinical.investigationResults as any)?.other ?? ""}
               onChange={(e) =>
                 onClinicalChange({
                   ...clinical,
@@ -2797,6 +2842,17 @@ export function DoctorFastConsultation({
           </div>
 
           <div className="flex items-center gap-2">
+            {medicines.filter((m) => m.name?.trim()).length > 0 && (
+              <button
+                type="button"
+                onClick={() => onMedicinesChange([])}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+                title="Clear all prescribed medicines"
+              >
+                Clear All
+              </button>
+            )}
+
             <button
               type="button"
               onClick={handleAddMedicineRow}
