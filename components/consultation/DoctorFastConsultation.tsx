@@ -1098,17 +1098,17 @@ export function DoctorFastConsultation({
           <button
             type="button"
             onClick={() => setCollapsedSections({})}
-            className="p-1.5 rounded text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded text-slate-500 dark:text-slate-400 hover:text-slate-800 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Toggle Menu / Expand All"
           >
-            <Icon icon={faBars} className="size-3.5 text-slate-700 dark:text-slate-300" />
+            <Icon icon={faBars} className="size-3.5" />
           </button>
 
           {/* All Parameters */}
           <button
             type="button"
             onClick={() => setCollapsedSections({})}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
             title="Expand / View all clinical parameters"
           >
             <Icon icon={faTableCells} className="size-3 text-slate-500" />
@@ -1122,10 +1122,10 @@ export function DoctorFastConsultation({
               setTemplatesModalMode("apply");
               setIsTemplatesModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors shadow-2xs cursor-pointer"
             title="Open Custom Templates & Clinical Protocols"
           >
-            <Icon icon={faBookmark} className="size-3 text-purple-600 dark:text-purple-400" />
+            <Icon icon={faBookmark} className="size-3 text-slate-500" />
             <span>Custom Template</span>
           </button>
 
@@ -1133,45 +1133,35 @@ export function DoctorFastConsultation({
           <button
             type="button"
             onClick={handleClearAllDetails}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/40 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 transition-colors cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
             title="Clear all consultation details entered"
           >
-            <Icon icon={faTrashCan} className="size-2.5 text-rose-600" />
+            <Icon icon={faTrashCan} className="size-2.5 text-slate-400" />
             <span>Clear All</span>
           </button>
         </div>
 
-        {/* Right side: Visits & AI Copilot & Specialty */}
+        {/* Right side: Visits & Specialty */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => scrollToSection("sec-followup")}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title="Patient Visits / Re-visits"
           >
-            <Icon icon={faCalendarDays} className="size-3 text-slate-600 dark:text-slate-400" />
+            <Icon icon={faCalendarDays} className="size-3 text-slate-500" />
             <span>Visits</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleOpenMacro("complaints", "all")}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
-            title="Clinician Copilot & Clinical Intelligence"
-          >
-            <Icon icon={faWandMagicSparkles} className="size-3 text-amber-500" />
-            <span>AI Copilot</span>
-          </button>
-
           {/* Specialty Selector */}
-          <div className="inline-flex rounded bg-slate-200/70 dark:bg-slate-800 p-0.5 border border-slate-300 dark:border-slate-700">
+          <div className="inline-flex rounded border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-0.5">
             <button
               type="button"
               onClick={() => onTreatmentModeChange("orthopedics")}
-              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
                 treatmentMode === "orthopedics"
-                  ? "bg-indigo-600 text-white shadow-2xs"
-                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-semibold"
+                  : "text-slate-500 hover:text-slate-800 font-medium"
               }`}
             >
               🦴 Ortho
@@ -1179,10 +1169,10 @@ export function DoctorFastConsultation({
             <button
               type="button"
               onClick={() => onTreatmentModeChange("general")}
-              className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+              className={`px-2.5 py-0.5 rounded text-[11px] transition-all cursor-pointer ${
                 treatmentMode === "general"
-                  ? "bg-indigo-600 text-white shadow-2xs"
-                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+                  ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-semibold"
+                  : "text-slate-500 hover:text-slate-800 font-medium"
               }`}
             >
               🩺 General

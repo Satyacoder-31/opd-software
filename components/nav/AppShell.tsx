@@ -645,7 +645,6 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top utility bar */}
         <header className="font-nav sticky top-0 z-40 border-b border-border/80 dark:border-slate-800/80 bg-white/95 dark:bg-[#0d1322]/95 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
-        <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-500" />
           <div className="flex items-center gap-3 px-3 py-2.5 md:px-5">
             <div className="flex shrink-0 items-center gap-2 md:hidden">
               <ClinicMark

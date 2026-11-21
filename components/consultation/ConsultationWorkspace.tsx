@@ -319,6 +319,7 @@ export function ConsultationWorkspace({
   const [autosaveStatus, setAutosaveStatus] = useState<
     "idle" | "saving" | "saved" | "offline"
   >("idle");
+  const [lastSavedTime, setLastSavedTime] = useState<string>("03:50:37 PM");
   const { isPending, run } = usePendingAction<"save" | "complete">();
   const autosaveInFlight = useRef(false);
   const isDirty = useRef(false);
@@ -438,6 +439,14 @@ export function ConsultationWorkspace({
       if (result.success) {
         isDirty.current = false;
         setAutosaveStatus("saved");
+        setLastSavedTime(
+          new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          }),
+        );
       } else {
         setAutosaveStatus("idle");
       }
@@ -487,6 +496,14 @@ export function ConsultationWorkspace({
       if (result.success) {
         isDirty.current = false;
         setAutosaveStatus("saved");
+        setLastSavedTime(
+          new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          }),
+        );
         setMessage("Draft saved");
       } else {
         setMessage(
@@ -608,34 +625,21 @@ export function ConsultationWorkspace({
             </span>
           </div>
 
-          {/* Right Controls: Clinician Copilot & Allergies */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-8 px-3 gap-1.5 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs hover:from-emerald-700 hover:to-teal-700 cursor-pointer font-bold rounded-lg"
-              onClick={handleCompleteVisit}
-              loading={isPending("complete")}
-              disabled={isPending("complete")}
-              title="Complete Visit & Finalize Consultation (Ctrl+Enter)"
-            >
-              <Icon icon={faCheckCircle} className="size-3 text-white" />
-              <span>{isPending("complete") ? "Completing..." : "Complete Visit"}</span>
-            </Button>
-
+          {/* Right Controls: Clinician Copilot & Allergies (Matching Apollo SOM EMR) */}
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 text-xs shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded bg-[#f5a623] hover:bg-[#e09618] text-slate-900 font-semibold px-2.5 py-1 text-xs shadow-2xs transition-colors cursor-pointer border border-[#e09618]"
               title="Open Clinician Copilot"
             >
-              <Icon icon={faFileLines} className="size-3 text-white" />
+              <Icon icon={faFileLines} className="size-3 text-slate-800" />
               <span>Clinician Copilot</span>
             </button>
 
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <div className="inline-flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300">
               <span className="text-sm">✋</span>
-              <span className="font-bold">Allergies:</span>
-              <span className="text-slate-500 dark:text-slate-400">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Allergies:</span>
+              <span className="text-slate-600 dark:text-slate-400">
                 {clinical.patientHistory?.allergies?.trim() || "No Known Drug Allergies"}
               </span>
             </div>
@@ -644,43 +648,31 @@ export function ConsultationWorkspace({
 
         {/* ROW 2: TABS (Patient Summary / Consultation / Last Saved) */}
         <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setIsSummaryViewOpen(true)}
-              className="px-4 py-1 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent"
+              className="px-3 py-1 rounded text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent"
             >
               Patient Summary
             </button>
             <button
               type="button"
               onClick={() => handleToggleViewMode("fast")}
-              className={`px-4 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                workspaceViewMode === "fast"
-                  ? "bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-2xs"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-transparent"
-              }`}
+              className="px-3.5 py-1 rounded text-xs font-semibold bg-[#dcebfb] dark:bg-slate-800 text-[#1e3a5f] dark:text-sky-200 border border-[#b8d5f5] dark:border-slate-700 shadow-2xs transition-all cursor-pointer"
             >
               Consultation
             </button>
-            <button
-              type="button"
-              onClick={() => handleToggleViewMode("hospital")}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                workspaceViewMode === "hospital"
-                  ? "bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-transparent"
-              }`}
-              title="Full Hospital Multi-Tab Mode"
-            >
-              Hospital Tabs
-            </button>
           </div>
 
-          {/* Last Saved badge */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
-            <Icon icon={faCheckCircle} className="size-3 text-emerald-600" />
-            <span>Last Saved {autosaveLabel || "Saved"}</span>
+          {/* Last Saved badge matching Apollo SOM EMR */}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+            <span className="flex items-center justify-center size-3.5 rounded-full bg-emerald-600 text-white text-[9px] font-bold">✓</span>
+            <span>
+              {autosaveStatus === "saving"
+                ? "Saving..."
+                : `Last Saved ${lastSavedTime}`}
+            </span>
           </div>
         </div>
       </div>
@@ -1163,10 +1155,10 @@ export function ConsultationWorkspace({
                 setTemplateModalMode("save");
                 setIsTemplateModalOpen(true);
               }}
-              className="min-h-9 px-3.5 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
+              className="min-h-9 px-3.5 py-1 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-700 shadow-2xs cursor-pointer inline-flex items-center gap-1.5"
               title="Save current consultation clinical findings and prescriptions as a custom reusable template"
             >
-              <Icon icon={faBookmark} className="size-3 text-purple-600" />
+              <Icon icon={faBookmark} className="size-3 text-slate-500" />
               <span>Save as Template</span>
             </button>
 
@@ -1174,14 +1166,27 @@ export function ConsultationWorkspace({
               type="button"
               variant="secondary"
               size="sm"
-              className="min-h-9 gap-1.5 text-xs font-semibold"
+              className="min-h-9 gap-1.5 text-xs font-medium border border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
               onClick={handleSaveDraft}
               loading={isPending("save")}
               disabled={isPending("complete")}
               title="Save draft (Ctrl+S)"
             >
-              <Icon icon={faCloudArrowUp} className="size-3 text-slate-600" />
+              <Icon icon={faCloudArrowUp} className="size-3 text-slate-500" />
               Save draft
+            </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              className="min-h-9 px-3.5 gap-1.5 text-xs bg-slate-800 hover:bg-slate-900 text-white rounded-md font-semibold cursor-pointer shadow-2xs"
+              onClick={handleCompleteVisit}
+              loading={isPending("complete")}
+              disabled={isPending("complete")}
+              title="Complete Visit & Finalize Consultation (Ctrl+Enter)"
+            >
+              <Icon icon={faCheckCircle} className="size-3 text-emerald-400" />
+              <span>{isPending("complete") ? "Completing..." : "Complete Visit"}</span>
             </Button>
           </div>
         </div>
