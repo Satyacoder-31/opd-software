@@ -1539,7 +1539,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={clinical.chiefComplaint ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, chiefComplaint: e.target.value })}
-              placeholder="Chief complaints, onset, and duration..."
+              placeholder=""
               rows={3}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1608,7 +1608,7 @@ export function DoctorFastConsultation({
                   } as any,
                 })
               }
-              placeholder="History of present illness, previous treatments, and relevant medical history..."
+              placeholder=""
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1652,7 +1652,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={(clinical as any).currentMedications || ""}
               onChange={(e) => onClinicalChange({ ...clinical, currentMedications: e.target.value } as any)}
-              placeholder="Existing medicines patient is currently taking..."
+              placeholder=""
               rows={2}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1724,7 +1724,7 @@ export function DoctorFastConsultation({
                   examination: { ...clinical.examination, jointsAndParts: e.target.value },
                 })
               }
-              placeholder="Physical examination findings, range of motion, and special tests..."
+              placeholder=""
               rows={3}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -2018,7 +2018,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={investigationText}
               onChange={(e) => handleInvestigationTextChange(e.target.value)}
-              placeholder="Past investigation findings, previous X-rays, MRI, and laboratory reports..."
+              placeholder=""
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -2078,7 +2078,7 @@ export function DoctorFastConsultation({
                   },
                 })
               }
-              placeholder="Other clinical tests, ECG, bone densitometry, or nerve conduction..."
+              placeholder=""
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -2205,7 +2205,7 @@ export function DoctorFastConsultation({
                   },
                 })
               }
-              placeholder="Advised laboratory investigations, imaging orders, and diagnostic directives..."
+              placeholder=""
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-teal-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -2796,7 +2796,7 @@ export function DoctorFastConsultation({
               <Textarea
                 value={plasterAdvice}
                 onChange={(e) => handlePlasterAdviceChange(e.target.value)}
-                placeholder="Doctor's plaster and bandage instructions for patient (Keep strictly dry, elevate on pillows, non-weight bearing...)"
+                placeholder=""
                 rows={3}
                 className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
               />
@@ -3221,7 +3221,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={(clinical as any).proceduresPerformed || ""}
               onChange={(e) => onClinicalChange({ ...clinical, proceduresPerformed: e.target.value } as any)}
-              placeholder="Details of in-clinic procedures performed..."
+              placeholder=""
               rows={2}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -3274,7 +3274,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={advice}
               onChange={(e) => onAdviceChange(e.target.value)}
-              placeholder="General advice, lifestyle modifications, and dietary instructions..."
+              placeholder=""
               rows={4}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -3369,7 +3369,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={currentPlanDetails}
               onChange={(e) => onClinicalChange({ ...clinical, planDetails: e.target.value } as any)}
-              placeholder="Treatment plan, protection, and therapeutic steps..."
+              placeholder=""
               rows={3}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -3431,7 +3431,7 @@ export function DoctorFastConsultation({
                 <Input
                   value={followUp}
                   onChange={(e) => onFollowUpChange(e.target.value)}
-                  placeholder="Review timeframe or follow-up instructions..."
+                  placeholder=""
                   className="h-8 text-xs font-bold"
                 />
               </div>

@@ -609,7 +609,20 @@ export function ConsultationWorkspace({
           </div>
 
           {/* Right Controls: Clinician Copilot & Allergies */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              type="button"
+              size="sm"
+              className="min-h-8 px-3 gap-1.5 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xs hover:from-emerald-700 hover:to-teal-700 cursor-pointer font-bold rounded-lg"
+              onClick={handleCompleteVisit}
+              loading={isPending("complete")}
+              disabled={isPending("complete")}
+              title="Complete Visit & Finalize Consultation (Ctrl+Enter)"
+            >
+              <Icon icon={faCheckCircle} className="size-3 text-white" />
+              <span>{isPending("complete") ? "Completing..." : "Complete Visit"}</span>
+            </Button>
+
             <button
               type="button"
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 text-xs shadow-xs transition-colors cursor-pointer"
@@ -1050,7 +1063,7 @@ export function ConsultationWorkspace({
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* Left side quick anchors matching Apollo SOM EMR */}
-          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 flex-wrap">
             <button
               type="button"
               onClick={() => setIsSummaryViewOpen(true)}
@@ -1106,16 +1119,43 @@ export function ConsultationWorkspace({
                 setRxAutoPrint(true);
                 setIsRxViewOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-700 dark:text-slate-200 transition-colors font-medium"
               title="Print Prescription (English)"
             >
               <Icon icon={faPrint} className="size-3 text-slate-600" />
               <span>Print</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                handleSaveDraft();
+                setRxModalLang("hi");
+                setRxAutoPrint(true);
+                setIsRxViewOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-teal-700 dark:text-teal-300 transition-colors font-medium"
+              title="चिकित्सीय पर्चा प्रिंट करें (Hindi Prescription Print)"
+            >
+              <Icon icon={faPrint} className="size-3 text-teal-600" />
+              <span>पर्चा प्रिंट (Hindi)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRxModalLang("en");
+                setRxAutoPrint(false);
+                setIsRxViewOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-slate-600 dark:text-slate-400 transition-colors"
+              title="View full prescription preview"
+            >
+              <Icon icon={faEye} className="size-3 text-slate-500" />
+              <span>View Rx</span>
+            </button>
           </div>
 
           {/* Right side actions matching Apollo SOM EMR */}
-          <div className="flex items-center gap-2 ml-auto flex-wrap">
+          <div className="flex items-center gap-2 ml-auto">
             {/* Save as Template (Exact Apollo SOM EMR button shape and styling) */}
             <button
               type="button"
@@ -1132,75 +1172,16 @@ export function ConsultationWorkspace({
 
             <Button
               type="button"
-              size="sm"
-              className="min-h-9 gap-1.5 font-bold text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-800 shadow-xs cursor-pointer text-xs"
-              onClick={() => {
-                handleSaveDraft();
-                setRxModalLang("en");
-                setRxAutoPrint(true);
-                setIsRxViewOpen(true);
-              }}
-              title="Print Prescription (English)"
-            >
-              <Icon icon={faPrint} className="size-3 text-white" />
-              Print Rx
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-9 gap-1.5 font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 shadow-xs cursor-pointer text-xs"
-              onClick={() => {
-                handleSaveDraft();
-                setRxModalLang("hi");
-                setRxAutoPrint(true);
-                setIsRxViewOpen(true);
-              }}
-              title="चिकित्सीय पर्चा प्रिंट करें (Hindi Prescription Print)"
-            >
-              <Icon icon={faPrint} className="size-3 text-white" />
-              पर्चा प्रिंट (Hindi)
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="min-h-9 gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 shadow-2xs text-xs"
-              onClick={() => {
-                setRxModalLang("en");
-                setRxAutoPrint(false);
-                setIsRxViewOpen(true);
-              }}
-              title="View full prescription in English"
-            >
-              <Icon icon={faEye} className="size-3 text-indigo-600" />
-              View Rx
-            </Button>
-
-            <Button
-              type="button"
               variant="secondary"
               size="sm"
-              className="min-h-9 gap-1.5 text-xs"
+              className="min-h-9 gap-1.5 text-xs font-semibold"
               onClick={handleSaveDraft}
               loading={isPending("save")}
               disabled={isPending("complete")}
+              title="Save draft (Ctrl+S)"
             >
               <Icon icon={faCloudArrowUp} className="size-3 text-slate-600" />
               Save draft
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              className="min-h-9 gap-1.5 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 cursor-pointer font-bold"
-              onClick={handleCompleteVisit}
-              loading={isPending("complete")}
-              disabled={isPending("complete")}
-            >
-              <Icon icon={faCheckCircle} className="size-3" />
-              {isPending("complete") ? "Completing..." : "Complete visit"}
             </Button>
           </div>
         </div>
