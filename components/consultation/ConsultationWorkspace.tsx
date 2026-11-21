@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  faArrowLeft,
   faBolt,
   faBone,
   faBookmark,
@@ -416,8 +418,8 @@ export function ConsultationWorkspace({
     [clinical, medicines, advice, followUp],
   );
 
-  const saveDraftRef = useRef<() => void>(() => {});
-  const completeVisitRef = useRef<() => void>(() => {});
+  const saveDraftRef = useRef<() => void>(() => { });
+  const completeVisitRef = useRef<() => void>(() => { });
   const pendingRef = useRef(isPending);
   pendingRef.current = isPending;
 
@@ -506,7 +508,7 @@ export function ConsultationWorkspace({
         setMessage("Visit completed successfully! Loading summary...");
         setMessageType("success");
         window.location.assign(`/consultations/${consultationId}`);
-        return new Promise(() => {}); // keep pending/spinner active until page unloads
+        return new Promise(() => { }); // keep pending/spinner active until page unloads
       }
       setMessageType("error");
       const err = result.fieldErrors
@@ -575,54 +577,82 @@ export function ConsultationWorkspace({
 
   return (
     <PageShell className="min-h-0">
-      {/* Patient Header — gradient card */}
-      <div className="border-b border-border bg-gradient-to-b from-card to-muted/20">
-        <PageHeader
-          className="pb-3 md:pb-3"
-          title={patientName}
-          backHref="/queue"
-          backLabel="Queue"
-          backAccessory={
-            autosaveLabel ? (
-              <span
-                role="status"
-                className={
-                  autosaveStatus === "saved"
-                    ? "inline-flex items-center gap-1.5 shrink-0 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700"
-                    : autosaveStatus === "saving"
-                      ? "inline-flex items-center gap-1.5 shrink-0 text-xs font-medium text-muted-foreground"
-                      : "inline-flex items-center gap-1.5 shrink-0 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700"
-                }
-              >
-                <Icon
-                  icon={
-                    autosaveStatus === "saved"
-                      ? faCheckCircle
-                      : autosaveStatus === "saving"
-                        ? faCloudArrowUp
-                        : faCircleExclamation
-                  }
-                  className="size-3"
-                />
-                {autosaveLabel}
+      {/* APOLLO SOM EMR PATIENT BANNER (MATCHING PHOTO) */}
+      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Patient Details */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Link
+              href="/queue"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Back to OPD Queue"
+            >
+              <Icon icon={faArrowLeft} className="size-4" />
+            </Link>
+
+            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              {patientName}
+            </h1>
+
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {patientGender || "Male"}
+            </span>
+
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {patientAge ? `${patientAge} Y` : "34Y 9M"}
+            </span>
+
+            <span className="text-xs font-mono font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1">
+              {uhid || "ANM1.0001078137"}
+              <span className="cursor-pointer text-slate-400 hover:text-indigo-600" title="Patient ID / Episode info">ⓘ</span>
+            </span>
+          </div>
+
+          {/* Right Controls: Clinician Copilot & Allergies */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 text-xs shadow-xs transition-colors cursor-pointer"
+              title="Open Clinician Copilot"
+            >
+              <Icon icon={faFileLines} className="size-3 text-white" />
+              <span>Clinician Copilot</span>
+            </button>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <span className="text-sm">✋</span>
+              <span className="font-bold">Allergies:</span>
+              <span className="text-slate-500 dark:text-slate-400">
+                {clinical.patientHistory?.allergies?.trim() || "No Known Drug Allergies"}
               </span>
-            ) : null
-          }
-        />
-        <PatientContextRail
-          className="px-6 pb-5 md:px-8"
-          hideName
-          patientName={patientName}
-          uhid={uhid}
-          episodeNo={episodeNo}
-          patientPhone={patientPhone}
-          patientAge={patientAge}
-          patientGender={patientGender}
-          doctorName={doctorName}
-          patientHref={`/patients/${patientId}`}
-          labResultsCount={investigationHistory.labResults.length}
-          onViewInvestigations={() => setTab("investigations")}
-        />
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 2: TABS (Patient Summary / Consultation / Last Saved) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsSummaryViewOpen(true)}
+              className="px-4 py-1 rounded-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent"
+            >
+              Patient Summary
+            </button>
+            <button
+              type="button"
+              className="px-4 py-1 rounded-full text-xs font-bold bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-200 border border-sky-300 dark:border-sky-700 shadow-2xs"
+            >
+              Consultation
+            </button>
+          </div>
+
+          {/* Last Saved badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">
+            <Icon icon={faCheckCircle} className="size-3 text-emerald-600" />
+            <span>Last Saved {autosaveLabel || "Saved"}</span>
+          </div>
+        </div>
       </div>
 
       {message ? (
@@ -644,11 +674,10 @@ export function ConsultationWorkspace({
               <button
                 type="button"
                 onClick={() => handleToggleViewMode("fast")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  workspaceViewMode === "fast"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${workspaceViewMode === "fast"
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
-                }`}
+                  }`}
                 title="Doctor Fast Track: Everything on 1 clean, fast screen with 1-click super templates and dosing chips"
               >
                 <Icon icon={faBolt} className="size-3 text-amber-300" />
@@ -657,11 +686,10 @@ export function ConsultationWorkspace({
               <button
                 type="button"
                 onClick={() => handleToggleViewMode("hospital")}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  workspaceViewMode === "hospital"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${workspaceViewMode === "hospital"
                     ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold border border-slate-200 dark:border-slate-700"
                     : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
-                }`}
+                  }`}
                 title="Full Hospital Mode: Multi-tab layout for complex surgery planning, systemic exams, and certificates"
               >
                 <Icon icon={faFileLines} className="size-3 text-slate-500" />
@@ -709,317 +737,310 @@ export function ConsultationWorkspace({
             }
           />
         ) : (
-        <Tabs
-          value={tab}
-          onValueChange={(value) => {
-            if (isWorkspaceTabId(value)) setTab(value);
-          }}
-          className="gap-0"
-        >
-          {/* Sticky tab bar with treatment mode selector */}
-          <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-2 py-2 backdrop-blur scrollbar-hide md:px-3">
-            <TabsList
-              variant="line"
-              className="h-auto w-max shrink-0 justify-start gap-0.5"
-            >
-              {([
-                { id: "consultation", label: "Consultation", icon: faStethoscope, color: "text-blue-600" },
-                { id: "prescription", label: "Prescription", icon: faPills, color: "text-violet-600" },
-                { id: "investigations", label: "Investigations", icon: faFlaskVial, color: "text-sky-600" },
-                { id: "documents", label: "Documents", icon: faFileLines, color: "text-orange-600" },
-              ] as const).map((item) => {
-                const totalInvCount =
-                  investigationHistory.labResults.length +
-                  investigationHistory.advisedInvestigations.length;
-
-                return (
-                  <TabsTrigger
-                    key={item.id}
-                    value={item.id}
-                    className="min-h-10 flex-none shrink-0 px-3 gap-1.5"
-                    title={item.label}
-                  >
-                    <Icon
-                      icon={item.icon}
-                      className={`size-3.5 ${tab === item.id ? item.color : "text-muted-foreground"}`}
-                    />
-                    {item.label}
-                    {item.id === "investigations" && totalInvCount > 0 && (
-                      <span className="ml-1 inline-flex items-center rounded-full bg-sky-500/15 px-1.5 py-0.2 text-[10px] font-bold text-sky-700 dark:text-sky-300">
-                        {totalInvCount}
-                      </span>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-
-            {/* Specialty Mode Selector in Sticky Bar */}
-            <div className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-muted/60 p-1 shrink-0 ml-auto">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 hidden sm:inline">
-                Specialty:
-              </span>
-              <button
-                type="button"
-                onClick={() => handleTreatmentModeChange("orthopedics")}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  treatmentMode === "orthopedics"
-                    ? "bg-primary text-primary-foreground shadow-xs ring-1 ring-primary/40"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Orthopedic Mode: Show orthopedic complaints, symptoms, joint exams & advice"
+          <Tabs
+            value={tab}
+            onValueChange={(value) => {
+              if (isWorkspaceTabId(value)) setTab(value);
+            }}
+            className="gap-0"
+          >
+            {/* Sticky tab bar with treatment mode selector */}
+            <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 px-2 py-2 backdrop-blur scrollbar-hide md:px-3">
+              <TabsList
+                variant="line"
+                className="h-auto w-max shrink-0 justify-start gap-0.5"
               >
-                <Icon icon={faBone} className="size-3" />
-                Orthopedics
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTreatmentModeChange("general")}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  treatmentMode === "general"
-                    ? "bg-primary text-primary-foreground shadow-xs ring-1 ring-primary/40"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="General Treatment Mode: Show general medicine, fever, viral, cough & GI complaints"
-              >
-                <Icon icon={faStethoscope} className="size-3" />
-                General Treatment
-              </button>
-              <button
-                type="button"
-                onClick={() => handleTreatmentModeChange("all")}
-                className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  treatmentMode === "all"
-                    ? "bg-card text-foreground shadow-xs font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show all dropdown options"
-              >
-                All
-              </button>
-            </div>
-          </div>
+                {([
+                  { id: "consultation", label: "Consultation", icon: faStethoscope, color: "text-blue-600" },
+                  { id: "prescription", label: "Prescription", icon: faPills, color: "text-violet-600" },
+                  { id: "investigations", label: "Investigations", icon: faFlaskVial, color: "text-sky-600" },
+                  { id: "documents", label: "Documents", icon: faFileLines, color: "text-orange-600" },
+                ] as const).map((item) => {
+                  const totalInvCount =
+                    investigationHistory.labResults.length +
+                    investigationHistory.advisedInvestigations.length;
 
-          <TabsContent value="consultation" className="mt-0">
-            {hasPatientSafetyAlerts({
-              allergies: patientAllergies,
-              chronicConditions: patientChronicConditions,
-            }) ? (
-              <div className="border-b border-border/70 bg-rose-50/50 px-3 py-3 md:px-4">
-                <PatientSafetyBanner
-                  allergies={patientAllergies}
-                  chronicConditions={patientChronicConditions}
-                />
-              </div>
-            ) : null}
+                  return (
+                    <TabsTrigger
+                      key={item.id}
+                      value={item.id}
+                      className="min-h-10 flex-none shrink-0 px-3 gap-1.5"
+                      title={item.label}
+                    >
+                      <Icon
+                        icon={item.icon}
+                        className={`size-3.5 ${tab === item.id ? item.color : "text-muted-foreground"}`}
+                      />
+                      {item.label}
+                      {item.id === "investigations" && totalInvCount > 0 && (
+                        <span className="ml-1 inline-flex items-center rounded-full bg-sky-500/15 px-1.5 py-0.2 text-[10px] font-bold text-sky-700 dark:text-sky-300">
+                          {totalInvCount}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
 
-            {investigationHistory.labResults.length > 0 ||
-            investigationHistory.advisedInvestigations.length > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-sky-500/10 px-3 py-2 text-xs text-sky-950 dark:text-sky-200 md:px-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Icon icon={faFlaskVial} className="size-3.5 shrink-0 text-sky-600" />
-                  <span className="truncate">
-                    <strong>Previous records:</strong> {investigationHistory.labResults.length} past lab {investigationHistory.labResults.length === 1 ? "result" : "results"}, {investigationHistory.advisedInvestigations.length} advised investigation {investigationHistory.advisedInvestigations.length === 1 ? "order" : "orders"} on file.
-                  </span>
-                </div>
-                <Button
+              {/* Specialty Mode Selector in Sticky Bar */}
+              <div className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-muted/60 p-1 shrink-0 ml-auto">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-1 hidden sm:inline">
+                  Specialty:
+                </span>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setTab("investigations")}
-                  className="h-7 text-xs font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 shrink-0"
+                  onClick={() => handleTreatmentModeChange("orthopedics")}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${treatmentMode === "orthopedics"
+                      ? "bg-primary text-primary-foreground shadow-xs ring-1 ring-primary/40"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  title="Orthopedic Mode: Show orthopedic complaints, symptoms, joint exams & advice"
                 >
-                  View investigations ➔
-                </Button>
+                  <Icon icon={faBone} className="size-3" />
+                  Orthopedics
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTreatmentModeChange("general")}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${treatmentMode === "general"
+                      ? "bg-primary text-primary-foreground shadow-xs ring-1 ring-primary/40"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  title="General Treatment Mode: Show general medicine, fever, viral, cough & GI complaints"
+                >
+                  <Icon icon={faStethoscope} className="size-3" />
+                  General Treatment
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTreatmentModeChange("all")}
+                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${treatmentMode === "all"
+                      ? "bg-card text-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  title="Show all dropdown options"
+                >
+                  All
+                </button>
               </div>
-            ) : null}
+            </div>
 
-            {previousVisit ? (
-              <div className="border-b border-purple-200/70 bg-gradient-to-r from-purple-50/90 via-indigo-50/50 to-purple-50/60 p-3.5 dark:border-indigo-900/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/30 md:p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-sm">
-                      <Icon icon={faRotate} className="size-3.5" />
+            <TabsContent value="consultation" className="mt-0">
+              {hasPatientSafetyAlerts({
+                allergies: patientAllergies,
+                chronicConditions: patientChronicConditions,
+              }) ? (
+                <div className="border-b border-border/70 bg-rose-50/50 px-3 py-3 md:px-4">
+                  <PatientSafetyBanner
+                    allergies={patientAllergies}
+                    chronicConditions={patientChronicConditions}
+                  />
+                </div>
+              ) : null}
+
+              {investigationHistory.labResults.length > 0 ||
+                investigationHistory.advisedInvestigations.length > 0 ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/80 bg-sky-500/10 px-3 py-2 text-xs text-sky-950 dark:text-sky-200 md:px-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon icon={faFlaskVial} className="size-3.5 shrink-0 text-sky-600" />
+                    <span className="truncate">
+                      <strong>Previous records:</strong> {investigationHistory.labResults.length} past lab {investigationHistory.labResults.length === 1 ? "result" : "results"}, {investigationHistory.advisedInvestigations.length} advised investigation {investigationHistory.advisedInvestigations.length === 1 ? "order" : "orders"} on file.
                     </span>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
-                          Returning Patient Visit (फ़ॉलो-अप मरीज)
-                        </span>
-                        <span className="rounded-full border border-indigo-300/60 bg-white/80 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 shadow-2xs">
-                          Previous Visit: {new Date(previousVisit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTab("investigations")}
+                    className="h-7 text-xs font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 shrink-0"
+                  >
+                    View investigations ➔
+                  </Button>
+                </div>
+              ) : null}
+
+              {previousVisit ? (
+                <div className="border-b border-purple-200/70 bg-gradient-to-r from-purple-50/90 via-indigo-50/50 to-purple-50/60 p-3.5 dark:border-indigo-900/60 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/30 md:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-sm">
+                        <Icon icon={faRotate} className="size-3.5" />
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-200">
+                            Returning Patient Visit (फ़ॉलो-अप मरीज)
+                          </span>
+                          <span className="rounded-full border border-indigo-300/60 bg-white/80 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 shadow-2xs">
+                            Previous Visit: {new Date(previousVisit.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Previous Diagnosis: <span className="font-semibold text-foreground">{previousVisit.diagnosis || "Under evaluation"}</span>
+                          {previousVisit.chiefComplaint ? ` · Symptoms: ${previousVisit.chiefComplaint}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-[11px] font-medium text-muted-foreground">
+                      Select visit option below:
+                    </div>
+                  </div>
+
+                  {/* Option 1 vs Option 2 Selectable Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
+                    {/* Option 1: Same Problem (Details already filled) */}
+                    <button
+                      type="button"
+                      onClick={handleSelectSameProblem}
+                      className={`group relative flex flex-col text-left p-3 rounded-xl border-2 transition-all cursor-pointer ${visitMode === "same_problem"
+                          ? "border-indigo-600 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-indigo-500/20"
+                          : "border-indigo-200/70 dark:border-indigo-900/40 bg-white/60 dark:bg-slate-900/40 hover:border-indigo-400"
+                        }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`size-4 rounded-full flex items-center justify-center border transition-colors ${visitMode === "same_problem"
+                                ? "border-indigo-600 bg-indigo-600 text-white"
+                                : "border-slate-300 group-hover:border-indigo-400"
+                              }`}
+                          >
+                            {visitMode === "same_problem" && (
+                              <span className="size-1.5 rounded-full bg-white" />
+                            )}
+                          </span>
+                          <span className="text-xs font-bold text-foreground">
+                            Option 1: Same Problem / Revisit (वही समस्या)
+                          </span>
+                        </div>
+                        <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
+                          Details Pre-filled
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Previous Diagnosis: <span className="font-semibold text-foreground">{previousVisit.diagnosis || "Under evaluation"}</span>
-                        {previousVisit.chiefComplaint ? ` · Symptoms: ${previousVisit.chiefComplaint}` : ""}
+                      <p className="text-[11px] text-muted-foreground mt-1.5 pl-6">
+                        Pre-fills previous complaints, joint examination, diagnosis, advice, and medicines since patient is revisiting for the same condition.
                       </p>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-medium text-muted-foreground">
-                    Select visit option below:
+                      {visitMode === "same_problem" && (
+                        <div className="mt-2 pl-6 flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                          <Icon icon={faCheckCircle} className="size-3 text-indigo-600" />
+                          <span>Active · Previous consultation records loaded</span>
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Option 2: New Problem (Input new details) */}
+                    <button
+                      type="button"
+                      onClick={handleSelectNewProblem}
+                      className={`group relative flex flex-col text-left p-3 rounded-xl border-2 transition-all cursor-pointer ${visitMode === "new_problem"
+                          ? "border-sky-600 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-sky-500/20"
+                          : "border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40 hover:border-sky-400"
+                        }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`size-4 rounded-full flex items-center justify-center border transition-colors ${visitMode === "new_problem"
+                                ? "border-sky-600 bg-sky-600 text-white"
+                                : "border-slate-300 group-hover:border-sky-400"
+                              }`}
+                          >
+                            {visitMode === "new_problem" && (
+                              <span className="size-1.5 rounded-full bg-white" />
+                            )}
+                          </span>
+                          <span className="text-xs font-bold text-foreground">
+                            Option 2: New Problem / Fresh Details (नई समस्या)
+                          </span>
+                        </div>
+                        <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          Blank Slate
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1.5 pl-6">
+                        Patient has presented with a new orthopedic complaint. Clears previous clinical details and medicines so new details can be entered.
+                      </p>
+                      {visitMode === "new_problem" && (
+                        <div className="mt-2 pl-6 flex items-center gap-1.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                          <Icon icon={faCheckCircle} className="size-3 text-sky-600" />
+                          <span>Active · Ready for fresh examination & prescription</span>
+                        </div>
+                      )}
+                    </button>
                   </div>
                 </div>
+              ) : null}
 
-                {/* Option 1 vs Option 2 Selectable Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-1">
-                  {/* Option 1: Same Problem (Details already filled) */}
-                  <button
-                    type="button"
-                    onClick={handleSelectSameProblem}
-                    className={`group relative flex flex-col text-left p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                      visitMode === "same_problem"
-                        ? "border-indigo-600 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-indigo-500/20"
-                        : "border-indigo-200/70 dark:border-indigo-900/40 bg-white/60 dark:bg-slate-900/40 hover:border-indigo-400"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`size-4 rounded-full flex items-center justify-center border transition-colors ${
-                            visitMode === "same_problem"
-                              ? "border-indigo-600 bg-indigo-600 text-white"
-                              : "border-slate-300 group-hover:border-indigo-400"
-                          }`}
-                        >
-                          {visitMode === "same_problem" && (
-                            <span className="size-1.5 rounded-full bg-white" />
-                          )}
-                        </span>
-                        <span className="text-xs font-bold text-foreground">
-                          Option 1: Same Problem / Revisit (वही समस्या)
-                        </span>
-                      </div>
-                      <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300">
-                        Details Pre-filled
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1.5 pl-6">
-                      Pre-fills previous complaints, joint examination, diagnosis, advice, and medicines since patient is revisiting for the same condition.
-                    </p>
-                    {visitMode === "same_problem" && (
-                      <div className="mt-2 pl-6 flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
-                        <Icon icon={faCheckCircle} className="size-3 text-indigo-600" />
-                        <span>Active · Previous consultation records loaded</span>
-                      </div>
-                    )}
-                  </button>
+              <ConsultationClinicalSections
+                value={clinical}
+                onChange={handleClinicalChange}
+                treatmentMode={treatmentMode}
+                onTreatmentModeChange={handleTreatmentModeChange}
+              />
+            </TabsContent>
 
-                  {/* Option 2: New Problem (Input new details) */}
-                  <button
-                    type="button"
-                    onClick={handleSelectNewProblem}
-                    className={`group relative flex flex-col text-left p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                      visitMode === "new_problem"
-                        ? "border-sky-600 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-sky-500/20"
-                        : "border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40 hover:border-sky-400"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`size-4 rounded-full flex items-center justify-center border transition-colors ${
-                            visitMode === "new_problem"
-                              ? "border-sky-600 bg-sky-600 text-white"
-                              : "border-slate-300 group-hover:border-sky-400"
-                          }`}
-                        >
-                          {visitMode === "new_problem" && (
-                            <span className="size-1.5 rounded-full bg-white" />
-                          )}
-                        </span>
-                        <span className="text-xs font-bold text-foreground">
-                          Option 2: New Problem / Fresh Details (नई समस्या)
-                        </span>
-                      </div>
-                      <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        Blank Slate
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground mt-1.5 pl-6">
-                      Patient has presented with a new orthopedic complaint. Clears previous clinical details and medicines so new details can be entered.
-                    </p>
-                    {visitMode === "new_problem" && (
-                      <div className="mt-2 pl-6 flex items-center gap-1.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
-                        <Icon icon={faCheckCircle} className="size-3 text-sky-600" />
-                        <span>Active · Ready for fresh examination & prescription</span>
-                      </div>
-                    )}
-                  </button>
-                </div>
-              </div>
-            ) : null}
+            <TabsContent value="prescription" className="mt-0">
+              <PrescriptionBuilder
+                consultationId={consultationId}
+                patientId={patientId}
+                medicines={medicines}
+                advice={advice}
+                followUp={followUp}
+                onMedicinesChange={setMedicines}
+                onAdviceChange={handleAdviceChange}
+                onFollowUpChange={setFollowUp}
+                patientAllergies={patientAllergies}
+                treatmentMode={treatmentMode}
+                onTreatmentModeChange={handleTreatmentModeChange}
+                hideSaveActions
+                saveTemplateInFooter={tab === "prescription"}
+              />
+            </TabsContent>
 
-            <ConsultationClinicalSections
-              value={clinical}
-              onChange={handleClinicalChange}
-              treatmentMode={treatmentMode}
-              onTreatmentModeChange={handleTreatmentModeChange}
-            />
-          </TabsContent>
+            <TabsContent value="investigations" className="mt-0">
+              <PatientPreviousInvestigations
+                history={investigationHistory}
+                loading={investigationHistoryLoading}
+                onCopyLabResult={handleCopyLabResult}
+                onCopyPastFindings={handleCopyPastFindings}
+                onReorderTests={handleReorderTests}
+              />
+              <LabOrdersPanel
+                ref={labOrdersPanelRef}
+                consultationId={consultationId}
+                onAppendToRxAdvice={handleAppendAdvisedToRxAdvice}
+              />
+              <InvestigationSections
+                value={clinical}
+                onChange={setClinical}
+                previousLabsNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.labs}
+                previousImagingNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.imaging}
+                previousOtherNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.other}
+              />
+            </TabsContent>
 
-          <TabsContent value="prescription" className="mt-0">
-            <PrescriptionBuilder
-              consultationId={consultationId}
-              patientId={patientId}
-              medicines={medicines}
-              advice={advice}
-              followUp={followUp}
-              onMedicinesChange={setMedicines}
-              onAdviceChange={handleAdviceChange}
-              onFollowUpChange={setFollowUp}
-              patientAllergies={patientAllergies}
-              treatmentMode={treatmentMode}
-              onTreatmentModeChange={handleTreatmentModeChange}
-              hideSaveActions
-              saveTemplateInFooter={tab === "prescription"}
-            />
-          </TabsContent>
-
-          <TabsContent value="investigations" className="mt-0">
-            <PatientPreviousInvestigations
-              history={investigationHistory}
-              loading={investigationHistoryLoading}
-              onCopyLabResult={handleCopyLabResult}
-              onCopyPastFindings={handleCopyPastFindings}
-              onReorderTests={handleReorderTests}
-            />
-            <LabOrdersPanel
-              ref={labOrdersPanelRef}
-              consultationId={consultationId}
-              onAppendToRxAdvice={handleAppendAdvisedToRxAdvice}
-            />
-            <InvestigationSections
-              value={clinical}
-              onChange={setClinical}
-              previousLabsNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.labs}
-              previousImagingNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.imaging}
-              previousOtherNote={investigationHistory.previousConsultationInvestigations[0]?.investigationResults?.other}
-            />
-          </TabsContent>
-
-          <TabsContent value="documents" className="mt-0">
-            <ReferralSections
-              consultationId={consultationId}
-              value={clinical}
-              onChange={setClinical}
-            />
-            <MedicalCertificateSections
-              value={clinical}
-              onChange={setClinical}
-            />
-            <CollapsibleSection
-              flush
-              density="compact"
-              contentClassName="px-3 py-3 md:px-4"
-              title="Attachments"
-              icon={faPaperclip}
-              iconColor="bg-slate-500/15 text-slate-600"
-            >
-              <ConsultationAttachments consultationId={consultationId} />
-            </CollapsibleSection>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="documents" className="mt-0">
+              <ReferralSections
+                consultationId={consultationId}
+                value={clinical}
+                onChange={setClinical}
+              />
+              <MedicalCertificateSections
+                value={clinical}
+                onChange={setClinical}
+              />
+              <CollapsibleSection
+                flush
+                density="compact"
+                contentClassName="px-3 py-3 md:px-4"
+                title="Attachments"
+                icon={faPaperclip}
+                iconColor="bg-slate-500/15 text-slate-600"
+              >
+                <ConsultationAttachments consultationId={consultationId} />
+              </CollapsibleSection>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
 

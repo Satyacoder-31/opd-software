@@ -122,7 +122,7 @@ export function PrescriptionQuickTemplates({
               </span>
             </div>
             <p className="hidden text-xs text-muted-foreground sm:block">
-              Select standard condition regimens (e.g. Flu, Back Pain, GERD) and edit dosages as needed.
+              Select standard condition regimens (Flu, Back Pain, GERD) and edit dosages as needed.
             </p>
           </div>
         </div>
@@ -470,7 +470,7 @@ export function PrescriptionSaveTemplateForm({
         name="templateName"
         value={templateName}
         onChange={(event) => onTemplateNameChange(event.target.value)}
-        placeholder="e.g. Adult upper respiratory infection"
+        placeholder="Adult upper respiratory infection"
         className="min-w-0 flex-1"
         onKeyDown={(event) => {
           if (event.key === "Enter" && canSave && !saving) {

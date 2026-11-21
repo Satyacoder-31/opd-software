@@ -759,7 +759,7 @@ export function PrescriptionBuilder({
                         updateMedicine(index, "dosage", value)
                       }
                       options={DOSAGE_RECOMMENDATIONS}
-                      placeholder="e.g. 1 tablet, 5 ml, 1 cap…"
+                      placeholder="1 tablet, 5 ml, 1 cap…"
                     />
                     <PrescriptionOptionCombobox
                       label="Frequency"
@@ -793,7 +793,7 @@ export function PrescriptionBuilder({
                         updateMedicine(index, "instructions", value)
                       }
                       options={INSTRUCTION_OPTIONS}
-                      placeholder="e.g. After meals"
+                      placeholder="After meals"
                     />
                   </div>
 
@@ -805,7 +805,7 @@ export function PrescriptionBuilder({
                       updateMedicine(index, "route", value)
                     }
                     options={MEDICINE_ROUTES}
-                    placeholder="e.g. Oral"
+                    placeholder="Oral"
                   />
                 </div>
               </div>

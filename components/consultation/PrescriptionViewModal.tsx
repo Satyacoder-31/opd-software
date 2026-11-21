@@ -411,26 +411,10 @@ export function PrescriptionViewModal({
                     type="button"
                     onClick={handleOpenSystemPdf}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
-                    title="Open in Adobe Acrobat Reader or Windows Edge PDF Viewer"
+                    title="Open in Adobe Acrobat Reader or Windows Edge PDF Viewer with complete print preview"
                   >
                     <Icon icon={faFilePdf} className="size-3 text-white" />
-                    <span>{lang === "hi" ? "रीडर में खोलें" : "Open in PDF App"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white px-3 py-1.5 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Icon icon={faDownload} className="size-3" />
-                    <span>{i18n.downloadPrescription}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handlePrint}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 font-semibold text-xs transition-colors cursor-pointer shadow-xs"
-                  >
-                    <Icon icon={faPrint} className="size-3" />
-                    <span>{i18n.printPrescription}</span>
+                    <span>{lang === "hi" ? "रीडर में खोलें (प्रिंट पूर्वावलोकन)" : "Open in PDF App (Print Preview)"}</span>
                   </button>
                 </div>
               </div>

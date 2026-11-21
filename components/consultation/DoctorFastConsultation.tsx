@@ -436,6 +436,7 @@ export function DoctorFastConsultation({
   const [newInvestigationInput, setNewInvestigationInput] = useState("");
   const [investigationSearch, setInvestigationSearch] = useState("");
   const [investigationNotice, setInvestigationNotice] = useState<string | null>(null);
+  const [invMenuOpen, setInvMenuOpen] = useState(false);
   const investigationRef = useRef<HTMLDivElement>(null);
 
   const [adviceMenuOpen, setAdviceMenuOpen] = useState(false);
@@ -1282,7 +1283,7 @@ export function DoctorFastConsultation({
                   vitals: { ...vitals, bp: e.target.value },
                 })
               }
-              placeholder="e.g. 120/80"
+              placeholder="120/80"
               className="h-8 text-xs font-bold"
             />
           </div>
@@ -1296,7 +1297,7 @@ export function DoctorFastConsultation({
                   vitals: { ...vitals, pulse: e.target.value },
                 })
               }
-              placeholder="e.g. 74"
+              placeholder="74"
               className="h-8 text-xs font-bold"
             />
           </div>
@@ -1310,7 +1311,7 @@ export function DoctorFastConsultation({
                   vitals: { ...vitals, weight: e.target.value },
                 })
               }
-              placeholder="e.g. 68"
+              placeholder="68"
               className="h-8 text-xs font-bold"
             />
           </div>
@@ -1324,7 +1325,7 @@ export function DoctorFastConsultation({
                   vitals: { ...vitals, spo2: e.target.value },
                 })
               }
-              placeholder="e.g. 98"
+              placeholder="98"
               className="h-8 text-xs font-bold"
             />
           </div>
@@ -1338,7 +1339,7 @@ export function DoctorFastConsultation({
                   vitals: { ...vitals, temp: e.target.value },
                 })
               }
-              placeholder="e.g. 98.6"
+              placeholder="98.6"
               className="h-8 text-xs font-bold"
             />
           </div>
@@ -1348,6 +1349,137 @@ export function DoctorFastConsultation({
       {/* ========================================================================= */}
       {/* APOLLO SOM EMR COLLAPSIBLE CLINICAL ACCORDIONS                            */}
       {/* ========================================================================= */}
+
+      
+      {/* TWO-COLUMN LAYOUT: LEFT SECTION ICON RAIL + MAIN CLINICAL CARDS */}
+      <div className="flex items-start gap-3 w-full">
+        {/* APOLLO SOM EMR LEFT VERTICAL ICON RAIL */}
+        <div className="w-10 sm:w-11 shrink-0 hidden md:flex flex-col items-center gap-1.5 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl sticky top-28 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Scroll to top"
+          >
+            <Icon icon={faChevronUp} className="size-3.5" />
+          </button>
+          <div className="w-6 h-px bg-slate-200 dark:bg-slate-700 my-0.5" />
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-complaints")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Complaints"
+          >
+            <Icon icon={faFileLines} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-history")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="History of Present Illness"
+          >
+            <Icon icon={faClock} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-current-meds")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Current Medication"
+          >
+            <Icon icon={faPills} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-exam")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Physical Examination"
+          >
+            <Icon icon={faBone} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-exam-attachments")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Attachments"
+          >
+            <Icon icon={faPaperclip} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-diagnosis")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Diagnosis"
+          >
+            <Icon icon={faStethoscope} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-investigations")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Investigation Results"
+          >
+            <Icon icon={faFlaskVial} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-advised-investigations")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Advised Investigations"
+          >
+            <Icon icon={faFileContract} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-plasters")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Bandages, Plasters & Supports"
+          >
+            <Icon icon={faBandage} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-procedures")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Procedures Performed"
+          >
+            <Icon icon={faStethoscope} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-medicines")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Medicines"
+          >
+            <Icon icon={faPills} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-advice")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Advice"
+          >
+            <Icon icon={faHeartPulse} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-plan")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Treatment Plan"
+          >
+            <Icon icon={faNotesMedical} className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollToSection("sec-followup")}
+            className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Follow Up"
+          >
+            <Icon icon={faClock} className="size-3.5" />
+          </button>
+        </div>
+
+        {/* MAIN COLUMN OF CLINICAL ACCORDIONS */}
+        <div className="flex-1 min-w-0 space-y-3">
 
       {/* SECTION 1: COMPLAINTS */}
       <div id="sec-complaints" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
@@ -1410,32 +1542,10 @@ export function DoctorFastConsultation({
         {/* Section Body */}
         {!collapsedSections.complaints && (
           <div className="p-4 space-y-2.5">
-            {/* Quick 1-Tap Chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(treatmentMode === "general" ? FAST_GENERAL_SYMPTOMS : FAST_ORTHO_SYMPTOMS).slice(0, 8).map((tag) => {
-                const isSelected = selectedComplaintsList.some((c) => c.toLowerCase() === tag.text.toLowerCase());
-                return (
-                  <button
-                    key={tag.label}
-                    type="button"
-                    onClick={() => handleToggleSymptom(tag.text)}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-indigo-600 text-white font-bold shadow-2xs"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-50 border border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    <Icon icon={isSelected ? faCheck : faPlus} className={`size-2.5 ${isSelected ? "text-white" : "text-indigo-600"}`} />
-                    <span>{tag.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
             <Textarea
               value={clinical.chiefComplaint ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, chiefComplaint: e.target.value })}
-              placeholder="e.g. CAME TO ORTHO OPD ON 20/11/2026&#10;HAS LOWER BACK PAIN WITH RADICULOPATHY TO LOWER LIMBS ON BOTH SIDE FOR 3 DAYS&#10;DIFFICULTY IN SITTING UP..."
+              placeholder="Chief complaints, onset, and duration..."
               rows={3}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1504,7 +1614,7 @@ export function DoctorFastConsultation({
                   } as any,
                 })
               }
-              placeholder="e.g. NO FEVER, NO TRAUMA, NO OTHER JOINT PAIN."
+              placeholder="History of present illness, previous treatments, and relevant medical history..."
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1548,7 +1658,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={(clinical as any).currentMedications || ""}
               onChange={(e) => onClinicalChange({ ...clinical, currentMedications: e.target.value } as any)}
-              placeholder="Enter details of existing medicines patient is currently taking..."
+              placeholder="Existing medicines patient is currently taking..."
               rows={2}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1612,28 +1722,6 @@ export function DoctorFastConsultation({
 
         {!collapsedSections.exam && (
           <div className="p-4 space-y-3">
-            {/* Quick Exam Chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {FAST_EXAM_CHIPS.slice(0, 7).map((tag) => {
-                const isSelected = selectedFindingsList.some((f) => f.toLowerCase() === tag.text.toLowerCase());
-                return (
-                  <button
-                    key={tag.label}
-                    type="button"
-                    onClick={() => handleToggleExamNote(tag.text)}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-amber-600 text-white font-bold shadow-2xs"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-50 border border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    <Icon icon={isSelected ? faCheck : faPlus} className={`size-2.5 ${isSelected ? "text-white" : "text-amber-600"}`} />
-                    <span>{tag.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
             <Textarea
               value={clinical.examination?.jointsAndParts ?? ""}
               onChange={(e) =>
@@ -1642,13 +1730,13 @@ export function DoctorFastConsultation({
                   examination: { ...clinical.examination, jointsAndParts: e.target.value },
                 })
               }
-              placeholder="e.g. LS SPINE: LUMBER LORDOSIS MAINTAINED, ACTIVE SLR POSSIBLE, NO STRETCH PAIN PRESENT, FIG OF 4 FREE & PAINLESS, BACK SPASM ++, NO TENDERNESS, NO DEFORMITY, ROM OF FLEXION, ROTATIONS - PAINLESS AND FREE, EXTENSION IS PAINFUL..."
+              placeholder="Physical examination findings, range of motion, and special tests..."
               rows={3}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
 
             {/* Attachments Section (Exact Apollo SOM EMR Subsection) */}
-            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
+            <div id="sec-exam-attachments" className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                   <Icon icon={faPaperclip} className="size-3 text-slate-500" />
@@ -1740,7 +1828,7 @@ export function DoctorFastConsultation({
                           setDiagLocation("");
                         }
                       }}
-                      placeholder="Search SNOMED or type condition (e.g. Left Ankle Sprain)..."
+                      placeholder="Search SNOMED or enter diagnosis..."
                       className="w-full h-8 pl-2.5 pr-7 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                     <Icon icon={faMagnifyingGlass} className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-slate-400 pointer-events-none" />
@@ -1769,7 +1857,7 @@ export function DoctorFastConsultation({
                     type="text"
                     value={diagLocation}
                     onChange={(e) => setDiagLocation(e.target.value)}
-                    placeholder="e.g. Lateral ankle, L4-L5..."
+                    placeholder="Anatomical location or joint..."
                     className="w-full h-8 px-2.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
@@ -1831,28 +1919,6 @@ export function DoctorFastConsultation({
                   + Add Diagnosis
                 </Button>
               </div>
-            </div>
-
-            {/* Quick 1-Tap Diagnosis Chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(treatmentMode === "general" ? FAST_GENERAL_DIAGNOSES : FAST_ORTHO_DIAGNOSES).slice(0, 8).map((tag) => {
-                const isSelected = selectedDiagnosesList.some((d) => d.toLowerCase() === tag.text.toLowerCase());
-                return (
-                  <button
-                    key={tag.label}
-                    type="button"
-                    onClick={() => handleToggleDiagnosis(tag.text)}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-emerald-600 text-white font-bold shadow-2xs"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 border border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    <Icon icon={isSelected ? faCheck : faPlus} className={`size-2.5 ${isSelected ? "text-white" : "text-emerald-600"}`} />
-                    <span>{tag.label}</span>
-                  </button>
-                );
-              })}
             </div>
 
             {/* APOLLO SOM EMR DIAGNOSIS TABLE */}
@@ -1948,7 +2014,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={investigationText}
               onChange={(e) => handleInvestigationTextChange(e.target.value)}
-              placeholder="e.g. TRIMURTI DIAGNOSTIC CENTRE... X-RAY LS SPINE AP/LAT: LOSS OF LUMBAR LORDOSIS..."
+              placeholder="Past investigation findings, previous X-rays, MRI, and laboratory reports..."
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -1990,9 +2056,136 @@ export function DoctorFastConsultation({
                   },
                 })
               }
-              placeholder="HBA1C, URIC ACID, VIT D3 TOTAL, VIT B12..."
+              placeholder="Other clinical tests, ECG, bone densitometry, or nerve conduction..."
               rows={2}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
+
+      
+      {/* SECTION 8: ADVISED INVESTIGATIONS */}
+      <div id="sec-advised-investigations" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faFlaskVial} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Advised Investigations
+            </span>
+            {clinical.investigationResults?.imaging?.trim() && (
+              <span className="rounded bg-teal-100 dark:bg-teal-900/60 px-1.5 py-0.2 text-[10px] font-bold text-teal-800 dark:text-teal-300">
+                Advised
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setInvMenuOpen((v) => !v)}
+                className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                title="View standard laboratory & imaging orders"
+              >
+                <Icon icon={faWandMagicSparkles} className="size-2.5 text-teal-600" />
+                <span>Suggestions ({FAST_INVESTIGATION_CHIPS.length})</span>
+                <Icon icon={faChevronDown} className="size-2 text-slate-400" />
+              </button>
+
+              {invMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-30 p-2.5 space-y-2 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Standard Laboratory & Imaging Tests
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setInvMenuOpen(false)}
+                      className="text-slate-400 hover:text-slate-700"
+                    >
+                      <Icon icon={faXmark} className="size-3" />
+                    </button>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto space-y-1">
+                    {FAST_INVESTIGATION_CHIPS.map((chip) => {
+                      const current = clinical.investigationResults?.imaging || "";
+                      const isSelected = current.includes(chip.text);
+                      return (
+                        <div
+                          key={chip.label}
+                          onClick={() => {
+                            const next = isSelected
+                              ? current.replace(new RegExp(`\\n?•?\\s*${escapeRegex(chip.text)}`, "g"), "").trim()
+                              : current ? `${current}\n• ${chip.text}` : `• ${chip.text}`;
+                            onClinicalChange({
+                              ...clinical,
+                              investigationResults: {
+                                ...(clinical.investigationResults ?? {}),
+                                imaging: next,
+                              },
+                            });
+                          }}
+                          className={`p-1.5 rounded-lg text-xs cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? "bg-teal-50 dark:bg-teal-950/60 text-teal-900 dark:text-teal-200 font-bold border border-teal-200"
+                              : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          <span>{chip.text}</span>
+                          {isSelected && <Icon icon={faCheck} className="size-2.5 text-teal-600" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {clinical.investigationResults?.imaging?.trim() && (
+              <button
+                type="button"
+                onClick={() =>
+                  onClinicalChange({
+                    ...clinical,
+                    investigationResults: {
+                      ...(clinical.investigationResults ?? {}),
+                      imaging: "",
+                    },
+                  })
+                }
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("advisedInvestigations")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.advisedInvestigations ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
+
+        {!collapsedSections.advisedInvestigations && (
+          <div className="p-4 space-y-2.5">
+            <Textarea
+              value={clinical.investigationResults?.imaging ?? ""}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  investigationResults: {
+                    ...(clinical.investigationResults ?? {}),
+                    imaging: e.target.value,
+                  },
+                })
+              }
+              placeholder="Advised laboratory investigations, imaging orders, and diagnostic directives..."
+              rows={2}
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-teal-500 bg-white dark:bg-slate-900 rounded-lg"
             />
           </div>
         )}
@@ -2048,7 +2241,7 @@ export function DoctorFastConsultation({
                       type="text"
                       value={plasterSearch}
                       onChange={(e) => setPlasterSearch(e.target.value)}
-                      placeholder="Search appliance (e.g. slab, brace, crepe, belt)..."
+                      placeholder="Search appliance or bandage..."
                       className="w-full h-7 pl-2.5 pr-7 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
                     <Icon icon={faMagnifyingGlass} className="absolute right-2 top-1/2 -translate-y-1/2 size-2.5 text-slate-400 pointer-events-none" />
@@ -2152,7 +2345,7 @@ export function DoctorFastConsultation({
                             setNewPlasterSuggestionInput("");
                           }
                         }}
-                        placeholder="e.g. Bohler-Braun Splint, Ankle Wrap..."
+                        placeholder="Appliance or bandage name..."
                         className="flex-1 h-7 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
                       />
                       <Button
@@ -2248,7 +2441,7 @@ export function DoctorFastConsultation({
                             <Input
                               value={editPlasterSite}
                               onChange={(e) => setEditPlasterSite(e.target.value)}
-                              placeholder="e.g. Right Ankle, Left Wrist"
+                              placeholder="Body site or side"
                               className="h-8 text-xs"
                             />
                           </div>
@@ -2259,7 +2452,7 @@ export function DoctorFastConsultation({
                             <Input
                               value={editPlasterDuration}
                               onChange={(e) => setEditPlasterDuration(e.target.value)}
-                              placeholder="e.g. 3 weeks, 10 days"
+                              placeholder="Duration"
                               className="h-8 text-xs"
                             />
                           </div>
@@ -2270,7 +2463,7 @@ export function DoctorFastConsultation({
                             <Input
                               value={editPlasterInstructions}
                               onChange={(e) => setEditPlasterInstructions(e.target.value)}
-                              placeholder="e.g. Strict Non-Weight Bearing"
+                              placeholder="Wear instructions"
                               className="h-8 text-xs"
                             />
                           </div>
@@ -2383,26 +2576,26 @@ export function DoctorFastConsultation({
                 <Input
                   value={newPlasterName}
                   onChange={(e) => setNewPlasterName(e.target.value)}
-                  placeholder="e.g. Scaphoid Cast, U-Slab..."
+                  placeholder="Appliance or bandage name..."
                   className="h-8 text-xs font-semibold"
                 />
                 <Input
                   value={newPlasterSite}
                   onChange={(e) => setNewPlasterSite(e.target.value)}
-                  placeholder="e.g. Right Ankle, Left Wrist..."
+                  placeholder="Body site or side..."
                   className="h-8 text-xs"
                 />
                 <Input
                   value={newPlasterDuration}
                   onChange={(e) => setNewPlasterDuration(e.target.value)}
-                  placeholder="e.g. 3 weeks, 2 weeks..."
+                  placeholder="Duration..."
                   className="h-8 text-xs"
                 />
                 <div className="flex items-center gap-1.5">
                   <Input
                     value={newPlasterInstructions}
                     onChange={(e) => setNewPlasterInstructions(e.target.value)}
-                    placeholder="e.g. Strict Non-Weight Bearing..."
+                    placeholder="Wear instructions..."
                     className="h-8 text-xs flex-1"
                   />
                   <Button
@@ -2473,7 +2666,7 @@ export function DoctorFastConsultation({
                             type="text"
                             value={plasterAdviceSearch}
                             onChange={(e) => setPlasterAdviceSearch(e.target.value)}
-                            placeholder="Filter precautions (e.g. dry, elevation)..."
+                            placeholder="Filter care precautions..."
                             className="w-full h-7 pl-2.5 pr-7 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
                           <Icon icon={faMagnifyingGlass} className="absolute right-2 top-1/2 -translate-y-1/2 size-2.5 text-slate-400 pointer-events-none" />
@@ -2542,7 +2735,7 @@ export function DoctorFastConsultation({
                                   setNewPlasterAdviceSuggestionInput("");
                                 }
                               }}
-                              placeholder="e.g. Do not remove until review on day 7..."
+                              placeholder="Precaution instructions..."
                               className="flex-1 h-7 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
                             />
                             <Button
@@ -2581,7 +2774,7 @@ export function DoctorFastConsultation({
               <Textarea
                 value={plasterAdvice}
                 onChange={(e) => handlePlasterAdviceChange(e.target.value)}
-                placeholder="Doctor's plaster & bandage instructions for patient (e.g. Keep strictly dry, elevate on pillows, non-weight bearing, wiggle toes...)"
+                placeholder="Doctor's plaster and bandage instructions for patient (Keep strictly dry, elevate on pillows, non-weight bearing...)"
                 rows={3}
                 className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
               />
@@ -2827,7 +3020,7 @@ export function DoctorFastConsultation({
                     type="text"
                     value={newMedComments}
                     onChange={(e) => setNewMedComments(e.target.value)}
-                    placeholder="Instructions / Comments (e.g. FOR PAIN, STOP IF YOU GET NAUSEA, VOMITING)..."
+                    placeholder="Instructions and clinical remarks..."
                     className="w-full h-8 px-2.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newMedName.trim()) {
@@ -2995,7 +3188,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={(clinical as any).proceduresPerformed || ""}
               onChange={(e) => onClinicalChange({ ...clinical, proceduresPerformed: e.target.value } as any)}
-              placeholder="Enter details of in-clinic procedures performed (e.g. Joint aspiration, local injection, dressing change)..."
+              placeholder="Details of in-clinic procedures performed..."
               rows={2}
               className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -3045,29 +3238,10 @@ export function DoctorFastConsultation({
 
         {!collapsedSections.advice && (
           <div className="p-4 space-y-3">
-            {/* Quick Advice Chips */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {FAST_ADVICE_CHIPS.slice(0, 8).map((tag) => (
-                <button
-                  key={tag.label}
-                  type="button"
-                  onClick={() => {
-                    const current = advice?.trim() ?? "";
-                    const next = current ? `${current}\n• ${tag.text}` : `• ${tag.text}`;
-                    onAdviceChange(next);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-50 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                >
-                  <Icon icon={faPlus} className="size-2.5 text-amber-600" />
-                  <span>{tag.label}</span>
-                </button>
-              ))}
-            </div>
-
             <Textarea
               value={advice}
               onChange={(e) => onAdviceChange(e.target.value)}
-              placeholder="e.g. GOUT DIET CHART, WALK 30M MINTS&#10;• Avoid squatting, sitting cross-legged, and frequent stair climbing.&#10;• Apply ice pack for 15 mins twice daily during acute flare...&#10;• Isometric quadriceps exercises once acute pain subsides."
+              placeholder="General advice, lifestyle modifications, and dietary instructions..."
               rows={4}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -3162,7 +3336,7 @@ export function DoctorFastConsultation({
             <Textarea
               value={currentPlanDetails}
               onChange={(e) => onClinicalChange({ ...clinical, planDetails: e.target.value } as any)}
-              placeholder="Enter details of treatment plan (e.g. Rest and protection; Ice application; Compression and elevation; Supportive ankle brace if indicated)..."
+              placeholder="Treatment plan, protection, and therapeutic steps..."
               rows={3}
               className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
             />
@@ -3220,11 +3394,11 @@ export function DoctorFastConsultation({
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Search by: Eg: 2d, 2w, 2m</label>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Search timeframe (2d, 2w, 2m)</label>
                 <Input
                   value={followUp}
                   onChange={(e) => onFollowUpChange(e.target.value)}
-                  placeholder="e.g. Review after 5–7 days..."
+                  placeholder="Review timeframe or follow-up instructions..."
                   className="h-8 text-xs font-bold"
                 />
               </div>
@@ -3277,6 +3451,9 @@ export function DoctorFastConsultation({
             </button>
           )}
         </div>
+      </div>
+
+              </div>
       </div>
 
       {/* Macro Text Modal */}

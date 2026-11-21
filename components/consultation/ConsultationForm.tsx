@@ -86,7 +86,7 @@ export function ConsultationForm({
             name="amendmentReason"
             value={amendmentReason}
             onChange={(e) => onAmendmentReasonChange?.(e.target.value)}
-            placeholder="e.g. Corrected diagnosis after lab report review"
+            placeholder="Corrected diagnosis after lab report review"
             rows={3}
             required
           />

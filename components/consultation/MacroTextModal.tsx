@@ -195,14 +195,14 @@ export function MacroTextModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 block mb-1">
-                    Macro Code (e.g. KNEE, LUMBAR, GOUT DIET)
+                    Macro Code (KNEE, LUMBAR, GOUT DIET)
                   </label>
                   <input
                     type="text"
                     required
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
-                    placeholder="e.g. ANKLE SPRAIN RICE"
+                    placeholder="ANKLE SPRAIN RICE"
                     className="w-full h-8 px-2.5 text-xs font-mono font-bold uppercase rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>

@@ -353,6 +353,17 @@ ipcMain.handle("desktop:print-html", async (_event, { htmlContent }) => {
     const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`;
     await printWin.loadURL(dataUrl);
 
+    // Ensure all styles and layout finish loading
+    await printWin.webContents.executeJavaScript(`
+      new Promise(resolve => {
+        if (document.readyState === 'complete') {
+          setTimeout(resolve, 200);
+        } else {
+          window.addEventListener('load', () => setTimeout(resolve, 200));
+        }
+      })
+    `);
+
     return new Promise((resolve) => {
       printWin.webContents.print(
         {

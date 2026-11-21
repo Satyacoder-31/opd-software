@@ -342,8 +342,8 @@ export function ConsultationClinicalSections({
                 options={getChiefComplaintRecommendations(mode)}
                 placeholder={
                   mode === "general"
-                    ? "e.g. High grade fever with chills, body ache, and dry cough for 3 days"
-                    : "e.g. Pain in right knee joint aggravated by walking"
+                    ? "High grade fever with chills, body ache, and dry cough for 3 days"
+                    : "Pain in right knee joint aggravated by walking"
                 }
                 rows={2}
               />
@@ -393,8 +393,8 @@ export function ConsultationClinicalSections({
                 options={getOnsetRecommendations(mode)}
                 placeholder={
                   mode === "general"
-                    ? "e.g. Acute onset (2-3 days ago)"
-                    : "e.g. Post-traumatic / Insidious"
+                    ? "Acute onset (2-3 days ago)"
+                    : "Post-traumatic / Insidious"
                 }
               />
               <ClinicalDropdownInput
@@ -405,7 +405,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setClinicalPresentation, "duration", text)
                 }
                 options={getDurationRecommendations(mode)}
-                placeholder="e.g. 5 days, 2 weeks, intermittent"
+                placeholder="5 days, 2 weeks, intermittent"
               />
             </div>
           </div>
@@ -433,7 +433,7 @@ export function ConsultationClinicalSections({
                 updateRecordField(setPatientHistory, "pastMedical", text)
               }
               options={PAST_MEDICAL_RECOMMENDATIONS}
-              placeholder="e.g. Hypertension, Type 2 Diabetes Mellitus"
+              placeholder="Hypertension, Type 2 Diabetes Mellitus"
               rows={2}
             />
             <ClinicalDropdownTextarea
@@ -445,7 +445,7 @@ export function ConsultationClinicalSections({
                 updateRecordField(setPatientHistory, "pastSurgical", text)
               }
               options={PAST_SURGICAL_RECOMMENDATIONS}
-              placeholder="e.g. Total Knee Replacement, Appendectomy"
+              placeholder="Total Knee Replacement, Appendectomy"
               rows={2}
             />
             <div className="grid gap-2.5 md:grid-cols-2">
@@ -458,7 +458,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setPatientHistory, "allergies", text)
                 }
                 options={ALLERGIES_RECOMMENDATIONS}
-                placeholder="e.g. NKDA, Penicillin, NSAIDs"
+                placeholder="NKDA, Penicillin, NSAIDs"
                 rows={2}
               />
               <ClinicalDropdownTextarea
@@ -470,7 +470,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setPatientHistory, "medications", text)
                 }
                 options={CURRENT_MEDICATIONS_RECOMMENDATIONS}
-                placeholder="e.g. Tab Telmisartan 40 mg OD, Tab Metformin 500 mg BD"
+                placeholder="Tab Telmisartan 40 mg OD, Tab Metformin 500 mg BD"
                 rows={2}
               />
             </div>
@@ -484,7 +484,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setPatientHistory, "familyHistory", text)
                 }
                 options={FAMILY_HISTORY_RECOMMENDATIONS}
-                placeholder="e.g. Hypertension, CAD, Osteoarthritis"
+                placeholder="Hypertension, CAD, Osteoarthritis"
                 rows={2}
               />
               <ClinicalDropdownTextarea
@@ -496,7 +496,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setPatientHistory, "socialHistory", text)
                 }
                 options={SOCIAL_HISTORY_RECOMMENDATIONS}
-                placeholder="e.g. Non-smoker, sedentary lifestyle, desk job"
+                placeholder="Non-smoker, sedentary lifestyle, desk job"
                 rows={2}
               />
             </div>
@@ -821,7 +821,7 @@ export function ConsultationClinicalSections({
                     updateRecordField(setTreatmentPlan, "treatmentType", text)
                   }
                   options={TREATMENT_PLAN_TYPE_RECOMMENDATIONS}
-                  placeholder="Select or enter pathway (e.g. Conservative, Elective Surgery, Urgent Surgery)…"
+                  placeholder="Select or enter clinical pathway (Conservative, Elective Surgery, Urgent Surgery)…"
                 />
               </div>
               <label className="block text-xs font-semibold text-indigo-950 dark:text-indigo-200 mb-2">
@@ -893,7 +893,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setTreatmentPlan, "proposedProcedure", text)
                 }
                 options={TREATMENT_PLAN_PROCEDURE_RECOMMENDATIONS}
-                placeholder="e.g. Total Knee Arthroplasty (TKA), ACL Reconstruction, MED Discectomy…"
+                placeholder="Total Knee Arthroplasty (TKA), ACL Reconstruction, MED Discectomy…"
               />
               <div className="grid grid-cols-2 gap-2">
                 <ClinicalDropdownInput
@@ -928,7 +928,7 @@ export function ConsultationClinicalSections({
                   updateRecordField(setTreatmentPlan, "timingOrDate", text)
                 }
                 options={TREATMENT_PLAN_TIMING_RECOMMENDATIONS}
-                placeholder="e.g. Elective within 1-2 weeks, Urgent within 48h…"
+                placeholder="Elective within 1-2 weeks, Urgent within 48h…"
               />
               <ClinicalDropdownTextarea
                 icon={faShieldHalved}
@@ -1091,7 +1091,7 @@ export function InvestigationSections({
                 updateRecordField(setInvestigationResults, "labs", text)
               }
               options={LAB_RESULTS_RECOMMENDATIONS}
-              placeholder="e.g. CBC, ESR/CRP, Blood sugar, Uric acid, LFT, KFT findings…"
+              placeholder="CBC, ESR/CRP, Blood sugar, Uric acid, LFT, KFT findings…"
               rows={3}
             />
           </div>
@@ -1120,7 +1120,7 @@ export function InvestigationSections({
                 updateRecordField(setInvestigationResults, "imaging", text)
               }
               options={IMAGING_RESULTS_RECOMMENDATIONS}
-              placeholder="e.g. X-ray knee OA, Lumbar spine MRI, Chest X-ray, Ultrasound findings…"
+              placeholder="X-ray knee OA, Lumbar spine MRI, Chest X-ray, Ultrasound findings…"
               rows={3}
             />
           </div>
@@ -1149,7 +1149,7 @@ export function InvestigationSections({
                 updateRecordField(setInvestigationResults, "other", text)
               }
               options={OTHER_INVESTIGATION_RECOMMENDATIONS}
-              placeholder="e.g. ECG normal sinus rhythm, DEXA bone scan T-score, EMG/NCV…"
+              placeholder="ECG normal sinus rhythm, DEXA bone scan T-score, EMG/NCV…"
               rows={2}
             />
           </div>
@@ -1247,7 +1247,7 @@ export function MedicalCertificateSections({
               )
             }
             options={MED_CERT_FITNESS_RECOMMENDATIONS}
-            placeholder="e.g. Unfit for duty — Advised strict medical rest"
+            placeholder="Unfit for duty — Advised strict medical rest"
           />
           <ClinicalDropdownTextarea
             icon={faFileMedical}
@@ -1262,7 +1262,7 @@ export function MedicalCertificateSections({
               )
             }
             options={MED_CERT_REMARKS_RECOMMENDATIONS}
-            placeholder="e.g. Advised strict rest; avoid weight bearing; review on expiry"
+            placeholder="Advised strict rest; avoid weight bearing; review on expiry"
             rows={2}
           />
         </div>

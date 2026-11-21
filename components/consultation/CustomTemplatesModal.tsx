@@ -325,7 +325,7 @@ export function CustomTemplatesModal({
                     required
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
-                    placeholder="e.g. Left Ankle Sprain Fast Track, Sciatica Acute Care"
+                    placeholder="Left Ankle Sprain Fast Track, Sciatica Acute Care"
                     className="w-full h-9 px-3 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
@@ -355,7 +355,7 @@ export function CustomTemplatesModal({
                       type="text"
                       value={templateDescription}
                       onChange={(e) => setTemplateDescription(e.target.value)}
-                      placeholder="e.g. R.I.C.E. protocol + supportive care"
+                      placeholder="R.I.C.E. protocol + supportive care"
                       className="w-full h-9 px-3 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                     />
                   </div>

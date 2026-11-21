@@ -262,7 +262,7 @@ export const LabOrdersPanel = forwardRef<LabOrdersPanelHandle, LabOrdersPanelPro
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tests (e.g. CBC, ESR, Uric acid, Sugar)…"
+                  placeholder="Search tests (CBC, ESR, Uric acid, Blood Sugar)…"
                   className="h-8 w-full rounded-md border border-border bg-card pl-8 pr-7 text-xs text-ink placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                 />
                 {searchQuery && (

@@ -78,7 +78,7 @@ export function ReferralSections({
             value={referral.toSpecialty ?? ""}
             onChange={(val) => patch({ toSpecialty: val })}
             options={REFERRAL_SPECIALTY_RECOMMENDATIONS}
-            placeholder="e.g. Orthopedics, Spine Surgery, Neurology"
+            placeholder="Orthopedics, Spine Surgery, Neurology"
           />
           <ClinicalDropdownInput
             label="Facility / clinician"
@@ -86,7 +86,7 @@ export function ReferralSections({
             value={referral.toFacility ?? ""}
             onChange={(val) => patch({ toFacility: val })}
             options={REFERRAL_FACILITY_RECOMMENDATIONS}
-            placeholder="e.g. Tertiary Care Center, Government Medical College"
+            placeholder="Tertiary Care Center, Government Medical College"
           />
         </div>
 
