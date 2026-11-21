@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   faBolt,
   faBone,
+  faBookmark,
   faCheck,
   faCheckCircle,
   faChevronDown,
@@ -18,6 +19,7 @@ import {
   faHeartPulse,
   faMagnifyingGlass,
   faNotesMedical,
+  faPen,
   faPills,
   faPlus,
   faPrint,
@@ -29,27 +31,21 @@ import {
   faTriangleExclamation,
   faWandMagicSparkles,
   faXmark,
+  faPaperclip,
+  faUpload,
 } from "@fortawesome/free-solid-svg-icons";
 import { Icon } from "@/components/ui/Icon";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/shadcn/textarea";
 import { MedicineCombobox } from "@/components/consultation/MedicineCombobox";
-import {
-  emptyMedicine,
-} from "@/components/consultation/PrescriptionBuilder";
+import { emptyMedicine } from "@/components/consultation/PrescriptionBuilder";
 import { useClinicalRecommendations } from "@/lib/clinical-recommendations-storage";
-
 import {
   COMMON_ILLNESS_TEMPLATES,
   getClinicalTemplatesBySpecialty,
   type ClinicalTemplate,
 } from "@/lib/clinical-templates";
-import {
-  getChiefComplaintRecommendations,
-  getDiagnosisRecommendations,
-  type ClinicalTreatmentMode,
-} from "@/lib/clinical-recommendations";
 import { listDrugSuggestions } from "@/actions/drug-catalog";
 import {
   loadFavoriteMedicines,
@@ -68,6 +64,8 @@ import type {
   PreviousVisitData,
   Vitals,
 } from "@/lib/types";
+import { MacroTextModal } from "@/components/consultation/MacroTextModal";
+import { CustomTemplatesModal } from "@/components/consultation/CustomTemplatesModal";
 
 export type QuickTag = {
   label: string;
@@ -78,7 +76,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// Crisp, readable symptom tags (short label + rich clinical text)
+// Crisp, readable symptom tags
 const FAST_ORTHO_SYMPTOMS: QuickTag[] = [
   { label: "Left Ankle Pain (4d)", text: "Left ankle pain for 4 days" },
   { label: "Swelling Post-Twist", text: "Swelling after twisting injury" },
@@ -103,7 +101,7 @@ const FAST_GENERAL_SYMPTOMS: QuickTag[] = [
   { label: "Fatigue / Weakness", text: "Generalized fatigue and muscle weakness" },
 ];
 
-// Crisp, readable diagnosis tags (short label + rich clinical text)
+// Crisp, readable diagnosis tags
 const FAST_ORTHO_DIAGNOSES: QuickTag[] = [
   { label: "Left Ankle Sprain", text: "Left Ankle Sprain" },
   { label: "Bilateral Knee OA", text: "Bilateral Osteoarthritis Knee (Grade 2/3) with Joint Flare" },
@@ -139,7 +137,7 @@ const FAST_EXAM_CHIPS: QuickTag[] = [
   { label: "Heel Tenderness (Plantar)", text: "Tender plantar fascia insertion at calcaneal tubercle, Windlass test positive." },
 ];
 
-// Crisp, readable investigations / imaging tags
+// Crisp, readable investigations tags
 const FAST_INVESTIGATION_CHIPS: QuickTag[] = [
   { label: "X-ray Left Ankle (4d Twist)", text: "X-ray Left Ankle – if indicated by clinical examination" },
   { label: "Digital X-Ray Left Ankle", text: "Digital X-Ray Left Ankle (AP & Lat)" },
@@ -259,7 +257,6 @@ const PRESET_PLASTER_INSTRUCTIONS = [
   "Keep limb elevated on pillows above chest level",
 ];
 
-// Dedicated Plaster & Bandage Care Precautions for Patients
 const PLASTER_ADVICE_PRESETS = [
   "Keep plaster / bandage strictly dry at all times; cover with plastic while bathing.",
   "Keep the limb elevated on 1-2 pillows above heart level to reduce pain and swelling.",
@@ -326,12 +323,12 @@ type DoctorFastConsultationProps = {
   medicines: Medicine[];
   advice: string;
   followUp: string;
-  treatmentMode: ClinicalTreatmentMode;
+  treatmentMode: any;
   onClinicalChange: (clinical: ConsultationClinicalData) => void;
   onMedicinesChange: (medicines: Medicine[]) => void;
   onAdviceChange: (advice: string) => void;
   onFollowUpChange: (followUp: string) => void;
-  onTreatmentModeChange: (mode: ClinicalTreatmentMode) => void;
+  onTreatmentModeChange: (mode: any) => void;
   onCompleteVisit: () => void;
   onSaveDraft: () => void;
   isSaving: boolean;
@@ -372,7 +369,51 @@ export function DoctorFastConsultation({
   const [favorites, setFavorites] = useState<string[]>([]);
   const [templateNotice, setTemplateNotice] = useState<string | null>(null);
 
+  // Macro Text Modal State
+  const [isMacroModalOpen, setIsMacroModalOpen] = useState(false);
+  const [macroCategory, setMacroCategory] = useState<"complaints" | "examination" | "advice" | "plan" | "all">("all");
+  const [macroTargetField, setMacroTargetField] = useState<"complaints" | "history" | "examination" | "advice" | "plan">("complaints");
 
+  // Custom Templates Modal State
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
+  const [templatesModalMode, setTemplatesModalMode] = useState<"apply" | "save">("apply");
+
+  // Accordion Section Collapse States (default: all primary open)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (key: string) => {
+    setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Structured Diagnosis State (SNOMED, side, location, onset, duration)
+  const [diagSearch, setDiagSearch] = useState("");
+  const [diagSide, setDiagSide] = useState("Select");
+  const [diagLocation, setDiagLocation] = useState("");
+  const [diagOnsetNum, setDiagOnsetNum] = useState("");
+  const [diagOnsetUnit, setDiagOnsetUnit] = useState("Days");
+  const [diagType, setDiagType] = useState<"Provisional" | "Definitive" | "Secondary">("Provisional");
+
+  // New Medicine Row Quick Entry
+  const [medPrescriptionType, setMedPrescriptionType] = useState<"Regular" | "Stat" | "SOS">("Regular");
+  const [medSearchType, setMedSearchType] = useState<"Brand" | "Generic">("Brand");
+  const [newMedName, setNewMedName] = useState("");
+  const [newMedDose, setNewMedDose] = useState("1");
+  const [newMedUnit, setNewMedUnit] = useState("Tablet(s)");
+  const [newMedFreq, setNewMedFreq] = useState("BD - Morning & Night");
+  const [medDoseM, setMedDoseM] = useState(true);
+  const [medDoseA, setMedDoseA] = useState(false);
+  const [medDoseE, setMedDoseE] = useState(false);
+  const [medDoseN, setMedDoseN] = useState(true);
+  const [newMedMeal, setNewMedMeal] = useState("After meal");
+  const [newMedDuration, setNewMedDuration] = useState("5");
+  const [newMedDurationUnit, setNewMedDurationUnit] = useState("Day(s)");
+  const [newMedRoute, setNewMedRoute] = useState("Oral");
+  const [newMedComments, setNewMedComments] = useState("");
+
+  // Plan Checkbox
+  const [isPlanChecked, setIsPlanChecked] = useState(true);
+  const treatmentPlan = clinical.treatmentPlan ?? {};
+  const currentPlanDetails = (clinical as any).planDetails || "";
 
   // Suggestion Dropdown States
   const [symptomsMenuOpen, setSymptomsMenuOpen] = useState(false);
@@ -403,15 +444,19 @@ export function DoctorFastConsultation({
   const [adviceNotice, setAdviceNotice] = useState<string | null>(null);
   const adviceRef = useRef<HTMLDivElement>(null);
 
-  const [showCustomHistory, setShowCustomHistory] = useState(false);
-  const [customHistoryInput, setCustomHistoryInput] = useState("");
-
   // Bandages, Plasters & Supports State
   const [newPlasterName, setNewPlasterName] = useState("");
   const [newPlasterSite, setNewPlasterSite] = useState("");
   const [newPlasterDuration, setNewPlasterDuration] = useState("");
   const [newPlasterInstructions, setNewPlasterInstructions] = useState("");
   const [plasterNotice, setPlasterNotice] = useState<string | null>(null);
+
+  // Bandages, Plasters & Supports Inline Editing State
+  const [editingPlasterId, setEditingPlasterId] = useState<string | null>(null);
+  const [editPlasterName, setEditPlasterName] = useState("");
+  const [editPlasterSite, setEditPlasterSite] = useState("");
+  const [editPlasterDuration, setEditPlasterDuration] = useState("");
+  const [editPlasterInstructions, setEditPlasterInstructions] = useState("");
 
   // Bandages, Plasters & Supports Dropdown States
   const [plasterMenuOpen, setPlasterMenuOpen] = useState(false);
@@ -426,10 +471,128 @@ export function DoctorFastConsultation({
   const [plasterAdviceNotice, setPlasterAdviceNotice] = useState<string | null>(null);
   const plasterAdviceMenuRef = useRef<HTMLDivElement>(null);
 
-  const treatmentPlan = clinical.treatmentPlan ?? {};
+  // Close menus on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (plasterMenuRef.current && !plasterMenuRef.current.contains(event.target as Node)) {
+        setPlasterMenuOpen(false);
+      }
+      if (plasterAdviceMenuRef.current && !plasterAdviceMenuRef.current.contains(event.target as Node)) {
+        setPlasterAdviceMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const plasterOrBandages = treatmentPlan.plasterOrBandages ?? [];
   const plasterAdvice = treatmentPlan.plasterAdvice ?? "";
 
+  // History of present illness
+  const historyOfPresentIllness = (clinical.patientHistory as any)?.presentIllness || "NO FEVER, NO TRAUMA, NO OTHER JOINT PAIN.";
+
+  // Load drugs catalog
+  useEffect(() => {
+    let active = true;
+    void listDrugSuggestions().then((items) => {
+      if (active) {
+        setDrugSuggestions(items);
+        setDrugSuggestionsLoading(false);
+      }
+    });
+    setFavorites(loadFavoriteMedicines());
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const vitals = (clinical.vitals as Vitals) ?? {};
+
+  // Macro Text opener
+  const handleOpenMacro = (
+    field: "complaints" | "history" | "examination" | "advice" | "plan",
+    cat: "complaints" | "examination" | "advice" | "plan" | "all"
+  ) => {
+    setMacroTargetField(field);
+    setMacroCategory(cat);
+    setIsMacroModalOpen(true);
+  };
+
+  // Macro Text handler
+  const handleInsertMacroText = (text: string) => {
+    if (!text) return;
+    if (macroTargetField === "complaints") {
+      const current = clinical.chiefComplaint?.trim() ?? "";
+      const next = current ? `${current}\n${text}` : text;
+      onClinicalChange({ ...clinical, chiefComplaint: next });
+    } else if (macroTargetField === "history") {
+      onClinicalChange({
+        ...clinical,
+        patientHistory: {
+          ...(clinical.patientHistory ?? {}),
+          presentIllness: text,
+        } as any,
+      });
+    } else if (macroTargetField === "examination") {
+      const current = clinical.examination?.jointsAndParts?.trim() ?? "";
+      const next = current ? `${current}\n${text}` : text;
+      onClinicalChange({
+        ...clinical,
+        examination: {
+          ...clinical.examination,
+          jointsAndParts: next,
+        },
+      });
+    } else if (macroTargetField === "advice") {
+      const current = advice?.trim() ?? "";
+      const next = current ? `${current}\n${text}` : text;
+      onAdviceChange(next);
+    } else if (macroTargetField === "plan") {
+      const current = currentPlanDetails.trim();
+      const next = current ? `${current}\n${text}` : text;
+      onClinicalChange({
+        ...clinical,
+        planDetails: next,
+      } as any);
+    }
+  };
+
+  // Custom Templates Handler
+  const handleApplyTemplate = (template: ClinicalTemplate) => {
+    const nextClinical: ConsultationClinicalData = {
+      ...clinical,
+      chiefComplaint: template.chiefComplaint || clinical.chiefComplaint || template.name,
+      diagnosis: template.diagnosis || clinical.diagnosis || template.name,
+      examination: {
+        ...clinical.examination,
+        jointsAndParts: template.examination || clinical.examination?.jointsAndParts,
+      },
+      investigationResults: {
+        ...(clinical.investigationResults ?? {}),
+        imaging: template.investigations || clinical.investigationResults?.imaging || "",
+      },
+      advice: template.advice || advice,
+    };
+    onClinicalChange(nextClinical);
+
+    if (template.medicines && template.medicines.length > 0) {
+      onMedicinesChange(
+        template.medicines.map((m) => ({
+          ...emptyMedicine(),
+          ...m,
+        }))
+      );
+    }
+    if (template.advice) onAdviceChange(template.advice);
+    if (template.followUp) onFollowUpChange(template.followUp);
+
+    setTemplateNotice(
+      `✓ Successfully applied template "${template.name}" with ${template.medicines.length} medicines, findings, and advice!`
+    );
+    setTimeout(() => setTemplateNotice(null), 5000);
+  };
+
+  // Bandages & Plasters Handlers
   const handleAddPlasterItem = (item: {
     name: string;
     site?: string;
@@ -446,7 +609,6 @@ export function DoctorFastConsultation({
     };
     const nextList = [...plasterOrBandages, newItem];
 
-    // Auto-suggest standard plaster care advice if advice is currently empty
     let nextAdvice = plasterAdvice;
     if (!nextAdvice?.trim()) {
       const l = item.name.toLowerCase();
@@ -541,47 +703,9 @@ export function DoctorFastConsultation({
 
   const defaultExamList = useMemo(() => FAST_EXAM_CHIPS.map((c) => c.text), []);
   const defaultAdviceList = useMemo(() => FAST_ADVICE_CHIPS.map((c) => c.text), []);
+  const defaultInvestigationList = useMemo(() => FAST_INVESTIGATION_CHIPS.map((c) => c.text), []);
 
-  const defaultInvestigationList = useMemo(
-    () => [
-      "X-ray Left Ankle – if indicated by clinical examination",
-      "Digital X-Ray Left Ankle (AP & Lat)",
-      "Digital X-Ray Right Ankle (AP & Lat)",
-      "Digital X-Ray Bilateral Knees (AP & Lat - Standing)",
-      "Digital X-Ray Lumbar Spine (AP & Lat)",
-      "Digital X-Ray Cervical Spine (AP & Lat)",
-      "Digital X-Ray Right Shoulder (AP & Axillary)",
-      "Digital X-Ray Left Shoulder (AP & Axillary)",
-      "Digital X-Ray Pelvis with Both Hips (AP)",
-      "Digital X-Ray Right Wrist (AP & Lat)",
-      "Digital X-Ray Left Wrist (AP & Lat)",
-      "Digital X-Ray Right Foot (AP & Oblique)",
-      "Digital X-Ray Left Foot (AP & Oblique)",
-      "MRI Lumbo-Sacral Spine with Screening of Whole Spine",
-      "MRI Cervical Spine with Screening of Whole Spine",
-      "MRI Right Knee Joint (Cruciate Ligaments & Meniscus)",
-      "MRI Left Knee Joint (Cruciate Ligaments & Meniscus)",
-      "MRI Right Shoulder Joint (Rotator Cuff Tear Protocol)",
-      "MRI Left Shoulder Joint (Rotator Cuff Tear Protocol)",
-      "Complete Blood Count (CBC) with ESR",
-      "C-Reactive Protein (CRP) Quantitative",
-      "Serum Uric Acid (Hyperuricemia / Gout Screen)",
-      "Rheumatoid Factor (RA) & Anti-CCP Antibodies",
-      "Serum Calcium & 25-Hydroxy Vitamin D3",
-      "Serum Alkaline Phosphatase (ALP)",
-      "HbA1c with Fasting Blood Sugar (FBS)",
-      "Renal Function Test (RFT) / Urea & Creatinine",
-      "Liver Function Test (LFT)",
-      "Serum Electrolytes (Na+, K+, Cl-)",
-      "Urine Routine & Microscopic Examination",
-      "DEXA Bone Mineral Density Scan (Spine & Hip)",
-      "Color Doppler Ultrasound - Venous (DVT Protocol)",
-      "USG Musculoskeletal (Tendon & Soft Tissue)",
-    ],
-    []
-  );
-
-  // Clinical Recommendations Hooks (Syncs across Fast OPD & Full Hospital Tabs)
+  // Clinical Recommendations Hooks
   const {
     allOptions: complaintsOptions,
     isFavorite: isComplaintFavorite,
@@ -627,11 +751,7 @@ export function DoctorFastConsultation({
     toggleFavorite: toggleAdviceFavorite,
   } = useClinicalRecommendations("advice", defaultAdviceList);
 
-  const defaultPlasterPresets = useMemo(
-    () => PRESET_PLASTERS.map((p) => p.name),
-    []
-  );
-
+  const defaultPlasterPresets = useMemo(() => PRESET_PLASTERS.map((p) => p.name), []);
   const {
     allOptions: plasterOptions,
     isFavorite: isPlasterFavorite,
@@ -641,11 +761,7 @@ export function DoctorFastConsultation({
     toggleFavorite: togglePlasterFavorite,
   } = useClinicalRecommendations("plaster_applications", defaultPlasterPresets);
 
-  const defaultPlasterAdviceList = useMemo(
-    () => PLASTER_ADVICE_PRESETS,
-    []
-  );
-
+  const defaultPlasterAdviceList = useMemo(() => PLASTER_ADVICE_PRESETS, []);
   const {
     allOptions: plasterAdviceOptions,
     isFavorite: isPlasterAdviceFavorite,
@@ -653,109 +769,40 @@ export function DoctorFastConsultation({
     addCustom: addCustomPlasterAdvice,
     removeCustom: removeCustomPlasterAdvice,
     toggleFavorite: togglePlasterAdviceFavorite,
-  } = useClinicalRecommendations("plaster_care_advice", defaultPlasterAdviceList);
+  } = useClinicalRecommendations("plaster_advice_precautions", defaultPlasterAdviceList);
 
-  // Click outside listener for suggestion menus
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node;
-      if (symptomsRef.current && !symptomsRef.current.contains(target)) {
-        setSymptomsMenuOpen(false);
-      }
-      if (diagnosisRef.current && !diagnosisRef.current.contains(target)) {
-        setDiagnosisMenuOpen(false);
-      }
-      if (examRef.current && !examRef.current.contains(target)) {
-        setExamMenuOpen(false);
-      }
-      if (investigationRef.current && !investigationRef.current.contains(target)) {
-        setInvestigationMenuOpen(false);
-      }
-      if (adviceRef.current && !adviceRef.current.contains(target)) {
-        setAdviceMenuOpen(false);
-      }
-      if (plasterMenuRef.current && !plasterMenuRef.current.contains(target)) {
-        setPlasterMenuOpen(false);
-      }
-      if (plasterAdviceMenuRef.current && !plasterAdviceMenuRef.current.contains(target)) {
-        setPlasterAdviceMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Filtered symptoms for the dropdown search
+  // Filtered lists for dropdown menus
   const filteredSymptoms = useMemo(() => {
     const q = symptomSearch.trim().toLowerCase();
     if (!q) return complaintsOptions;
     return complaintsOptions.filter((s) => s.toLowerCase().includes(q));
   }, [symptomSearch, complaintsOptions]);
 
-  // Filtered diagnoses for dropdown list
   const filteredDiagnoses = useMemo(() => {
     const q = newDiagnosisInput.trim().toLowerCase();
     if (!q) return diagnosisOptions;
     return diagnosisOptions.filter((d) => d.toLowerCase().includes(q));
   }, [newDiagnosisInput, diagnosisOptions]);
 
-  // Filtered investigations for dropdown list
-  const filteredInvestigations = useMemo(() => {
-    const q = investigationSearch.trim().toLowerCase();
-    if (!q) return investigationOptions;
-    return investigationOptions.filter((inv) => inv.toLowerCase().includes(q));
-  }, [investigationSearch, investigationOptions]);
-
-  // Filtered advice for dropdown
   const filteredAdvice = useMemo(() => {
     const q = adviceFilter.trim().toLowerCase();
     if (!q) return adviceOptions;
     return adviceOptions.filter((a) => a.toLowerCase().includes(q));
   }, [adviceFilter, adviceOptions]);
 
-  // Filtered plaster applications for dropdown
   const filteredPlasterOptions = useMemo(() => {
     const q = plasterSearch.trim().toLowerCase();
     if (!q) return plasterOptions;
     return plasterOptions.filter((s) => s.toLowerCase().includes(q));
   }, [plasterSearch, plasterOptions]);
 
-  // Filtered plaster precautions for dropdown
   const filteredPlasterAdviceOptions = useMemo(() => {
     const q = plasterAdviceSearch.trim().toLowerCase();
     if (!q) return plasterAdviceOptions;
     return plasterAdviceOptions.filter((s) => s.toLowerCase().includes(q));
   }, [plasterAdviceSearch, plasterAdviceOptions]);
 
-  // Load drugs catalog
-  useEffect(() => {
-    let active = true;
-    void listDrugSuggestions().then((items) => {
-      if (active) {
-        setDrugSuggestions(items);
-        setDrugSuggestionsLoading(false);
-      }
-    });
-    setFavorites(loadFavoriteMedicines());
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const vitals = (clinical.vitals as Vitals) ?? {};
-
-  // Handle vitals change
-  function handleVitalChange(field: keyof Vitals, val: string) {
-    onClinicalChange({
-      ...clinical,
-      vitals: {
-        ...vitals,
-        [field]: val,
-      },
-    });
-  }
-
-  // Parse individual chief complaints into clean array
+  // Parse individual chief complaints
   const selectedComplaintsList = useMemo(() => {
     const raw = clinical.chiefComplaint?.trim() ?? "";
     if (!raw) return [];
@@ -765,7 +812,6 @@ export function DoctorFastConsultation({
       .filter((s) => s.length > 0);
   }, [clinical.chiefComplaint]);
 
-  // Handle toggling symptoms (append or remove cleanly)
   function handleToggleSymptom(tag: QuickTag | string) {
     const text = typeof tag === "string" ? tag.trim() : tag.text.trim();
     if (!text) return;
@@ -785,25 +831,22 @@ export function DoctorFastConsultation({
     }
   }
 
-  // Parse individual diagnoses into a clean array
+  // Parse diagnoses list (do NOT split by comma so descriptions/locations with comma are preserved)
   const selectedDiagnosesList = useMemo(() => {
     const raw = clinical.diagnosis?.trim() ?? "";
     if (!raw) return [];
     return raw
-      .split(/\n|;|,|•/)
+      .split(/\n|;|\r|•/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
   }, [clinical.diagnosis]);
 
-  // Handle toggling multiple diagnoses (add or remove cleanly without wiping existing)
   function handleToggleDiagnosis(text: string) {
     const cleanText = text.trim();
     if (!cleanText) return;
-
     const isPresent = selectedDiagnosesList.some(
       (d) => d.toLowerCase() === cleanText.toLowerCase()
     );
-
     if (isPresent) {
       const remaining = selectedDiagnosesList.filter(
         (d) => d.toLowerCase() !== cleanText.toLowerCase()
@@ -818,12 +861,7 @@ export function DoctorFastConsultation({
     }
   }
 
-  // Handle setting/clearing diagnosis from quick tags
-  function handleSelectDiagnosis(tag: QuickTag) {
-    handleToggleDiagnosis(tag.text);
-  }
-
-  // Parse individual examination findings into clean array
+  // Parse examination findings
   const selectedFindingsList = useMemo(() => {
     const raw = clinical.examination?.jointsAndParts?.trim() ?? "";
     if (!raw) return [];
@@ -833,7 +871,6 @@ export function DoctorFastConsultation({
       .filter((s) => s.length > 0);
   }, [clinical.examination?.jointsAndParts]);
 
-  // Handle toggling exam notes
   function handleToggleExamNote(tag: QuickTag | string) {
     const text = typeof tag === "string" ? tag.trim() : tag.text.trim();
     if (!text) return;
@@ -865,7 +902,19 @@ export function DoctorFastConsultation({
     }
   }
 
-  // Investigations state & handlers
+  // Normal Examination (NAD)
+  function handleSetNormalExam() {
+    onClinicalChange({
+      ...clinical,
+      examination: {
+        ...clinical.examination,
+        jointsAndParts:
+          "LS SPINE: LUMBER LORDOSIS MAINTAINED, ACTIVE SLR POSSIBLE, NO STRETCH PAIN PRESENT, FIG OF 4 FREE & PAINLESS. NO TENDERNESS, NO DEFORMITY, ROM FREE & PAINLESS. NORMAL EXAMINATION (NAD).",
+      },
+    });
+  }
+
+  // Investigations state
   const investigationText = useMemo(() => {
     const imaging = clinical.investigationResults?.imaging?.trim() ?? "";
     const labs = clinical.investigationResults?.labs?.trim() ?? "";
@@ -911,42 +960,7 @@ export function DoctorFastConsultation({
     }
   }
 
-  // 1-Click Normal Examination (NAD)
-  function handleSetNormalExam() {
-    onClinicalChange({
-      ...clinical,
-      examination: {
-        ...clinical.examination,
-        jointsAndParts:
-          "No localized joint swelling, effusion or deformity. Full painless active & passive range of motion. No motor or sensory neurological deficit. Normal examination (NAD).",
-      },
-    });
-  }
-
-  // Handle toggling advice
-  function handleToggleAdvice(tag: QuickTag) {
-    const current = advice?.trim() ?? "";
-    if (current.includes(tag.text)) {
-      const next = current
-        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(tag.text)}`, "g"), "")
-        .trim();
-      onAdviceChange(next);
-    } else {
-      const next = current ? `${current}\n• ${tag.text}` : `• ${tag.text}`;
-      onAdviceChange(next);
-    }
-  }
-
-  // Handle follow up selection
-  function handleSelectFollowUp(tag: QuickTag) {
-    if (followUp?.trim().toLowerCase() === tag.text.toLowerCase()) {
-      onFollowUpChange("");
-    } else {
-      onFollowUpChange(tag.text);
-    }
-  }
-
-  // Handle medicine modification
+  // Medicines handlers
   function handleUpdateMedicine(index: number, patch: Partial<Medicine>) {
     const next = medicines.map((med, i) => (i === index ? { ...med, ...patch } : med));
     onMedicinesChange(next);
@@ -973,43 +987,33 @@ export function DoctorFastConsultation({
     handleUpdateMedicine(index, updated);
   }
 
-  // Apply 1-Click Super Template
-  function handleApplySuperTemplate(template: ClinicalTemplate) {
-    // Fill symptoms, diagnosis, exam, investigations, medicines, advice, follow-up
-    const nextClinical: ConsultationClinicalData = {
-      ...clinical,
-      chiefComplaint: template.chiefComplaint || clinical.chiefComplaint || template.name,
-      diagnosis: template.diagnosis || clinical.diagnosis || template.name,
-      examination: {
-        ...clinical.examination,
-        jointsAndParts: template.examination || clinical.examination?.jointsAndParts,
-      },
-      investigationResults: {
-        ...(clinical.investigationResults ?? {}),
-        imaging: template.investigations || clinical.investigationResults?.imaging || "",
-      },
-      advice: template.advice || advice,
-    };
-    onClinicalChange(nextClinical);
+  // Add medicine from the dedicated Apollo-style form
+  function handleAddFromApolloForm() {
+    if (!newMedName.trim()) return;
 
-    if (template.medicines && template.medicines.length > 0) {
-      onMedicinesChange(
-        template.medicines.map((m) => ({
-          ...emptyMedicine(),
-          ...m,
-        }))
-      );
+    // Build frequency string from M, A, E, N or dropdown
+    let freqStr = newMedFreq;
+    const times = [medDoseM ? "1" : "0", medDoseA ? "1" : "0", medDoseE ? "1" : "0", medDoseN ? "1" : "0"];
+    if (medDoseM || medDoseA || medDoseE || medDoseN) {
+      freqStr = `${times.join("-")} (${newMedFreq.split("-")[0].trim()})`;
     }
-    if (template.advice) onAdviceChange(template.advice);
-    if (template.followUp) onFollowUpChange(template.followUp);
 
-    setTemplateNotice(
-      `✓ Loaded "${template.name}" template with clinical findings, investigations, ${template.medicines.length} medicines, advice, and follow-up!`
-    );
-    setTimeout(() => setTemplateNotice(null), 5000);
+    const newMed: Medicine = {
+      name: newMedName.trim(),
+      dosage: `${newMedDose} ${newMedUnit}`,
+      route: newMedRoute,
+      frequency: freqStr,
+      duration: `${newMedDuration} ${newMedDurationUnit}`,
+      instructions: newMedComments.trim() ? `${newMedMeal}; ${newMedComments.trim()}` : newMedMeal,
+    };
+
+    rememberRecentMedicine(newMed.name);
+    onMedicinesChange([...medicines, newMed]);
+    setNewMedName("");
+    setNewMedComments("");
   }
 
-  // Apply Rapid Dosing Preset to a medicine
+  // Apply Rapid Dosing Preset
   function handleApplyDosingPreset(
     index: number,
     preset: (typeof RAPID_DOSING_PRESETS)[number]
@@ -1022,69 +1026,191 @@ export function DoctorFastConsultation({
     });
   }
 
+  // Scroll to section helper
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const superTemplates = getClinicalTemplatesBySpecialty(treatmentMode);
 
   return (
-    <div className="flex flex-col gap-3 p-3 md:p-4 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-3 p-3 md:p-5 max-w-7xl mx-auto font-sans bg-slate-50/50 dark:bg-slate-950 text-slate-800 dark:text-slate-100">
+      {/* APOLLO SOM EMR SUB-HEADER: PARAMETERS & CUSTOM TEMPLATES */}
+      <div className="sticky top-12 z-20 flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 p-2 backdrop-blur shadow-xs">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* All Parameters Button */}
+          <button
+            type="button"
+            onClick={() => setCollapsedSections({})}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-2xs cursor-pointer"
+            title="Expand / View all clinical parameters"
+          >
+            <Icon icon={faFileLines} className="size-3 text-slate-500" />
+            <span>All Parameters</span>
+          </button>
 
+          {/* Custom Template Button (Exact Apollo SOM EMR Subheader Action) */}
+          <button
+            type="button"
+            onClick={() => {
+              setTemplatesModalMode("apply");
+              setIsTemplatesModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800 px-3 py-1.5 text-xs font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors shadow-2xs cursor-pointer"
+            title="Open Custom Templates & Clinical Protocols"
+          >
+            <Icon icon={faBookmark} className="size-3 text-purple-600 dark:text-purple-400" />
+            <span>Custom Template</span>
+          </button>
 
-      {/* 1-CLICK SUPER TEMPLATES BANNER */}
-      <div className="rounded-2xl border-2 border-purple-200/90 dark:border-purple-900/70 bg-gradient-to-r from-purple-50/90 via-indigo-50/60 to-purple-50/80 dark:from-purple-950/60 dark:via-indigo-950/40 dark:to-purple-950/50 p-3 shadow-xs">
-        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs">
-              <Icon icon={faWandMagicSparkles} className="size-3.5" />
-            </span>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-950">
-                Clinical Quick Templates
-              </span>
-              <p className="text-[11px] text-slate-600">
-                Select a condition below to quickly prefill complaints, diagnosis, examination, medicines & advice.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">Specialty:</span>
-            <div className="inline-flex rounded-lg bg-white/90 p-0.5 border border-indigo-200">
-              <button
-                type="button"
-                onClick={() => onTreatmentModeChange("orthopedics")}
-                className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                  treatmentMode === "orthopedics"
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                🦴 Ortho
-              </button>
-              <button
-                type="button"
-                onClick={() => onTreatmentModeChange("general")}
-                className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                  treatmentMode === "general"
-                    ? "bg-indigo-600 text-white"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                🩺 General
-              </button>
-            </div>
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block" />
+
+          {/* Section Quick Jump Pills */}
+          <div className="hidden lg:flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-complaints")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Complaints
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-history")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              History
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-exam")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Examination
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-diagnosis")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Diagnosis
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-investigations")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Investigations
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-medicines")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold text-purple-700 dark:text-purple-400"
+            >
+              Medicines ({medicines.filter((m) => m.name?.trim()).length})
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-advice")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Advice
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-plan")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold text-indigo-700 dark:text-indigo-400"
+            >
+              Plan
+            </button>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={() => scrollToSection("sec-followup")}
+              className="px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              Follow Up
+            </button>
           </div>
         </div>
 
-        {/* Quick Template Buttons Carousel / Grid */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          {superTemplates.slice(0, 7).map((tpl) => (
+        {/* Specialty Selector */}
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          <span className="text-[10px] font-bold text-slate-500 uppercase">Specialty:</span>
+          <div className="inline-flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => onTreatmentModeChange("orthopedics")}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                treatmentMode === "orthopedics"
+                  ? "bg-indigo-600 text-white shadow-2xs"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+              }`}
+            >
+              🦴 Ortho
+            </button>
+            <button
+              type="button"
+              onClick={() => onTreatmentModeChange("general")}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                treatmentMode === "general"
+                  ? "bg-indigo-600 text-white shadow-2xs"
+                  : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
+              }`}
+            >
+              🩺 General
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* QUICK TEMPLATES CAROUSEL BANNER */}
+      <div className="rounded-xl border border-purple-200 dark:border-purple-900/60 bg-gradient-to-r from-purple-50/70 via-indigo-50/40 to-purple-50/60 dark:from-purple-950/40 dark:via-slate-900 dark:to-purple-950/30 p-3 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-2">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-white shadow-xs">
+              <Icon icon={faWandMagicSparkles} className="size-3" />
+            </span>
+            <span className="text-xs font-bold text-purple-950 dark:text-purple-200">
+              Clinical Quick Protocols
+            </span>
+            <span className="text-[10px] text-slate-500 hidden sm:inline">
+              1-click prefill complaints, diagnosis, exam, medicines & advice
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setTemplatesModalMode("apply");
+              setIsTemplatesModalOpen(true);
+            }}
+            className="text-[11px] font-bold text-purple-700 dark:text-purple-400 hover:underline cursor-pointer"
+          >
+            View All ({COMMON_ILLNESS_TEMPLATES.length}+) ➔
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {superTemplates.slice(0, 6).map((tpl) => (
             <button
               key={tpl.id}
               type="button"
-              onClick={() => handleApplySuperTemplate(tpl)}
-              className="group inline-flex items-center gap-1.5 rounded-xl border border-indigo-200/90 bg-white px-2.5 py-1.5 text-xs font-bold text-indigo-950 shadow-2xs hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-900 transition-all cursor-pointer active:scale-98"
+              onClick={() => handleApplyTemplate(tpl)}
+              className="group inline-flex items-center gap-1.5 rounded-lg border border-indigo-200/90 dark:border-indigo-800 bg-white dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-800 dark:text-slate-100 shadow-2xs hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/60 transition-all cursor-pointer active:scale-98"
             >
-              <Icon icon={faBolt} className="size-3 text-amber-500 group-hover:scale-110 transition-transform" />
+              <Icon icon={faBolt} className="size-2.5 text-amber-500 group-hover:scale-110 transition-transform" />
               <span>{tpl.name}</span>
-              <span className="rounded bg-indigo-100/80 px-1 py-0.2 text-[9px] font-semibold text-indigo-700">
+              <span className="rounded bg-purple-100 dark:bg-purple-900/60 px-1 py-0.2 text-[9px] font-semibold text-purple-700 dark:text-purple-300">
                 {tpl.medicines.length} meds
               </span>
             </button>
@@ -1092,7 +1218,7 @@ export function DoctorFastConsultation({
         </div>
 
         {templateNotice && (
-          <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 animate-in fade-in">
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 animate-in fade-in">
             <Icon icon={faCheckCircle} className="size-3.5 text-emerald-600 shrink-0" />
             <span>{templateNotice}</span>
           </div>
@@ -1101,7 +1227,7 @@ export function DoctorFastConsultation({
 
       {/* REVISIT NOTIFICATION (IF RETURNING PATIENT) */}
       {previousVisit && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 bg-sky-50/70 p-2.5 text-xs text-sky-950">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/70 dark:bg-sky-950/40 p-2.5 text-xs text-sky-950 dark:text-sky-200">
           <div className="flex items-center gap-2">
             <Icon icon={faRotate} className="size-3.5 text-sky-600 shrink-0" />
             <span>
@@ -1137,12 +1263,12 @@ export function DoctorFastConsultation({
         </div>
       )}
 
-      {/* TOP COMPACT VITALS BAR */}
-      <div className="rounded-xl border border-purple-200/70 dark:border-slate-800 bg-gradient-to-r from-purple-50/30 via-white to-white dark:from-purple-950/30 dark:via-slate-900 dark:to-slate-900 p-2.5 shadow-2xs">
+      {/* COMPACT VITALS BANNER */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-2xs">
         <div className="flex items-center gap-2 mb-1.5">
           <Icon icon={faHeartPulse} className="size-3 text-rose-500" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-            Quick Vitals
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            Vital Signs
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -1150,7 +1276,12 @@ export function DoctorFastConsultation({
             <label className="text-[10px] font-semibold text-slate-500">BP (mmHg)</label>
             <Input
               value={vitals.bp ?? ""}
-              onChange={(e) => handleVitalChange("bp", e.target.value)}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  vitals: { ...vitals, bp: e.target.value },
+                })
+              }
               placeholder="e.g. 120/80"
               className="h-8 text-xs font-bold"
             />
@@ -1159,7 +1290,12 @@ export function DoctorFastConsultation({
             <label className="text-[10px] font-semibold text-slate-500">Pulse (bpm)</label>
             <Input
               value={vitals.pulse ?? ""}
-              onChange={(e) => handleVitalChange("pulse", e.target.value)}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  vitals: { ...vitals, pulse: e.target.value },
+                })
+              }
               placeholder="e.g. 74"
               className="h-8 text-xs font-bold"
             />
@@ -1168,7 +1304,12 @@ export function DoctorFastConsultation({
             <label className="text-[10px] font-semibold text-slate-500">Weight (kg)</label>
             <Input
               value={vitals.weight ?? ""}
-              onChange={(e) => handleVitalChange("weight", e.target.value)}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  vitals: { ...vitals, weight: e.target.value },
+                })
+              }
               placeholder="e.g. 68"
               className="h-8 text-xs font-bold"
             />
@@ -1177,7 +1318,12 @@ export function DoctorFastConsultation({
             <label className="text-[10px] font-semibold text-slate-500">SpO2 (%)</label>
             <Input
               value={vitals.spo2 ?? ""}
-              onChange={(e) => handleVitalChange("spo2", e.target.value)}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  vitals: { ...vitals, spo2: e.target.value },
+                })
+              }
               placeholder="e.g. 98"
               className="h-8 text-xs font-bold"
             />
@@ -1186,429 +1332,88 @@ export function DoctorFastConsultation({
             <label className="text-[10px] font-semibold text-slate-500">Temp (°F)</label>
             <Input
               value={vitals.temp ?? ""}
-              onChange={(e) => handleVitalChange("temp", e.target.value)}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  vitals: { ...vitals, temp: e.target.value },
+                })
+              }
               placeholder="e.g. 98.6"
               className="h-8 text-xs font-bold"
             />
           </div>
         </div>
-
-        {/* PAST MEDICAL & SURGICAL HISTORY */}
-        {(() => {
-          const rawPast = clinical.patientHistory?.pastMedical;
-          const currentPastMedical =
-            rawPast !== undefined ? rawPast.trim() : "No DM, No HTN, No surgery";
-          const hasPastMedical = Boolean(currentPastMedical);
-
-          const presetTags = [
-            "No DM, No HTN, No surgery",
-            "Known HTN",
-            "Known DM",
-            "No past surgery",
-            "Prior surgery",
-            "Asthma / Allergy",
-          ];
-
-          return (
-            <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                  Past History:
-                </span>
-                {hasPastMedical ? (
-                  <span className="text-xs font-semibold text-slate-800">
-                    {currentPastMedical}
-                  </span>
-                ) : (
-                  <span className="text-xs italic text-slate-400">
-                    None (Removed)
-                  </span>
-                )}
-                {hasPastMedical && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClinicalChange({
-                        ...clinical,
-                        patientHistory: {
-                          ...(clinical.patientHistory ?? {}),
-                          pastMedical: "",
-                        },
-                      });
-                    }}
-                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer border border-rose-200/60"
-                    title="Remove / Clear past history"
-                  >
-                    <Icon icon={faTrashCan} className="size-2.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-1">
-                {presetTags.map((tag) => {
-                  const isActive =
-                    tag === "No DM, No HTN, No surgery"
-                      ? currentPastMedical === "No DM, No HTN, No surgery"
-                      : currentPastMedical.includes(tag) &&
-                        currentPastMedical !== "No DM, No HTN, No surgery";
-
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        let next = "";
-                        if (tag === "No DM, No HTN, No surgery") {
-                          if (currentPastMedical === "No DM, No HTN, No surgery") {
-                            next = "";
-                          } else {
-                            next = "No DM, No HTN, No surgery";
-                          }
-                        } else {
-                          if (currentPastMedical === "No DM, No HTN, No surgery") {
-                            next = tag;
-                          } else if (currentPastMedical.includes(tag)) {
-                            const remaining = currentPastMedical
-                              .split(";")
-                              .map((s) => s.trim())
-                              .filter(
-                                (s) =>
-                                  s &&
-                                  s !== tag &&
-                                  s !== "No DM, No HTN, No surgery"
-                              );
-                            next = remaining.join("; ");
-                          } else {
-                            const existing = currentPastMedical
-                              .split(";")
-                              .map((s) => s.trim())
-                              .filter((s) => s && s !== "No DM, No HTN, No surgery");
-                            existing.push(tag);
-                            next = existing.join("; ");
-                          }
-                        }
-                        onClinicalChange({
-                          ...clinical,
-                          patientHistory: {
-                            ...(clinical.patientHistory ?? {}),
-                            pastMedical: next,
-                          },
-                        });
-                      }}
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                        isActive
-                          ? "bg-indigo-50 border-indigo-300 text-indigo-700 shadow-2xs font-bold"
-                          : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      {isActive && tag !== "No DM, No HTN, No surgery" ? `✓ ${tag}` : tag}
-                    </button>
-                  );
-                })}
-
-                {showCustomHistory ? (
-                  <div className="inline-flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={customHistoryInput}
-                      onChange={(e) => setCustomHistoryInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const val = customHistoryInput.trim();
-                          if (val) {
-                            const existing =
-                              currentPastMedical &&
-                              currentPastMedical !== "No DM, No HTN, No surgery"
-                                ? currentPastMedical
-                                    .split(";")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean)
-                                : [];
-                            existing.push(val);
-                            onClinicalChange({
-                              ...clinical,
-                              patientHistory: {
-                                ...(clinical.patientHistory ?? {}),
-                                pastMedical: existing.join("; "),
-                              },
-                            });
-                            setCustomHistoryInput("");
-                            setShowCustomHistory(false);
-                          }
-                        } else if (e.key === "Escape") {
-                          setShowCustomHistory(false);
-                        }
-                      }}
-                      placeholder="e.g. Hypothyroidism"
-                      className="h-6 text-[10px] px-2 rounded-md border border-indigo-300 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-32 bg-white"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = customHistoryInput.trim();
-                        if (val) {
-                          const existing =
-                            currentPastMedical &&
-                            currentPastMedical !== "No DM, No HTN, No surgery"
-                              ? currentPastMedical
-                                  .split(";")
-                                  .map((s) => s.trim())
-                                  .filter(Boolean)
-                              : [];
-                          existing.push(val);
-                          onClinicalChange({
-                            ...clinical,
-                            patientHistory: {
-                              ...(clinical.patientHistory ?? {}),
-                              pastMedical: existing.join("; "),
-                            },
-                          });
-                          setCustomHistoryInput("");
-                          setShowCustomHistory(false);
-                        }
-                      }}
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700"
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomHistory(false)}
-                      className="text-[10px] text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomHistory(true)}
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-dashed border-slate-300 text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
-                    title="Add custom past medical history"
-                  >
-                    + Custom
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
-      {/* ROW 1: CHIEF COMPLAINTS & CLINICAL FINDINGS (PHYSICAL EXAMINATION) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* CARD 1: CHIEF COMPLAINTS */}
-        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={symptomsRef}>
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-purple-50 text-purple-700 ring-1 ring-purple-500/20">
-                  <Icon icon={faStethoscope} className="size-3.5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      1. Chief Complaints
-                    </span>
-                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/60">
-                      लक्षण व समस्याएं
-                    </span>
-                  </div>
-                </div>
-                {selectedComplaintsList.length > 0 && (
-                  <span className="text-[10px] font-bold text-purple-700 bg-purple-100/80 px-1.5 py-0.2 rounded">
-                    {selectedComplaintsList.length}
-                  </span>
-                )}
-              </div>
+      {/* ========================================================================= */}
+      {/* APOLLO SOM EMR COLLAPSIBLE CLINICAL ACCORDIONS                            */}
+      {/* ========================================================================= */}
 
-              <div className="flex items-center gap-2">
-                {clinical.chiefComplaint?.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => onClinicalChange({ ...clinical, chiefComplaint: "" })}
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                    title="Clear complaints"
-                  >
-                    <Icon icon={faTrashCan} className="size-2.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
+      {/* SECTION 1: COMPLAINTS */}
+      <div id="sec-complaints" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        {/* Accordion Header (Grey Bar Matching Apollo SOM EMR) */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faStethoscope} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Complaints
+            </span>
+            {selectedComplaintsList.length > 0 && (
+              <span className="rounded bg-indigo-100 dark:bg-indigo-900/60 px-1.5 py-0.2 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                {selectedComplaintsList.length}
+              </span>
+            )}
+          </div>
 
-                {/* Suggestions Dropdown Trigger */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setSymptomsMenuOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/80 px-2.5 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    <Icon icon={faWandMagicSparkles} className="size-2.5 text-purple-600" />
-                    <span>Suggestions ({complaintsOptions.length})</span>
-                    <Icon icon={symptomsMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-blue-500" />
-                  </button>
+          <div className="flex items-center gap-2">
+            {/* Macro Text Button */}
+            <button
+              type="button"
+              onClick={() => handleOpenMacro("complaints", "complaints")}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+              title="Open Macro Text selector"
+            >
+              <Icon icon={faFileLines} className="size-2.5 text-indigo-600" />
+              <span>Macro Text</span>
+            </button>
 
-                  {/* Dropdown Menu */}
-                  {symptomsMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-purple-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
-                      {/* Search Bar */}
-                      <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
-                        <div className="relative flex-1">
-                          <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
-                          <input
-                            type="text"
-                            value={symptomSearch}
-                            onChange={(e) => setSymptomSearch(e.target.value)}
-                            placeholder="Search symptoms (knee, back, fever)..."
-                            className="h-7 w-full rounded-md border border-slate-200 bg-slate-50 pl-7 pr-6 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-purple-500 focus:outline-none"
-                            autoFocus
-                          />
-                          {symptomSearch && (
-                            <button
-                              type="button"
-                              onClick={() => setSymptomSearch("")}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                            >
-                              <Icon icon={faXmark} className="size-2.5" />
-                            </button>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSymptomsMenuOpen(false)}
-                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 px-1 cursor-pointer"
-                        >
-                          Done ✕
-                        </button>
-                      </div>
+            {/* Suggestions Trigger */}
+            <button
+              type="button"
+              onClick={() => setSymptomsMenuOpen((v) => !v)}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <Icon icon={faWandMagicSparkles} className="size-2.5 text-amber-600" />
+              <span>Suggestions ({complaintsOptions.length})</span>
+            </button>
 
-                      {/* Doctor Custom Symptom Add Box */}
-                      <div className="p-2 bg-purple-50/80 border border-purple-200 rounded-lg mb-2">
-                        <div className="text-[10px] font-bold text-purple-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>+ Add Doctor Custom Symptom</span>
-                          <span className="text-[9px] text-purple-600 font-normal">Saves for future visits</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            value={newComplaintInput}
-                            onChange={(e) => setNewComplaintInput(e.target.value)}
-                            placeholder="e.g. Pain in shoulder during gym..."
-                            className="h-7 flex-1 rounded border border-purple-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && newComplaintInput.trim()) {
-                                e.preventDefault();
-                                const text = newComplaintInput.trim();
-                                addCustomComplaint(text);
-                                handleToggleSymptom(text);
-                                setNewComplaintInput("");
-                                setComplaintNotice("Added & saved for future ✓");
-                                setTimeout(() => setComplaintNotice(null), 3000);
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const text = newComplaintInput.trim();
-                              if (text) {
-                                addCustomComplaint(text);
-                                handleToggleSymptom(text);
-                                setNewComplaintInput("");
-                                setComplaintNotice("Added & saved for future ✓");
-                                setTimeout(() => setComplaintNotice(null), 3000);
-                              }
-                            }}
-                            disabled={!newComplaintInput.trim()}
-                            className="h-7 px-2.5 rounded bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            + Add
-                          </button>
-                        </div>
-                      </div>
+            {clinical.chiefComplaint?.trim() && (
+              <button
+                type="button"
+                onClick={() => onClinicalChange({ ...clinical, chiefComplaint: "" })}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
 
-                      {/* Options List */}
-                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                        {filteredSymptoms.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-500">
-                            No matching symptoms found. Type above to add a custom one.
-                          </div>
-                        ) : (
-                          filteredSymptoms.map((text, idx) => {
-                            const isAdded = selectedComplaintsList.some(
-                              (c) => c.toLowerCase() === text.trim().toLowerCase()
-                            );
-                            const isFav = isComplaintFavorite(text);
-                            const isCust = isComplaintCustom(text);
-                            return (
-                              <div
-                                key={idx}
-                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                                  isAdded
-                                    ? "bg-purple-50 font-bold text-purple-950 border border-purple-200"
-                                    : "text-slate-700 hover:bg-slate-100 font-medium"
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => toggleComplaintFavorite(text)}
-                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                                >
-                                  <Icon
-                                    icon={faStar}
-                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                                  />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleSymptom(text)}
-                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                                >
-                                  <span className="text-xs text-slate-800 break-words block">{text}</span>
-                                  {isCust && (
-                                    <span className="text-[9px] font-bold text-purple-700 bg-purple-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                      Doctor Custom
-                                    </span>
-                                  )}
-                                </button>
-                                {isCust && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeCustomComplaint(text)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                    title="Delete custom symptom"
-                                  >
-                                    <Icon icon={faTrashCan} className="size-2.5" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleSymptom(text)}
-                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                    isAdded ? "bg-purple-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                                  }`}
-                                >
-                                  {isAdded ? "✓ Added" : "+ Add"}
-                                </button>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => toggleSection("complaints")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.complaints ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
 
-            {/* 1-Tap Quick Symptoms Chips */}
-            <div className="flex flex-wrap items-center gap-1 mb-2">
+        {/* Section Body */}
+        {!collapsedSections.complaints && (
+          <div className="p-4 space-y-2.5">
+            {/* Quick 1-Tap Chips */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {(treatmentMode === "general" ? FAST_GENERAL_SYMPTOMS : FAST_ORTHO_SYMPTOMS).slice(0, 8).map((tag) => {
-                const isSelected = selectedComplaintsList.some(
-                  (c) => c.toLowerCase() === tag.text.toLowerCase()
-                );
+                const isSelected = selectedComplaintsList.some((c) => c.toLowerCase() === tag.text.toLowerCase());
                 return (
                   <button
                     key={tag.label}
@@ -1616,506 +1421,422 @@ export function DoctorFastConsultation({
                     onClick={() => handleToggleSymptom(tag.text)}
                     className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-purple-600 text-white shadow-2xs font-bold"
-                        : "bg-slate-100 text-slate-700 hover:bg-purple-50 hover:text-purple-800 border border-slate-200/80"
+                        ? "bg-indigo-600 text-white font-bold shadow-2xs"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-50 border border-slate-200 dark:border-slate-700"
                     }`}
                   >
-                    <Icon
-                      icon={isSelected ? faCheck : faPlus}
-                      className={`size-2.5 ${isSelected ? "text-white" : "text-purple-600"}`}
-                    />
+                    <Icon icon={isSelected ? faCheck : faPlus} className={`size-2.5 ${isSelected ? "text-white" : "text-indigo-600"}`} />
                     <span>{tag.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Selected Complaints Active Chips */}
-            {selectedComplaintsList.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {selectedComplaintsList.map((complaint, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-800 border border-purple-200"
-                  >
-                    <span>{complaint}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleSymptom(complaint)}
-                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
-                      title="Remove complaint"
-                    >
-                      <Icon icon={faXmark} className="size-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
             <Textarea
               value={clinical.chiefComplaint ?? ""}
               onChange={(e) => onClinicalChange({ ...clinical, chiefComplaint: e.target.value })}
-              placeholder="Enter chief complaints (e.g. Left ankle pain for 4 days; Swelling after twisting injury; Difficulty walking)..."
+              placeholder="e.g. CAME TO ORTHO OPD ON 20/11/2026&#10;HAS LOWER BACK PAIN WITH RADICULOPATHY TO LOWER LIMBS ON BOTH SIDE FOR 3 DAYS&#10;DIFFICULTY IN SITTING UP..."
               rows={3}
-              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 2: HISTORY OF PRESENT ILLNESS */}
+      <div id="sec-history" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faClock} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              History of Present Illness
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleOpenMacro("history", "complaints")}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <Icon icon={faFileLines} className="size-2.5 text-indigo-600" />
+              <span>Macro Text</span>
+            </button>
+
+            {historyOfPresentIllness && (
+              <button
+                type="button"
+                onClick={() =>
+                  onClinicalChange({
+                    ...clinical,
+                    patientHistory: {
+                      ...(clinical.patientHistory ?? {}),
+                      presentIllness: "",
+                    } as any,
+                  })
+                }
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("history")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.history ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
           </div>
         </div>
 
-        {/* CARD 2: CLINICAL FINDINGS / PHYSICAL EXAMINATION */}
-        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={examRef}>
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700 ring-1 ring-amber-500/20">
-                  <Icon icon={faBone} className="size-3.5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      2. Clinical Findings / Physical Exam
-                    </span>
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
-                      परीक्षण एवं निष्कर्ष
-                    </span>
-                  </div>
-                </div>
-                {selectedFindingsList.length > 0 && (
-                  <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-1.5 py-0.2 rounded">
-                    {selectedFindingsList.length}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSetNormalExam}
-                  className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 hover:bg-emerald-100 cursor-pointer transition-colors shadow-2xs"
-                  title="1-click mark examination as normal (NAD)"
-                >
-                  <Icon icon={faCheck} className="size-2.5 text-emerald-600" />
-                  <span>Normal / NAD</span>
-                </button>
-                {clinical.examination?.jointsAndParts?.trim() && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onClinicalChange({
-                        ...clinical,
-                        examination: {
-                          ...clinical.examination,
-                          jointsAndParts: "",
-                        },
-                      })
-                    }
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                    title="Clear findings"
-                  >
-                    <Icon icon={faTrashCan} className="size-2.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
+        {!collapsedSections.history && (
+          <div className="p-4">
+            <Textarea
+              value={historyOfPresentIllness}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  patientHistory: {
+                    ...(clinical.patientHistory ?? {}),
+                    presentIllness: e.target.value,
+                  } as any,
+                })
+              }
+              placeholder="e.g. NO FEVER, NO TRAUMA, NO OTHER JOINT PAIN."
+              rows={2}
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
 
-                {/* Findings Suggestions Dropdown Trigger */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setExamMenuOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    <Icon icon={faBone} className="size-2.5 text-amber-700" />
-                    <span>Presets ({examOptions.length})</span>
-                    <Icon icon={examMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-amber-600" />
-                  </button>
+      {/* SECTION 3: CURRENT MEDICATION */}
+      <div id="sec-current-meds" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faPills} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Current Medication
+            </span>
+          </div>
 
-                  {examMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
-                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-slate-800 px-1">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                          Preset Joint Findings
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setExamMenuOpen(false)}
-                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
-                        >
-                          Done ✕
-                        </button>
-                      </div>
+          <div className="flex items-center gap-2">
+            {((clinical as any).currentMedications?.trim()) && (
+              <button
+                type="button"
+                onClick={() => onClinicalChange({ ...clinical, currentMedications: "" } as any)}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
 
-                      {/* Doctor Custom Exam Finding Add Box */}
-                      <div className="p-2 bg-amber-50/80 border border-amber-200 rounded-lg mb-2">
-                        <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>+ Add Doctor Custom Exam Finding</span>
-                          <span className="text-[9px] text-amber-600 font-normal">Saves for future visits</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            value={newExamInput}
-                            onChange={(e) => setNewExamInput(e.target.value)}
-                            placeholder="e.g. Lateral ankle tenderness, mild swelling..."
-                            className="h-7 flex-1 rounded border border-amber-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && newExamInput.trim()) {
-                                e.preventDefault();
-                                const text = newExamInput.trim();
-                                addCustomExam(text);
-                                handleToggleExamNote(text);
-                                setNewExamInput("");
-                                setExamNotice("Added to findings & saved for future ✓");
-                                setTimeout(() => setExamNotice(null), 3000);
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const text = newExamInput.trim();
-                              if (text) {
-                                addCustomExam(text);
-                                handleToggleExamNote(text);
-                                setNewExamInput("");
-                                setExamNotice("Added to findings & saved for future ✓");
-                                setTimeout(() => setExamNotice(null), 3000);
-                              }
-                            }}
-                            disabled={!newExamInput.trim()}
-                            className="h-7 px-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            + Add
-                          </button>
-                        </div>
-                      </div>
+            <button
+              type="button"
+              onClick={() => toggleSection("currentMeds")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.currentMeds ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
 
-                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                        {examOptions.map((text, idx) => {
-                          const isAdded = selectedFindingsList.some(
-                            (f) => f.toLowerCase() === text.trim().toLowerCase()
-                          );
-                          const isFav = isExamFavorite(text);
-                          const isCust = isExamCustom(text);
-                          return (
-                            <div
-                              key={idx}
-                              className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                                isAdded
-                                  ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
-                                  : "text-slate-700 hover:bg-slate-100 font-medium"
-                              }`}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => toggleExamFavorite(text)}
-                                className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                              >
-                                <Icon
-                                  icon={faStar}
-                                  className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                                />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleToggleExamNote(text)}
-                                className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                              >
-                                <span className="text-xs text-slate-800 break-words block">{text}</span>
-                                {isCust && (
-                                  <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                    Doctor Custom
-                                  </span>
-                                )}
-                              </button>
-                              {isCust && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeCustomExam(text)}
-                                  className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                  title="Delete custom exam finding"
-                                >
-                                  <Icon icon={faTrashCan} className="size-2.5" />
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleExamNote(text)}
-                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                  isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                                }`}
-                              >
-                                {isAdded ? "✓ Added" : "+ Add"}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+        {!collapsedSections.currentMeds && (
+          <div className="p-4">
+            <Textarea
+              value={(clinical as any).currentMedications || ""}
+              onChange={(e) => onClinicalChange({ ...clinical, currentMedications: e.target.value } as any)}
+              placeholder="Enter details of existing medicines patient is currently taking..."
+              rows={2}
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
 
-            {/* 1-Tap Quick Findings Chips */}
-            <div className="flex flex-wrap items-center gap-1 mb-2">
-              {FAST_EXAM_CHIPS.slice(0, 8).map((chip) => {
-                const isSelected = selectedFindingsList.some(
-                  (f) => f.toLowerCase() === chip.text.toLowerCase()
-                );
+      {/* SECTION 4: PHYSICAL EXAMINATION */}
+      <div id="sec-exam" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faBone} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Physical Examination
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSetNormalExam}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 cursor-pointer shadow-2xs"
+            >
+              <Icon icon={faCheck} className="size-2.5 text-emerald-600" />
+              <span>Normal / NAD</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenMacro("examination", "examination")}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <Icon icon={faFileLines} className="size-2.5 text-indigo-600" />
+              <span>Macro Text</span>
+            </button>
+
+            {clinical.examination?.jointsAndParts?.trim() && (
+              <button
+                type="button"
+                onClick={() =>
+                  onClinicalChange({
+                    ...clinical,
+                    examination: { ...clinical.examination, jointsAndParts: "" },
+                  })
+                }
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("exam")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.exam ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
+
+        {!collapsedSections.exam && (
+          <div className="p-4 space-y-3">
+            {/* Quick Exam Chips */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {FAST_EXAM_CHIPS.slice(0, 7).map((tag) => {
+                const isSelected = selectedFindingsList.some((f) => f.toLowerCase() === tag.text.toLowerCase());
                 return (
                   <button
-                    key={chip.label}
+                    key={tag.label}
                     type="button"
-                    onClick={() => handleToggleExamNote(chip.text)}
+                    onClick={() => handleToggleExamNote(tag.text)}
                     className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-amber-600 text-white shadow-2xs font-bold"
-                        : "bg-slate-100 text-slate-700 hover:bg-amber-50 hover:text-amber-800 border border-slate-200/80"
+                        ? "bg-amber-600 text-white font-bold shadow-2xs"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-50 border border-slate-200 dark:border-slate-700"
                     }`}
                   >
-                    <Icon
-                      icon={isSelected ? faCheck : faPlus}
-                      className={`size-2.5 ${isSelected ? "text-white" : "text-amber-600"}`}
-                    />
-                    <span>{chip.label}</span>
+                    <Icon icon={isSelected ? faCheck : faPlus} className={`size-2.5 ${isSelected ? "text-white" : "text-amber-600"}`} />
+                    <span>{tag.label}</span>
                   </button>
                 );
               })}
             </div>
-
-            {/* Selected Findings Active Chips */}
-            {selectedFindingsList.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {selectedFindingsList.map((finding, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-900 border border-amber-200"
-                  >
-                    <span>{finding}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleExamNote(finding)}
-                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
-                      title="Remove finding"
-                    >
-                      <Icon icon={faXmark} className="size-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
 
             <Textarea
               value={clinical.examination?.jointsAndParts ?? ""}
               onChange={(e) =>
                 onClinicalChange({
                   ...clinical,
-                  examination: {
-                    ...clinical.examination,
-                    jointsAndParts: e.target.value,
-                  },
+                  examination: { ...clinical.examination, jointsAndParts: e.target.value },
                 })
               }
-              placeholder="Enter physical examination findings (e.g. Lateral ankle tenderness; Mild swelling; Pain during movement)..."
+              placeholder="e.g. LS SPINE: LUMBER LORDOSIS MAINTAINED, ACTIVE SLR POSSIBLE, NO STRETCH PAIN PRESENT, FIG OF 4 FREE & PAINLESS, BACK SPASM ++, NO TENDERNESS, NO DEFORMITY, ROM OF FLEXION, ROTATIONS - PAINLESS AND FREE, EXTENSION IS PAINFUL..."
               rows={3}
-              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
+
+            {/* Attachments Section (Exact Apollo SOM EMR Subsection) */}
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Icon icon={faPaperclip} className="size-3 text-slate-500" />
+                  Attachments
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="text-[11px] font-bold text-indigo-700 hover:underline cursor-pointer"
+                  >
+                    Add New
+                  </button>
+                  <span className="text-slate-300">·</span>
+                  <button
+                    type="button"
+                    className="text-[11px] font-bold text-indigo-700 hover:underline cursor-pointer"
+                  >
+                    Add From Favourites
+                  </button>
+                </div>
+              </div>
+              <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-3 text-center text-xs text-slate-500">
+                <Icon icon={faUpload} className="size-4 mb-1 text-slate-400 block mx-auto" />
+                Upload clinical attachments, X-rays, or photograph
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ROW 2: PROVISIONAL DIAGNOSIS & INVESTIGATIONS ADVISED */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* CARD 3: PROVISIONAL / CLINICAL DIAGNOSIS */}
-        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={diagnosisRef}>
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20">
-                  <Icon icon={faNotesMedical} className="size-3.5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      3. Provisional Diagnosis
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/60">
-                      संभावित चिकित्सीय निदान
-                    </span>
+      {/* SECTION 5: DIAGNOSIS */}
+      <div id="sec-diagnosis" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faStethoscope} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Diagnosis
+            </span>
+            {selectedDiagnosesList.length > 0 && (
+              <span className="rounded bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.2 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
+                {selectedDiagnosesList.length}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {clinical.diagnosis?.trim() && (
+              <button
+                type="button"
+                onClick={() => onClinicalChange({ ...clinical, diagnosis: "" })}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("diagnosis")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.diagnosis ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
+
+        {!collapsedSections.diagnosis && (
+          <div className="p-4 space-y-3">
+            {/* Apollo SOM EMR Structured Diagnosis Entry Grid */}
+            <div className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
+                Current Diagnosis
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                {/* Search SNOMED / Diagnosis */}
+                <div className="sm:col-span-2 relative">
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">SNOMED / Diagnosis *</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={diagSearch}
+                      onChange={(e) => setDiagSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && diagSearch.trim()) {
+                          e.preventDefault();
+                          const full = [diagSearch.trim(), diagSide !== "Select" ? `(${diagSide})` : "", diagLocation ? `Location: ${diagLocation}` : ""].filter(Boolean).join(" ");
+                          handleToggleDiagnosis(full);
+                          setDiagSearch("");
+                          setDiagLocation("");
+                        }
+                      }}
+                      placeholder="Search SNOMED or type condition (e.g. Left Ankle Sprain)..."
+                      className="w-full h-8 pl-2.5 pr-7 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <Icon icon={faMagnifyingGlass} className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-                {selectedDiagnosesList.length > 0 && (
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.2 rounded">
-                    {selectedDiagnosesList.length}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {clinical.diagnosis?.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => onClinicalChange({ ...clinical, diagnosis: "" })}
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                    title="Clear diagnosis"
+
+                {/* Select Side */}
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Select Side</label>
+                  <select
+                    value={diagSide}
+                    onChange={(e) => setDiagSide(e.target.value)}
+                    className="w-full h-8 px-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   >
-                    <Icon icon={faTrashCan} className="size-2.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
-                {/* Suggestions Dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setDiagnosisMenuOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2.5 py-1 text-xs font-bold text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    <Icon icon={faWandMagicSparkles} className="size-2.5 text-emerald-600" />
-                    <span>Suggestions ({diagnosisOptions.length})</span>
-                    <Icon icon={diagnosisMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-emerald-600" />
-                  </button>
-
-                  {/* Autocomplete Dropdown List */}
-                  {diagnosisMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-emerald-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
-                      <div className="px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-2">
-                        <span>Suggested Diagnoses ({filteredDiagnoses.length})</span>
-                        <button
-                          type="button"
-                          onClick={() => setDiagnosisMenuOpen(false)}
-                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          Close ✕
-                        </button>
-                      </div>
-
-                      {/* Doctor Custom Diagnosis Add & Filter Box */}
-                      <div className="p-2 bg-emerald-50/80 border border-emerald-200 rounded-lg mb-2">
-                        <div className="text-[10px] font-bold text-emerald-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>+ Search / Add Custom Diagnosis</span>
-                          <span className="text-[9px] text-emerald-600 font-normal">Saves for future visits</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            value={newDiagnosisInput}
-                            onChange={(e) => setNewDiagnosisInput(e.target.value)}
-                            placeholder="Type to filter or add custom (e.g. Left Ankle Sprain)..."
-                            className="h-7 flex-1 rounded border border-emerald-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && newDiagnosisInput.trim()) {
-                                e.preventDefault();
-                                const text = newDiagnosisInput.trim();
-                                addCustomDiagnosis(text);
-                                handleToggleDiagnosis(text);
-                                setNewDiagnosisInput("");
-                                setDiagnosisNotice("Saved & applied diagnosis ✓");
-                                setTimeout(() => setDiagnosisNotice(null), 3000);
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const text = newDiagnosisInput.trim();
-                              if (text) {
-                                addCustomDiagnosis(text);
-                                handleToggleDiagnosis(text);
-                                setNewDiagnosisInput("");
-                                setDiagnosisNotice("Saved & applied diagnosis ✓");
-                                setTimeout(() => setDiagnosisNotice(null), 3000);
-                              }
-                            }}
-                            disabled={!newDiagnosisInput.trim()}
-                            className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            + Add
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Diagnosis Options List */}
-                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                        {filteredDiagnoses.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-500">
-                            No matching presets. You can add it using the box above.
-                          </div>
-                        ) : (
-                          filteredDiagnoses.map((text, idx) => {
-                            const isAdded = selectedDiagnosesList.some(
-                              (d) => d.toLowerCase() === text.trim().toLowerCase()
-                            );
-                            const isFav = isDiagnosisFavorite(text);
-                            const isCust = isDiagnosisCustom(text);
-                            return (
-                              <div
-                                key={idx}
-                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                                  isAdded
-                                    ? "bg-emerald-50 font-bold text-emerald-950 border border-emerald-200"
-                                    : "text-slate-800 hover:bg-slate-50 hover:text-emerald-900 font-medium"
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => toggleDiagnosisFavorite(text)}
-                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                                >
-                                  <Icon
-                                    icon={faStar}
-                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                                  />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleDiagnosis(text)}
-                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                                >
-                                  <span className="text-xs text-slate-900 font-semibold break-words block">{text}</span>
-                                  {isCust && (
-                                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                      Doctor Custom
-                                    </span>
-                                  )}
-                                </button>
-                                {isCust && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeCustomDiagnosis(text)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                    title="Delete custom diagnosis"
-                                  >
-                                    <Icon icon={faTrashCan} className="size-2.5" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleDiagnosis(text)}
-                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                    isAdded
-                                      ? "bg-emerald-600 text-white"
-                                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                                  }`}
-                                >
-                                  {isAdded ? "✓ Added" : "+ Add"}
-                                </button>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    <option value="Select">Select</option>
+                    <option value="Left">Left</option>
+                    <option value="Right">Right</option>
+                    <option value="Bilateral">Bilateral</option>
+                  </select>
                 </div>
+
+                {/* Location */}
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Location</label>
+                  <input
+                    type="text"
+                    value={diagLocation}
+                    onChange={(e) => setDiagLocation(e.target.value)}
+                    placeholder="e.g. Lateral ankle, L4-L5..."
+                    className="w-full h-8 px-2.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Onset / Duration & Add Button */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 mt-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-slate-500">Onset / Duration:</span>
+                  <input
+                    type="number"
+                    value={diagOnsetNum}
+                    onChange={(e) => setDiagOnsetNum(e.target.value)}
+                    placeholder="4"
+                    className="h-7 w-16 px-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-center font-bold"
+                  />
+                  <select
+                    value={diagOnsetUnit}
+                    onChange={(e) => setDiagOnsetUnit(e.target.value)}
+                    className="h-7 px-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
+                  >
+                    <option value="Days">Days</option>
+                    <option value="Weeks">Weeks</option>
+                    <option value="Months">Months</option>
+                  </select>
+                  <select
+                    value={diagType}
+                    onChange={(e) => setDiagType(e.target.value as any)}
+                    className="h-7 px-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-bold text-emerald-800"
+                  >
+                    <option value="Provisional">Provisional</option>
+                    <option value="Definitive">Definitive</option>
+                    <option value="Secondary">Secondary</option>
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    if (diagSearch.trim()) {
+                      const full = [
+                        diagSearch.trim(),
+                        diagSide !== "Select" ? `(${diagSide})` : "",
+                        diagLocation ? `Location: ${diagLocation}` : "",
+                        diagOnsetNum ? `Onset: ${diagOnsetNum} ${diagOnsetUnit}` : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ");
+                      handleToggleDiagnosis(full);
+                      setDiagSearch("");
+                      setDiagLocation("");
+                      setDiagOnsetNum("");
+                    }
+                  }}
+                  disabled={!diagSearch.trim()}
+                  className="h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                >
+                  + Add Diagnosis
+                </Button>
               </div>
             </div>
 
-            {/* 1-Tap Quick Diagnosis Chips */}
-            <div className="flex flex-wrap items-center gap-1 mb-2">
+            {/* Quick 1-Tap Diagnosis Chips */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {(treatmentMode === "general" ? FAST_GENERAL_DIAGNOSES : FAST_ORTHO_DIAGNOSES).slice(0, 8).map((tag) => {
-                const isSelected = selectedDiagnosesList.some(
-                  (d) => d.toLowerCase() === tag.text.toLowerCase()
-                );
+                const isSelected = selectedDiagnosesList.some((d) => d.toLowerCase() === tag.text.toLowerCase());
                 return (
                   <button
                     key={tag.label}
@@ -2123,774 +1844,338 @@ export function DoctorFastConsultation({
                     onClick={() => handleToggleDiagnosis(tag.text)}
                     className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-emerald-600 text-white shadow-2xs font-bold"
-                        : "bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 border border-slate-200/80"
+                        ? "bg-emerald-600 text-white font-bold shadow-2xs"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 border border-slate-200 dark:border-slate-700"
                     }`}
                   >
-                    <Icon
-                      icon={isSelected ? faCheck : faPlus}
-                      className={`size-2.5 ${isSelected ? "text-white" : "text-emerald-600"}`}
-                    />
+                    <Icon icon={isSelected ? faCheck : faPlus} className={`size-2.5 ${isSelected ? "text-white" : "text-emerald-600"}`} />
                     <span>{tag.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Inline Add Diagnosis Input Box for rapid multi-diagnosis entry */}
-            <div className="flex items-center gap-1.5 mb-2">
-              <input
-                type="text"
-                value={newDiagnosisInput}
-                onChange={(e) => setNewDiagnosisInput(e.target.value)}
-                placeholder="Type multiple diagnoses & press Enter (e.g. Left Ankle Sprain)..."
-                className="h-7 flex-1 rounded border border-emerald-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-2xs"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newDiagnosisInput.trim()) {
-                    e.preventDefault();
-                    const text = newDiagnosisInput.trim();
-                    addCustomDiagnosis(text);
-                    handleToggleDiagnosis(text);
-                    setNewDiagnosisInput("");
-                    setDiagnosisNotice("Diagnosis added ✓");
-                    setTimeout(() => setDiagnosisNotice(null), 2500);
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const text = newDiagnosisInput.trim();
-                  if (text) {
-                    addCustomDiagnosis(text);
-                    handleToggleDiagnosis(text);
-                    setNewDiagnosisInput("");
-                    setDiagnosisNotice("Diagnosis added ✓");
-                    setTimeout(() => setDiagnosisNotice(null), 2500);
-                  }
-                }}
-                disabled={!newDiagnosisInput.trim()}
-                className="h-7 px-2.5 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-              >
-                + Add
-              </button>
-            </div>
-
-            {/* Selected Diagnoses Active Chips */}
+            {/* APOLLO SOM EMR DIAGNOSIS TABLE */}
             {selectedDiagnosesList.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {selectedDiagnosesList.map((diag, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800 border border-emerald-200"
-                  >
-                    <span>{diag}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDiagnosis(diag)}
-                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
-                      title="Remove diagnosis"
-                    >
-                      <Icon icon={faXmark} className="size-2.5" />
-                    </button>
-                  </span>
-                ))}
+              <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                    <tr>
+                      <th className="py-2 px-3">Diagnosis</th>
+                      <th className="py-2 px-3">Type</th>
+                      <th className="py-2 px-3 text-center">Print</th>
+                      <th className="py-2 px-3 text-center">Fav</th>
+                      <th className="py-2 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                    {selectedDiagnosesList.map((diag, i) => (
+                      <tr key={i} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                        <td className="py-2.5 px-3">
+                          <span className="font-bold text-slate-900 dark:text-white mr-2">::</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{diag}</span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 text-[11px] font-bold border border-emerald-200">
+                            Provisional
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <input type="checkbox" defaultChecked className="size-3.5 text-emerald-600 rounded" />
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleDiagnosisFavorite(diag)}
+                            className="text-slate-300 hover:text-amber-500"
+                          >
+                            <Icon icon={faStar} className={`size-3 ${isDiagnosisFavorite(diag) ? "text-amber-500 fill-amber-500" : ""}`} />
+                          </button>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDiagnosis(diag)}
+                            className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                            title="Delete diagnosis"
+                          >
+                            <Icon icon={faTrashCan} className="size-3" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
+          </div>
+        )}
+      </div>
 
-            <Textarea
-              value={clinical.diagnosis ?? ""}
-              onChange={(e) => onClinicalChange({ ...clinical, diagnosis: e.target.value })}
-              placeholder="Enter clinical diagnosis (e.g. Left Ankle Sprain)..."
-              rows={3}
-              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
-            />
+      {/* SECTION 6: INVESTIGATION RESULTS */}
+      <div id="sec-investigations" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faFlaskVial} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Investigation Results
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {investigationText.trim() && (
+              <button
+                type="button"
+                onClick={() => handleInvestigationTextChange("")}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("investigations")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.investigations ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
           </div>
         </div>
 
-        {/* CARD 4: INVESTIGATIONS ADVISED */}
-        <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between relative" ref={investigationRef}>
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-700 ring-1 ring-sky-500/20">
-                  <Icon icon={faFlaskVial} className="size-3.5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      4. Investigations Advised
-                    </span>
-                    <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/60">
-                      जांच एवं एक्स-रे निर्देश
-                    </span>
-                  </div>
-                </div>
-                {selectedInvestigationsList.length > 0 && (
-                  <span className="text-[10px] font-bold text-sky-700 bg-sky-100/80 px-1.5 py-0.2 rounded">
-                    {selectedInvestigationsList.length}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {investigationText.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => handleInvestigationTextChange("")}
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                    title="Clear investigations"
-                  >
-                    <Icon icon={faTrashCan} className="size-2.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
-                {/* Suggestions Dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setInvestigationMenuOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50/80 px-2.5 py-1 text-xs font-bold text-sky-800 hover:bg-sky-100 hover:border-sky-300 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    <Icon icon={faFlaskVial} className="size-2.5 text-sky-600" />
-                    <span>Lab / X-Ray Catalog ({investigationOptions.length})</span>
-                    <Icon icon={investigationMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-sky-600" />
-                  </button>
-
-                  {/* Investigation Dropdown Menu */}
-                  {investigationMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 max-h-80 overflow-y-auto rounded-xl border border-sky-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
-                      <div className="px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-700 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 mb-2">
-                        <span>All Investigations & Imaging ({filteredInvestigations.length})</span>
-                        <button
-                          type="button"
-                          onClick={() => setInvestigationMenuOpen(false)}
-                          className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer"
-                        >
-                          Close ✕
-                        </button>
-                      </div>
-
-                      {/* Doctor Custom Test / Filter Box */}
-                      <div className="p-2 bg-sky-50/80 border border-sky-200 rounded-lg mb-2">
-                        <div className="text-[10px] font-bold text-sky-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>+ Search or Add Test / X-Ray</span>
-                          <span className="text-[9px] text-sky-600 font-normal">Saves for future visits</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            value={newInvestigationInput}
-                            onChange={(e) => {
-                              setNewInvestigationInput(e.target.value);
-                              setInvestigationSearch(e.target.value);
-                            }}
-                            placeholder="Type test name (e.g. Digital X-Ray Left Ankle, CBC)..."
-                            className="h-7 flex-1 rounded border border-sky-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && newInvestigationInput.trim()) {
-                                e.preventDefault();
-                                const text = newInvestigationInput.trim();
-                                addCustomInvestigation(text);
-                                handleToggleInvestigation(text);
-                                setNewInvestigationInput("");
-                                setInvestigationSearch("");
-                                setInvestigationNotice("Added investigation ✓");
-                                setTimeout(() => setInvestigationNotice(null), 2500);
-                              }
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const text = newInvestigationInput.trim();
-                              if (text) {
-                                addCustomInvestigation(text);
-                                handleToggleInvestigation(text);
-                                setNewInvestigationInput("");
-                                setInvestigationSearch("");
-                                setInvestigationNotice("Added investigation ✓");
-                                setTimeout(() => setInvestigationNotice(null), 2500);
-                              }
-                            }}
-                            disabled={!newInvestigationInput.trim()}
-                            className="h-7 px-2.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            + Add
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Test Options List */}
-                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                        {filteredInvestigations.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-500">
-                            No matching test found. Type above to add a custom test.
-                          </div>
-                        ) : (
-                          filteredInvestigations.map((text, idx) => {
-                            const isAdded = selectedInvestigationsList.some(
-                              (inv) => inv.toLowerCase() === text.trim().toLowerCase()
-                            );
-                            const isFav = isInvestigationFavorite(text);
-                            const isCust = isInvestigationCustom(text);
-                            return (
-                              <div
-                                key={idx}
-                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                                  isAdded
-                                    ? "bg-sky-50 font-bold text-sky-950 border border-sky-200"
-                                    : "text-slate-800 hover:bg-slate-50 hover:text-sky-900 font-medium"
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => toggleInvestigationFavorite(text)}
-                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                                >
-                                  <Icon
-                                    icon={faStar}
-                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                                  />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleInvestigation(text)}
-                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                                >
-                                  <span className="text-xs text-slate-900 font-semibold break-words block">{text}</span>
-                                  {isCust && (
-                                    <span className="text-[9px] font-bold text-sky-700 bg-sky-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                      Doctor Custom
-                                    </span>
-                                  )}
-                                </button>
-                                {isCust && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeCustomInvestigation(text)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                    title="Delete custom test"
-                                  >
-                                    <Icon icon={faTrashCan} className="size-2.5" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleInvestigation(text)}
-                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                    isAdded
-                                      ? "bg-sky-600 text-white"
-                                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                                  }`}
-                                >
-                                  {isAdded ? "✓ Added" : "+ Add"}
-                                </button>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* 1-Tap Quick Investigation Chips */}
-            <div className="flex flex-wrap items-center gap-1 mb-2">
-              {FAST_INVESTIGATION_CHIPS.slice(0, 8).map((chip) => {
-                const isSelected = selectedInvestigationsList.some(
-                  (inv) => inv.toLowerCase() === chip.text.toLowerCase()
-                );
-                return (
-                  <button
-                    key={chip.label}
-                    type="button"
-                    onClick={() => handleToggleInvestigation(chip.text)}
-                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-all cursor-pointer ${
-                      isSelected
-                        ? "bg-sky-600 text-white shadow-2xs font-bold"
-                        : "bg-slate-100 text-slate-700 hover:bg-sky-50 hover:text-sky-900 border border-slate-200/80"
-                    }`}
-                  >
-                    <Icon
-                      icon={isSelected ? faCheck : faPlus}
-                      className={`size-2.5 ${isSelected ? "text-white" : "text-sky-600"}`}
-                    />
-                    <span>{chip.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Inline Add Investigation Input Box */}
-            <div className="flex items-center gap-1.5 mb-2">
-              <input
-                type="text"
-                value={newInvestigationInput}
-                onChange={(e) => setNewInvestigationInput(e.target.value)}
-                placeholder="Type test name & press Enter (e.g. X-ray Left Ankle, CBC)..."
-                className="h-7 flex-1 rounded border border-sky-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-2xs"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newInvestigationInput.trim()) {
-                    e.preventDefault();
-                    const text = newInvestigationInput.trim();
-                    addCustomInvestigation(text);
-                    handleToggleInvestigation(text);
-                    setNewInvestigationInput("");
-                    setInvestigationNotice("Test added ✓");
-                    setTimeout(() => setInvestigationNotice(null), 2500);
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const text = newInvestigationInput.trim();
-                  if (text) {
-                    addCustomInvestigation(text);
-                    handleToggleInvestigation(text);
-                    setNewInvestigationInput("");
-                    setInvestigationNotice("Test added ✓");
-                    setTimeout(() => setInvestigationNotice(null), 2500);
-                  }
-                }}
-                disabled={!newInvestigationInput.trim()}
-                className="h-7 px-2.5 rounded bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-              >
-                + Add
-              </button>
-            </div>
-
-            {/* Selected Investigations Active Chips */}
-            {selectedInvestigationsList.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {selectedInvestigationsList.map((inv, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800 border border-sky-200"
-                  >
-                    <span>{inv}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleInvestigation(inv)}
-                      className="hover:text-rose-600 transition-colors cursor-pointer ml-0.5"
-                      title="Remove investigation"
-                    >
-                      <Icon icon={faXmark} className="size-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
+        {!collapsedSections.investigations && (
+          <div className="p-4 space-y-2.5">
             <Textarea
               value={investigationText}
               onChange={(e) => handleInvestigationTextChange(e.target.value)}
-              placeholder="Enter diagnostic tests & imaging orders (e.g. X-ray Left Ankle – if indicated by clinical examination)..."
-              rows={3}
-              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
+              placeholder="e.g. TRIMURTI DIAGNOSTIC CENTRE... X-RAY LS SPINE AP/LAT: LOSS OF LUMBAR LORDOSIS..."
+              rows={2}
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
             />
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ROW 3: CARD 5: TREATMENT PLAN · PRESCRIBED MEDICINES (Rx) */}
-      <div className="rounded-2xl border-2 border-purple-200/90 dark:border-purple-900/60 bg-white dark:bg-slate-900 p-3 md:p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-200/80 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xs">
-              <Icon icon={faPills} className="size-3.5" />
+      {/* SECTION 7: OTHER TESTS */}
+      <div id="sec-other-tests" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faFlaskVial} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Other Tests
             </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold text-slate-950">
-                  5. Treatment Plan · Prescribed Medicines (Rx)
-                </span>
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/60">
-                  उपचार योजना · औषधियां
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                {medicines.filter((m) => m.name?.trim()).length} medicine{medicines.filter((m) => m.name?.trim()).length === 1 ? "" : "s"} prescribed
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleAddMedicineRow}
-            className="gap-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-xs"
-          >
-            <Icon icon={faPlus} className="size-3" />
-            Add Medicine
-          </Button>
-        </div>
-
-        {/* MEDICINE ROWS */}
-        <div className="space-y-3">
-          {medicines.map((med, index) => {
-            const matchedDrug = med.name?.trim()
-              ? findDrugSuggestion(drugSuggestions, med.name)
-              : null;
-
-            return (
-              <div
-                key={index}
-                className="rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-slate-50/50 dark:bg-slate-800/40 p-2.5 transition-all hover:border-purple-400"
-              >
-                {/* Row Header: Number, Drug Name, Remove */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-800 text-xs font-bold">
-                    #{index + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <MedicineCombobox
-                      name={`fast-med-${index}`}
-                      value={med.name}
-                      onChange={(value) => handleUpdateMedicine(index, { name: value })}
-                      onSelectMedicine={(suggestion) => handleSelectDrugSuggestion(index, suggestion)}
-                      suggestions={drugSuggestions}
-                      loading={drugSuggestionsLoading}
-                      favorites={favorites}
-                      onFavoritesChange={setFavorites}
-                    />
-                  </div>
-                  {medicines.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMedicineRow(index)}
-                      className="size-8 shrink-0 flex items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
-                      title="Remove medicine"
-                    >
-                      <Icon icon={faTrashCan} className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Generic Salt Indicator */}
-                {(med.genericName || matchedDrug?.genericName) && (
-                  <div className="mb-1.5 pl-8 flex items-center gap-1.5 text-[11px] text-teal-800">
-                    <span className="font-semibold text-teal-900">Generic:</span>
-                    <span className="bg-teal-50 text-teal-900 border border-teal-200/80 rounded px-1.5 py-0.5 font-medium">
-                      {med.genericName || matchedDrug?.genericName}
-                    </span>
-                  </div>
-                )}
-
-                {/* 1-CLICK RAPID DOSING PRESETS (1 TAP FILLS DOSE, FREQ, DUR, INSTRUCTIONS) */}
-                <div className="mb-2 pl-8 flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-violet-700 uppercase">⚡ 1-Tap Dose:</span>
-                  {RAPID_DOSING_PRESETS.map((preset, pIdx) => (
-                    <button
-                      key={pIdx}
-                      type="button"
-                      onClick={() => handleApplyDosingPreset(index, preset)}
-                      className="inline-flex items-center gap-1 rounded-md border border-violet-200/90 bg-white px-2 py-0.5 text-[10px] font-bold text-violet-900 hover:bg-violet-100 hover:border-violet-400 cursor-pointer transition-all active:scale-95"
-                    >
-                      <span>{preset.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Granular input fields */}
-                <div className="pl-8 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500">Dose</label>
-                    <Input
-                      value={med.dosage}
-                      onChange={(e) => handleUpdateMedicine(index, { dosage: e.target.value })}
-                      placeholder="1 tablet"
-                      className="h-8 text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500">Frequency</label>
-                    <Input
-                      value={med.frequency}
-                      onChange={(e) =>
-                        handleUpdateMedicine(index, {
-                          frequency: expandFrequencyInput(e.target.value),
-                        })
-                      }
-                      placeholder="1-0-1 or Twice daily"
-                      className="h-8 text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500">Duration</label>
-                    <Input
-                      value={med.duration}
-                      onChange={(e) => handleUpdateMedicine(index, { duration: e.target.value })}
-                      placeholder="5 days"
-                      className="h-8 text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-500">Instructions</label>
-                    <Input
-                      value={med.instructions ?? ""}
-                      onChange={(e) => handleUpdateMedicine(index, { instructions: e.target.value })}
-                      placeholder="e.g. After food, at bedtime..."
-                      className="h-8 text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Big Add Medicine CTA */}
-        <div className="mt-3 text-center">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleAddMedicineRow}
-            className="w-full border-dashed border-2 border-violet-300 py-3 text-xs font-bold text-violet-700 hover:bg-violet-50"
-          >
-            <Icon icon={faPlus} className="size-3 mr-1" />
-            + Add Another Medicine Row
-          </Button>
-        </div>
-      </div>
-
-      {/* ROW 4: CARD 6: TREATMENT PLAN · BANDAGES, PLASTERS & SUPPORTS */}
-      <div className="rounded-2xl border-2 border-indigo-200/90 dark:border-indigo-900/60 bg-white dark:bg-slate-900 p-3.5 shadow-xs transition-shadow hover:shadow-sm">
-        <div className="flex items-center justify-between gap-2 mb-2.5 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/20 dark:bg-indigo-950 dark:text-indigo-300">
-              <Icon icon={faBandage} className="size-3.5" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">
-                  6. Treatment Plan · Bandages, Plasters & Supports
-                </span>
-                <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-200/60">
-                  प्लास्टर, पट्टी एवं सपोर्ट
-                </span>
-                {plasterOrBandages.length > 0 && (
-                  <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 dark:bg-indigo-900/80 px-2 py-0.5 rounded-full">
-                    {plasterOrBandages.length} applied
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Prescribe POP slabs, casts, crepe bandages, braces, splints & give care instructions to patient
-              </p>
-            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Plaster Suggestions Dropdown Trigger */}
+            <button
+              type="button"
+              onClick={() => toggleSection("otherTests")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.otherTests ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
+
+        {!collapsedSections.otherTests && (
+          <div className="p-4">
+            <Textarea
+              value={(clinical.investigationResults as any)?.other || "HBA1C, URIC ACID, VIT D3 TOTAL, VIT B12"}
+              onChange={(e) =>
+                onClinicalChange({
+                  ...clinical,
+                  investigationResults: {
+                    ...(clinical.investigationResults ?? {}),
+                    other: e.target.value,
+                  },
+                })
+              }
+              placeholder="HBA1C, URIC ACID, VIT D3 TOTAL, VIT B12..."
+              rows={2}
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 focus:border-indigo-500 bg-white dark:bg-slate-900 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 8: BANDAGES, PLASTERS & SUPPORTS */}
+      <div id="sec-plasters" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-visible">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faBandage} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Bandages, Plasters & Supports
+            </span>
+            {plasterOrBandages.length > 0 && (
+              <span className="rounded bg-indigo-100 dark:bg-indigo-900/60 px-1.5 py-0.2 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                {plasterOrBandages.length} applied
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Suggestions Trigger & Dropdown */}
             <div className="relative" ref={plasterMenuRef}>
               <button
                 type="button"
                 onClick={() => setPlasterMenuOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-800 hover:bg-indigo-100 hover:border-indigo-300 transition-colors shadow-2xs cursor-pointer dark:bg-indigo-950/60 dark:border-indigo-800 dark:text-indigo-300"
+                className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-slate-600 cursor-pointer shadow-2xs"
+                title="View popular orthopedic appliances & bandages or add custom suggestions"
               >
-                <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600 dark:text-indigo-400" />
+                <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600" />
                 <span>Suggestions ({plasterOptions.length})</span>
-                <Icon icon={plasterMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-indigo-600 dark:text-indigo-400" />
+                <Icon icon={faChevronDown} className="size-2 text-slate-400" />
               </button>
 
-              {/* Plaster Suggestions Dropdown Menu */}
               {plasterMenuOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-indigo-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
-                  <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-slate-800 px-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
-                      Bandage & Plaster Presets
+                <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-30 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      Popular Appliances & Bandages
                     </span>
                     <button
                       type="button"
                       onClick={() => setPlasterMenuOpen(false)}
-                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
+                      className="text-slate-400 hover:text-slate-700 p-0.5"
                     >
-                      Done ✕
+                      <Icon icon={faXmark} className="size-3" />
                     </button>
                   </div>
 
-                  {/* Search Bar */}
-                  <div className="relative mb-2">
-                    <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
+                  {/* Search box */}
+                  <div className="relative">
                     <input
                       type="text"
                       value={plasterSearch}
                       onChange={(e) => setPlasterSearch(e.target.value)}
-                      placeholder="Search presets (POP, cast, crepe, collar, belt)..."
-                      className="h-7 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 pl-7 pr-6 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
-                      autoFocus
+                      placeholder="Search appliance (e.g. slab, brace, crepe, belt)..."
+                      className="w-full h-7 pl-2.5 pr-7 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                     />
-                    {plasterSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setPlasterSearch("")}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        <Icon icon={faXmark} className="size-2.5" />
-                      </button>
-                    )}
+                    <Icon icon={faMagnifyingGlass} className="absolute right-2 top-1/2 -translate-y-1/2 size-2.5 text-slate-400 pointer-events-none" />
                   </div>
 
-                  {/* Doctor Custom Suggestion Add Box */}
-                  <div className="p-2 bg-indigo-50/80 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 rounded-lg mb-2">
-                    <div className="text-[10px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider mb-1 flex items-center justify-between">
-                      <span>+ Add Doctor Custom Application</span>
-                      <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-normal">Saves for future visits</span>
+                  {/* Scrollable list */}
+                  <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
+                    {filteredPlasterOptions.map((opt) => {
+                      const details = getPlasterPresetDetails(opt);
+                      const isApplied = plasterOrBandages.some(
+                        (it) => it.name.toLowerCase() === opt.toLowerCase()
+                      );
+                      const isFav = isPlasterFavorite(opt);
+                      const isCust = isPlasterCustom(opt);
+
+                      return (
+                        <div
+                          key={opt}
+                          className={`flex items-center justify-between gap-1.5 p-2 rounded-lg text-xs transition-colors ${
+                            isApplied
+                              ? "bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 font-bold text-indigo-900 dark:text-indigo-200"
+                              : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                          }`}
+                        >
+                          <div
+                            className="flex-1 cursor-pointer"
+                            onClick={() => {
+                              if (isApplied) {
+                                const target = plasterOrBandages.find(
+                                  (it) => it.name.toLowerCase() === opt.toLowerCase()
+                                );
+                                if (target) handleRemovePlasterItem(target.id);
+                              } else {
+                                handleAddPlasterItem({
+                                  name: opt,
+                                  site: details.site,
+                                  duration: details.duration,
+                                  instructions: details.instructions,
+                                });
+                              }
+                            }}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold">{opt}</span>
+                              {isApplied && (
+                                <span className="text-[10px] rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-1 font-bold">
+                                  Applied
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                              {details.site} · {details.duration} · {details.instructions}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => togglePlasterFavorite(opt)}
+                              className={`p-1 cursor-pointer ${isFav ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+                              title={isFav ? "Favorited" : "Mark as favorite"}
+                            >
+                              <Icon icon={faStar} className="size-2.5" />
+                            </button>
+                            {isCust && (
+                              <button
+                                type="button"
+                                onClick={() => removeCustomPlaster(opt)}
+                                className="p-1 text-slate-300 hover:text-rose-500 cursor-pointer"
+                                title="Delete custom suggestion"
+                              >
+                                <Icon icon={faTrashCan} className="size-2.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Add New Custom Suggestion */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                      + Add New Application Suggestion
                     </div>
                     <div className="flex items-center gap-1.5">
                       <input
                         type="text"
                         value={newPlasterSuggestionInput}
                         onChange={(e) => setNewPlasterSuggestionInput(e.target.value)}
-                        placeholder="e.g. Scaphoid Cast, U-Slab, Patella Brace..."
-                        className="h-7 flex-1 rounded border border-indigo-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && newPlasterSuggestionInput.trim()) {
                             e.preventDefault();
-                            const name = newPlasterSuggestionInput.trim();
-                            addCustomPlaster(name);
-                            const presetDetails = getPlasterPresetDetails(name);
+                            addCustomPlaster(newPlasterSuggestionInput.trim());
                             handleAddPlasterItem({
-                              name,
-                              site: presetDetails.site,
-                              duration: presetDetails.duration,
-                              instructions: presetDetails.instructions,
+                              name: newPlasterSuggestionInput.trim(),
+                              site: "Affected Joint",
+                              duration: "2 weeks",
+                              instructions: "As advised by doctor",
                             });
                             setNewPlasterSuggestionInput("");
-                            setPlasterNotice(`Saved "${name}" for future visits ✓`);
-                            setTimeout(() => setPlasterNotice(null), 3000);
                           }
                         }}
+                        placeholder="e.g. Bohler-Braun Splint, Ankle Wrap..."
+                        className="flex-1 h-7 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
                       />
-                      <button
+                      <Button
                         type="button"
+                        size="sm"
                         onClick={() => {
-                          const name = newPlasterSuggestionInput.trim();
-                          if (name) {
-                            addCustomPlaster(name);
-                            const presetDetails = getPlasterPresetDetails(name);
+                          if (newPlasterSuggestionInput.trim()) {
+                            addCustomPlaster(newPlasterSuggestionInput.trim());
                             handleAddPlasterItem({
-                              name,
-                              site: presetDetails.site,
-                              duration: presetDetails.duration,
-                              instructions: presetDetails.instructions,
+                              name: newPlasterSuggestionInput.trim(),
+                              site: "Affected Joint",
+                              duration: "2 weeks",
+                              instructions: "As advised by doctor",
                             });
                             setNewPlasterSuggestionInput("");
-                            setPlasterNotice(`Saved "${name}" for future visits ✓`);
-                            setTimeout(() => setPlasterNotice(null), 3000);
                           }
                         }}
                         disabled={!newPlasterSuggestionInput.trim()}
-                        className="h-7 px-2.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
+                        className="h-7 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
                       >
-                        + Add
-                      </button>
+                        Save
+                      </Button>
                     </div>
-                  </div>
-
-                  {/* Options List */}
-                  <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                    {filteredPlasterOptions.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-slate-500">
-                        No matching presets found. Type above to add a custom one.
-                      </div>
-                    ) : (
-                      filteredPlasterOptions.map((name, idx) => {
-                        const isApplied = plasterOrBandages.some(
-                          (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
-                        );
-                        const isFav = isPlasterFavorite(name);
-                        const isCust = isPlasterCustom(name);
-                        const details = getPlasterPresetDetails(name);
-                        return (
-                          <div
-                            key={idx}
-                            className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                              isApplied
-                                ? "bg-indigo-50 dark:bg-indigo-950/60 font-bold text-indigo-950 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800"
-                                : "text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => togglePlasterFavorite(name)}
-                              className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                              title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                            >
-                              <Icon
-                                icon={faStar}
-                                className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isApplied) {
-                                  const targetItem = plasterOrBandages.find(
-                                    (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
-                                  );
-                                  if (targetItem) handleRemovePlasterItem(targetItem.id);
-                                } else {
-                                  handleAddPlasterItem({
-                                    name,
-                                    site: details.site,
-                                    duration: details.duration,
-                                    instructions: details.instructions,
-                                  });
-                                }
-                              }}
-                              className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                            >
-                              <span className="text-xs text-slate-800 dark:text-slate-100 break-words block leading-snug">
-                                {name}
-                              </span>
-                              <span className="text-[10px] text-slate-400 block">
-                                {details.duration} · {details.site}
-                              </span>
-                            </button>
-                            {isCust && (
-                              <button
-                                type="button"
-                                onClick={() => removeCustomPlaster(name)}
-                                className="p-1 text-slate-300 hover:text-rose-600 transition-colors cursor-pointer"
-                                title="Delete custom recommendation"
-                              >
-                                <Icon icon={faTrashCan} className="size-2.5" />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isApplied) {
-                                  const targetItem = plasterOrBandages.find(
-                                    (it) => it.name.trim().toLowerCase() === name.trim().toLowerCase()
-                                  );
-                                  if (targetItem) handleRemovePlasterItem(targetItem.id);
-                                } else {
-                                  handleAddPlasterItem({
-                                    name,
-                                    site: details.site,
-                                    duration: details.duration,
-                                    instructions: details.instructions,
-                                  });
-                                }
-                              }}
-                              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                isApplied
-                                  ? "bg-indigo-600 text-white shadow-2xs"
-                                  : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200"
-                              }`}
-                            >
-                              {isApplied ? "✓ Added" : "+ Add"}
-                            </button>
-                          </div>
-                        );
-                      })
-                    )}
                   </div>
                 </div>
               )}
@@ -2909,814 +2194,1065 @@ export function DoctorFastConsultation({
                     },
                   });
                 }}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors border border-rose-200/80"
-                title="Clear all bandages, plasters, and plaster advice"
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
               >
-                <Icon icon={faTrashCan} className="size-2.5" />
-                <span>Clear All</span>
+                Clear
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("plasters")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.plasters ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
           </div>
         </div>
 
-        {plasterNotice && (
-          <div className="mb-2.5 flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 animate-in fade-in">
-            <Icon icon={faCheckCircle} className="size-3 text-emerald-600 shrink-0" />
-            <span>{plasterNotice}</span>
-          </div>
-        )}
+        {!collapsedSections.plasters && (
+          <div className="p-4 space-y-3">
+            {/* Active Prescribed Bandages with Inline Editing */}
+            {plasterOrBandages.length > 0 && (
+              <div className="grid gap-2 pt-1">
+                {plasterOrBandages.map((item, idx) => {
+                  const isEditing = editingPlasterId === item.id;
 
-        {/* Currently Prescribed Bandages & Plasters Table / List (Fully Editable) */}
-        {plasterOrBandages.length > 0 && (
-          <div className="mb-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
-                Active Prescribed Applications ({plasterOrBandages.length}):
-              </div>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                Click any field to edit name, body site, duration, or instructions
-              </span>
-            </div>
-            <div className="grid gap-2.5">
-              {plasterOrBandages.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  className="p-3 rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-white dark:bg-slate-800/90 shadow-2xs space-y-2.5"
-                >
-                  {/* Top row: Index badge, Editable Item Name input, and Delete button */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-[10px] shrink-0">
-                        #{idx + 1}
-                      </span>
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) =>
-                          handleUpdatePlasterItem(item.id, { name: e.target.value })
-                        }
-                        placeholder="Appliance / Bandage Name"
-                        className="w-full text-xs font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                        title="Edit appliance / bandage name"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePlasterItem(item.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer shrink-0"
-                      title="Remove this appliance/bandage"
+                  if (isEditing) {
+                    return (
+                      <div
+                        key={item.id || idx}
+                        className="p-3 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-900 shadow-xs space-y-2.5"
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold text-indigo-700">
+                          <span>Edit Application #{idx + 1}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            Edit details and click Save Changes
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                          <div>
+                            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+                              Item Name
+                            </label>
+                            <Input
+                              value={editPlasterName}
+                              onChange={(e) => setEditPlasterName(e.target.value)}
+                              className="h-8 text-xs font-semibold"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+                              Body Site / Side
+                            </label>
+                            <Input
+                              value={editPlasterSite}
+                              onChange={(e) => setEditPlasterSite(e.target.value)}
+                              placeholder="e.g. Right Ankle, Left Wrist"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+                              Duration
+                            </label>
+                            <Input
+                              value={editPlasterDuration}
+                              onChange={(e) => setEditPlasterDuration(e.target.value)}
+                              placeholder="e.g. 3 weeks, 10 days"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">
+                              Wear Instructions
+                            </label>
+                            <Input
+                              value={editPlasterInstructions}
+                              onChange={(e) => setEditPlasterInstructions(e.target.value)}
+                              placeholder="e.g. Strict Non-Weight Bearing"
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setEditingPlasterId(null)}
+                            className="h-7 px-3 text-xs"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => {
+                              if (editPlasterName.trim()) {
+                                handleUpdatePlasterItem(item.id, {
+                                  name: editPlasterName.trim(),
+                                  site: editPlasterSite.trim() || undefined,
+                                  duration: editPlasterDuration.trim() || undefined,
+                                  instructions: editPlasterInstructions.trim() || undefined,
+                                });
+                                setEditingPlasterId(null);
+                              }
+                            }}
+                            className="h-7 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs"
+                          >
+                            Save Changes
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={item.id || idx}
+                      className="p-2.5 rounded-lg border border-indigo-200 dark:border-indigo-900 bg-indigo-50/40 dark:bg-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-xs"
                     >
-                      <Icon icon={faTrashCan} className="size-3.5 text-rose-500" />
-                    </button>
-                  </div>
-
-                  {/* Editable Fields Grid: Body Site, Duration, Wear Instructions */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100 dark:border-slate-700/50">
-                    {/* Body Site */}
-                    <div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
-                          📍 Body Site / Side
-                        </label>
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const base = (item.site || "Ankle").replace(/^(Right|Left|Bilateral)\s+/i, "");
-                              handleUpdatePlasterItem(item.id, { site: `Right ${base}` });
-                            }}
-                            className="text-[9px] px-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 transition-colors"
-                          >
-                            Right
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const base = (item.site || "Ankle").replace(/^(Right|Left|Bilateral)\s+/i, "");
-                              handleUpdatePlasterItem(item.id, { site: `Left ${base}` });
-                            }}
-                            className="text-[9px] px-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 transition-colors"
-                          >
-                            Left
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const base = (item.site || "Ankle").replace(/^(Right|Left|Bilateral)\s+/i, "");
-                              handleUpdatePlasterItem(item.id, { site: `Bilateral ${base}` });
-                            }}
-                            className="text-[9px] px-1 rounded bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-800 transition-colors"
-                          >
-                            Both
-                          </button>
-                        </div>
+                      <div
+                        className="flex items-center gap-2 flex-wrap flex-1 cursor-pointer"
+                        onClick={() => {
+                          setEditingPlasterId(item.id);
+                          setEditPlasterName(item.name);
+                          setEditPlasterSite(item.site || "");
+                          setEditPlasterDuration(item.duration || "");
+                          setEditPlasterInstructions(item.instructions || "");
+                        }}
+                        title="Click to edit this suggestion"
+                      >
+                        <span className="font-bold text-indigo-700 dark:text-indigo-300">
+                          #{idx + 1} {item.name}
+                        </span>
+                        {item.site && (
+                          <span className="bg-white dark:bg-slate-700 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-[11px] font-medium">
+                            📍 {item.site}
+                          </span>
+                        )}
+                        {item.duration && (
+                          <span className="bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 text-[11px] font-bold">
+                            ⏱️ {item.duration}
+                          </span>
+                        )}
+                        {item.instructions && (
+                          <span className="text-slate-600 dark:text-slate-400 text-[11px]">
+                            📋 {item.instructions}
+                          </span>
+                        )}
                       </div>
-                      <input
-                        type="text"
-                        list={`plaster-sites-${item.id}`}
-                        value={item.site || ""}
-                        onChange={(e) =>
-                          handleUpdatePlasterItem(item.id, { site: e.target.value })
-                        }
-                        placeholder="e.g. Right Ankle, Left Wrist..."
-                        className="w-full text-[11px] font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                      <datalist id={`plaster-sites-${item.id}`}>
-                        {PRESET_PLASTER_SITES.map((site) => (
-                          <option key={site} value={site} />
-                        ))}
-                      </datalist>
-                    </div>
 
-                    {/* Duration */}
-                    <div>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <label className="text-[10px] font-bold text-amber-800 dark:text-amber-400">
-                          ⏱️ Duration
-                        </label>
-                        <div className="flex gap-1">
-                          {["2w", "3w", "4w", "6w"].map((d) => (
-                            <button
-                              key={d}
-                              type="button"
-                              onClick={() => {
-                                const map: Record<string, string> = {
-                                  "2w": "2 weeks",
-                                  "3w": "3 weeks",
-                                  "4w": "4 weeks",
-                                  "6w": "6 weeks",
-                                };
-                                handleUpdatePlasterItem(item.id, { duration: map[d] });
-                              }}
-                              className="text-[9px] px-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/60 transition-colors"
-                            >
-                              {d}
-                            </button>
-                          ))}
-                        </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingPlasterId(item.id);
+                            setEditPlasterName(item.name);
+                            setEditPlasterSite(item.site || "");
+                            setEditPlasterDuration(item.duration || "");
+                            setEditPlasterInstructions(item.instructions || "");
+                          }}
+                          className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                          title="Edit this application / suggestion"
+                        >
+                          <Icon icon={faPen} className="size-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePlasterItem(item.id)}
+                          className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                          title="Remove application"
+                        >
+                          <Icon icon={faTrashCan} className="size-3" />
+                        </button>
                       </div>
-                      <input
-                        type="text"
-                        list={`plaster-durations-${item.id}`}
-                        value={item.duration || ""}
-                        onChange={(e) =>
-                          handleUpdatePlasterItem(item.id, { duration: e.target.value })
-                        }
-                        placeholder="e.g. 3 weeks, 10 days..."
-                        className="w-full text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-50/50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                      />
-                      <datalist id={`plaster-durations-${item.id}`}>
-                        {PRESET_PLASTER_DURATIONS.map((dur) => (
-                          <option key={dur} value={dur} />
-                        ))}
-                      </datalist>
                     </div>
+                  );
+                })}
+              </div>
+            )}
 
-                    {/* Wear Instructions */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-indigo-800 dark:text-indigo-400 mb-0.5">
-                        📋 Wear Instructions / Precautions
-                      </label>
-                      <input
-                        type="text"
-                        list={`plaster-instructions-${item.id}`}
-                        value={item.instructions || ""}
-                        onChange={(e) =>
-                          handleUpdatePlasterItem(item.id, { instructions: e.target.value })
-                        }
-                        placeholder="e.g. Strict Non-Weight Bearing (NWB)..."
-                        className="w-full text-[11px] font-medium text-indigo-900 dark:text-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/60 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                      <datalist id={`plaster-instructions-${item.id}`}>
-                        {PRESET_PLASTER_INSTRUCTIONS.map((inst) => (
-                          <option key={inst} value={inst} />
-                        ))}
-                      </datalist>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Custom Application / Bandage Add Row */}
-        <div className="mb-3 p-2.5 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-800 bg-indigo-50/20 dark:bg-slate-800/30">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300 mb-1.5 flex items-center justify-between">
-            <span>+ Add Custom Appliance / Bandage / Plaster</span>
-            <span className="text-[9px] text-slate-500 font-normal">Enter details and click Add</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Item Name</label>
-              <Input
-                value={newPlasterName}
-                onChange={(e) => setNewPlasterName(e.target.value)}
-                placeholder="e.g. Scaphoid Cast, U-Slab..."
-                className="h-8 text-xs font-semibold"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Body Site / Side</label>
-              <div className="relative">
+            {/* Custom Plaster Add Box */}
+            <div className="p-2.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                + Add Custom Appliance / Bandage / Plaster
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <Input
+                  value={newPlasterName}
+                  onChange={(e) => setNewPlasterName(e.target.value)}
+                  placeholder="e.g. Scaphoid Cast, U-Slab..."
+                  className="h-8 text-xs font-semibold"
+                />
                 <Input
                   value={newPlasterSite}
                   onChange={(e) => setNewPlasterSite(e.target.value)}
                   placeholder="e.g. Right Ankle, Left Wrist..."
-                  className="h-8 text-xs font-semibold"
+                  className="h-8 text-xs"
                 />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Duration</label>
-              <Input
-                value={newPlasterDuration}
-                onChange={(e) => setNewPlasterDuration(e.target.value)}
-                placeholder="e.g. 3 weeks, 2 weeks..."
-                className="h-8 text-xs font-semibold"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">Wear Instructions</label>
-              <div className="flex items-center gap-1.5">
                 <Input
-                  value={newPlasterInstructions}
-                  onChange={(e) => setNewPlasterInstructions(e.target.value)}
-                  placeholder="e.g. Strict Non-Weight Bearing..."
-                  className="h-8 text-xs font-semibold flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newPlasterName.trim()) {
-                      e.preventDefault();
-                      const name = newPlasterName.trim();
-                      addCustomPlaster(name);
-                      handleAddPlasterItem({
-                        name,
-                        site: newPlasterSite,
-                        duration: newPlasterDuration,
-                        instructions: newPlasterInstructions,
-                      });
-                      setNewPlasterName("");
-                      setNewPlasterSite("");
-                      setNewPlasterDuration("");
-                      setNewPlasterInstructions("");
-                    }
-                  }}
+                  value={newPlasterDuration}
+                  onChange={(e) => setNewPlasterDuration(e.target.value)}
+                  placeholder="e.g. 3 weeks, 2 weeks..."
+                  className="h-8 text-xs"
                 />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    if (newPlasterName.trim()) {
-                      const name = newPlasterName.trim();
-                      addCustomPlaster(name);
-                      handleAddPlasterItem({
-                        name,
-                        site: newPlasterSite,
-                        duration: newPlasterDuration,
-                        instructions: newPlasterInstructions,
-                      });
-                      setNewPlasterName("");
-                      setNewPlasterSite("");
-                      setNewPlasterDuration("");
-                      setNewPlasterInstructions("");
-                    }
-                  }}
-                  disabled={!newPlasterName.trim()}
-                  className="h-8 px-3 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer shadow-xs shrink-0"
-                >
-                  + Add
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* DEDICATED PLASTER & BANDAGE ADVICE SECTION */}
-        <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-br from-indigo-50/50 to-purple-50/40 dark:from-slate-800 dark:to-slate-800/80 p-3">
-          <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-lg bg-indigo-600 text-white">
-                <Icon icon={faNotesMedical} className="size-3" />
-              </span>
-              <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
-                Plaster & Bandage Care Advice / Precautions
-              </span>
-              <span className="text-[10px] font-bold text-teal-800 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-1.5 py-0.2 rounded border border-teal-200/60">
-                प्लास्टर एवं पट्टी की सावधानियां
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {plasterAdvice?.trim() && (
-                <button
-                  type="button"
-                  onClick={() => handlePlasterAdviceChange("")}
-                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                  title="Clear plaster advice"
-                >
-                  <Icon icon={faTrashCan} className="size-2.5" />
-                  <span>Clear</span>
-                </button>
-              )}
-
-              {/* Plaster Advice Suggestions Dropdown Trigger */}
-              <div className="relative" ref={plasterAdviceMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setPlasterAdviceMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white/90 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-indigo-800 dark:text-indigo-300 hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-2xs cursor-pointer"
-                >
-                  <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Precautions ({plasterAdviceOptions.length})</span>
-                  <Icon icon={plasterAdviceMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-indigo-600 dark:text-indigo-400" />
-                </button>
-
-                {/* Plaster Advice Suggestions Dropdown Menu */}
-                {plasterAdviceMenuOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-indigo-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5 dark:bg-slate-900 dark:border-slate-700">
-                    <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 dark:border-slate-800 px-1">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
-                        Care Instructions & Precautions
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPlasterAdviceMenuOpen(false)}
-                        className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
-                      >
-                        Done ✕
-                      </button>
-                    </div>
-
-                    {/* Search Bar */}
-                    <div className="relative mb-2">
-                      <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
-                      <input
-                        type="text"
-                        value={plasterAdviceSearch}
-                        onChange={(e) => setPlasterAdviceSearch(e.target.value)}
-                        placeholder="Search precautions (dry, elevate, swelling)..."
-                        className="h-7 w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 pl-7 pr-6 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none"
-                        autoFocus
-                      />
-                      {plasterAdviceSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setPlasterAdviceSearch("")}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          <Icon icon={faXmark} className="size-2.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Doctor Custom Precaution Add Box */}
-                    <div className="p-2 bg-indigo-50/80 dark:bg-slate-800 border border-indigo-200 dark:border-indigo-900 rounded-lg mb-2">
-                      <div className="text-[10px] font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider mb-1 flex items-center justify-between">
-                        <span>+ Add Doctor Custom Precaution</span>
-                        <span className="text-[9px] text-indigo-600 dark:text-indigo-400 font-normal">Saves for future visits</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="text"
-                          value={newPlasterAdviceSuggestionInput}
-                          onChange={(e) => setNewPlasterAdviceSuggestionInput(e.target.value)}
-                          placeholder="e.g. Keep dressing clean, do not drive with cast..."
-                          className="h-7 flex-1 rounded border border-indigo-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && newPlasterAdviceSuggestionInput.trim()) {
-                              e.preventDefault();
-                              const text = newPlasterAdviceSuggestionInput.trim();
-                              addCustomPlasterAdvice(text);
-                              const current = plasterAdvice?.trim() ?? "";
-                              const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                              handlePlasterAdviceChange(next);
-                              setNewPlasterAdviceSuggestionInput("");
-                              setPlasterAdviceNotice(`Saved precaution for future visits ✓`);
-                              setTimeout(() => setPlasterAdviceNotice(null), 3000);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const text = newPlasterAdviceSuggestionInput.trim();
-                            if (text) {
-                              addCustomPlasterAdvice(text);
-                              const current = plasterAdvice?.trim() ?? "";
-                              const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                              handlePlasterAdviceChange(next);
-                              setNewPlasterAdviceSuggestionInput("");
-                              setPlasterAdviceNotice(`Saved precaution for future visits ✓`);
-                              setTimeout(() => setPlasterAdviceNotice(null), 3000);
-                            }
-                          }}
-                          disabled={!newPlasterAdviceSuggestionInput.trim()}
-                          className="h-7 px-2.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                        >
-                          + Add
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Options List */}
-                    <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                      {filteredPlasterAdviceOptions.length === 0 ? (
-                        <div className="p-3 text-center text-xs text-slate-500">
-                          No matching precautions found. Type above to add a custom one.
-                        </div>
-                      ) : (
-                        filteredPlasterAdviceOptions.map((text, idx) => {
-                          const isIncluded = Boolean(plasterAdvice?.includes(text));
-                          const isFav = isPlasterAdviceFavorite(text);
-                          const isCust = isPlasterAdviceCustom(text);
-                          return (
-                            <div
-                              key={idx}
-                              className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                                isIncluded
-                                  ? "bg-indigo-50 dark:bg-indigo-950/60 font-bold text-indigo-950 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800"
-                                  : "text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
-                              }`}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => togglePlasterAdviceFavorite(text)}
-                                className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                title={isFav ? "Unpin favorite" : "Pin favorite to top"}
-                              >
-                                <Icon
-                                  icon={faStar}
-                                  className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                                />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleTogglePlasterAdviceTag(text)}
-                                className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                              >
-                                <span className="text-xs text-slate-800 dark:text-slate-100 break-words block leading-snug">
-                                  {text}
-                                </span>
-                              </button>
-                              {isCust && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeCustomPlasterAdvice(text)}
-                                  className="p-1 text-slate-300 hover:text-rose-600 transition-colors cursor-pointer"
-                                  title="Delete custom recommendation"
-                                >
-                                  <Icon icon={faTrashCan} className="size-2.5" />
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleTogglePlasterAdviceTag(text)}
-                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                  isIncluded
-                                    ? "bg-indigo-600 text-white shadow-2xs"
-                                    : "bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200"
-                                }`}
-                              >
-                                {isIncluded ? "✓ Added" : "+ Add"}
-                              </button>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {plasterAdviceNotice && (
-            <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 animate-in fade-in">
-              <Icon icon={faCheckCircle} className="size-3 text-emerald-600 shrink-0" />
-              <span>{plasterAdviceNotice}</span>
-            </div>
-          )}
-
-          {/* Editable Plaster Advice Textarea */}
-          <Textarea
-            value={plasterAdvice}
-            onChange={(e) => handlePlasterAdviceChange(e.target.value)}
-            placeholder="Doctor's plaster & bandage instructions for patient (e.g. Keep strictly dry, elevate on pillows, non-weight bearing, wiggle toes...)"
-            rows={3}
-            className="w-full text-xs font-medium resize-none leading-relaxed border-indigo-200 dark:border-indigo-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white dark:bg-slate-900 rounded-lg transition-colors"
-          />
-        </div>
-      </div>
-
-      {/* ROW 5: CARD 7 & 8: ADVICE & FOLLOW-UP */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* CARD 7: ADVICE */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-800 ring-1 ring-amber-500/20">
-                  <Icon icon={faNotesMedical} className="size-3.5" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      7. Treatment Plan · Doctor's Advice
-                    </span>
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/60">
-                      सलाह एवं सावधानियां
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={newPlasterInstructions}
+                    onChange={(e) => setNewPlasterInstructions(e.target.value)}
+                    placeholder="e.g. Strict Non-Weight Bearing..."
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      if (newPlasterName.trim()) {
+                        handleAddPlasterItem({
+                          name: newPlasterName.trim(),
+                          site: newPlasterSite,
+                          duration: newPlasterDuration,
+                          instructions: newPlasterInstructions,
+                        });
+                        setNewPlasterName("");
+                        setNewPlasterSite("");
+                        setNewPlasterDuration("");
+                        setNewPlasterInstructions("");
+                      }
+                    }}
+                    disabled={!newPlasterName.trim()}
+                    className="h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+                  >
+                    + Add
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {advice?.trim() && (
-                  <button
-                    type="button"
-                    onClick={() => onAdviceChange("")}
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                    title="Clear advice"
-                  >
-                    <Icon icon={faTrashCan} className="size-2.5" />
-                    <span>Clear</span>
-                  </button>
-                )}
+            </div>
 
-                {/* Advice Suggestions Dropdown */}
-                <div className="relative" ref={adviceRef}>
-                  <button
-                    type="button"
-                    onClick={() => setAdviceMenuOpen((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs font-bold text-amber-800 hover:bg-amber-100 hover:border-amber-300 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    <Icon icon={faWandMagicSparkles} className="size-2.5 text-amber-700" />
-                    <span>Suggestions ({adviceOptions.length})</span>
-                    <Icon icon={adviceMenuOpen ? faChevronUp : faChevronDown} className="size-2 text-amber-600" />
-                  </button>
+            {/* Plaster Care Advice / Precautions with Dropdown & Custom Suggestion Addition */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase">
+                  Plaster & Bandage Care Advice / Precautions
+                </div>
 
-                  {adviceMenuOpen && (
-                    <div className="absolute right-0 top-full z-50 mt-1 w-80 sm:w-96 rounded-xl border border-amber-200 bg-white p-2.5 shadow-2xl ring-1 ring-black/5">
-                      <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-100 px-1">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                          Precaution Presets & Recommendations
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setAdviceMenuOpen(false)}
-                          className="text-[11px] font-bold text-slate-500 hover:text-slate-800 cursor-pointer"
-                        >
-                          Done ✕
-                        </button>
-                      </div>
+                <div className="flex items-center gap-2">
+                  {/* Precautions Dropdown */}
+                  <div className="relative" ref={plasterAdviceMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setPlasterAdviceMenuOpen((v) => !v)}
+                      className="inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-slate-600 cursor-pointer shadow-2xs"
+                      title="View standard plaster care instructions or add custom precautions"
+                    >
+                      <Icon icon={faWandMagicSparkles} className="size-2.5 text-indigo-600" />
+                      <span>Precautions ({plasterAdviceOptions.length})</span>
+                      <Icon icon={faChevronDown} className="size-2 text-slate-400" />
+                    </button>
 
-                      {/* Search / Filter Advice */}
-                      <div className="relative mb-2">
-                        <Icon icon={faMagnifyingGlass} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 size-3 text-slate-400" />
-                        <input
-                          type="text"
-                          value={adviceFilter}
-                          onChange={(e) => setAdviceFilter(e.target.value)}
-                          placeholder="Filter precautions..."
-                          className="h-7 w-full rounded-md border border-slate-200 bg-slate-50 pl-7 pr-6 text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-amber-500 focus:outline-none"
-                        />
-                        {adviceFilter && (
+                    {plasterAdviceMenuOpen && (
+                      <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl z-30 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">
+                            Care Advice & Precautions
+                          </span>
                           <button
                             type="button"
-                            onClick={() => setAdviceFilter("")}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            onClick={() => setPlasterAdviceMenuOpen(false)}
+                            className="text-slate-400 hover:text-slate-700 p-0.5"
                           >
-                            <Icon icon={faXmark} className="size-2.5" />
+                            <Icon icon={faXmark} className="size-3" />
                           </button>
-                        )}
-                      </div>
-
-                      {/* Doctor Custom Precaution Add Box */}
-                      <div className="p-2 bg-amber-50/80 border border-amber-200 rounded-lg mb-2">
-                        <div className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1 flex items-center justify-between">
-                          <span>+ Add Doctor Custom Precaution</span>
-                          <span className="text-[9px] text-amber-600 font-normal">Saves for future visits</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
+
+                        {/* Search */}
+                        <div className="relative">
                           <input
                             type="text"
-                            value={newAdviceInput}
-                            onChange={(e) => setNewAdviceInput(e.target.value)}
-                            placeholder="e.g. Avoid cold drinks, steam twice daily..."
-                            className="h-7 flex-1 rounded border border-amber-300 bg-white px-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && newAdviceInput.trim()) {
-                                e.preventDefault();
-                                const text = newAdviceInput.trim();
-                                addCustomAdvice(text);
-                                const current = advice?.trim() ?? "";
-                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                                onAdviceChange(next);
-                                setNewAdviceInput("");
-                                setAdviceNotice("Added to advice & saved for future ✓");
-                                setTimeout(() => setAdviceNotice(null), 3000);
-                              }
-                            }}
+                            value={plasterAdviceSearch}
+                            onChange={(e) => setPlasterAdviceSearch(e.target.value)}
+                            placeholder="Filter precautions (e.g. dry, elevation)..."
+                            className="w-full h-7 pl-2.5 pr-7 text-xs rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const text = newAdviceInput.trim();
-                              if (text) {
-                                addCustomAdvice(text);
-                                const current = advice?.trim() ?? "";
-                                const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                                onAdviceChange(next);
-                                setNewAdviceInput("");
-                                setAdviceNotice("Added to advice & saved for future ✓");
-                                setTimeout(() => setAdviceNotice(null), 3000);
-                              }
-                            }}
-                            disabled={!newAdviceInput.trim()}
-                            className="h-7 px-2.5 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs disabled:opacity-40 transition-colors shadow-2xs cursor-pointer"
-                          >
-                            + Add
-                          </button>
+                          <Icon icon={faMagnifyingGlass} className="absolute right-2 top-1/2 -translate-y-1/2 size-2.5 text-slate-400 pointer-events-none" />
                         </div>
-                      </div>
 
-                      <div className="max-h-60 overflow-y-auto space-y-1 pr-0.5">
-                        {filteredAdvice.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-500">
-                            No matching precautions found. Add custom above.
-                          </div>
-                        ) : (
-                          filteredAdvice.map((text, idx) => {
-                            const isAdded = Boolean(advice?.includes(text));
-                            const isFav = isAdviceFavorite(text);
-                            const isCust = isAdviceCustom(text);
+                        {/* List */}
+                        <div className="max-h-52 overflow-y-auto space-y-1 pr-1">
+                          {filteredPlasterAdviceOptions.map((adviceItem) => {
+                            const isPresent = plasterAdvice.includes(adviceItem);
+                            const isFav = isPlasterAdviceFavorite(adviceItem);
+                            const isCust = isPlasterAdviceCustom(adviceItem);
+
                             return (
                               <div
-                                key={idx}
-                                className={`flex items-center justify-between gap-1.5 rounded-lg px-2 py-1.5 text-xs transition-colors ${
-                                  isAdded
-                                    ? "bg-amber-50 font-bold text-amber-950 border border-amber-200"
-                                    : "text-slate-700 hover:bg-slate-100 font-medium"
+                                key={adviceItem}
+                                className={`flex items-start justify-between gap-1.5 p-2 rounded-lg text-xs transition-colors ${
+                                  isPresent
+                                    ? "bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 font-bold text-indigo-900 dark:text-indigo-200"
+                                    : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
                                 }`}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() => toggleAdviceFavorite(text)}
-                                  className="p-1 text-slate-300 hover:text-amber-500 transition-colors cursor-pointer"
-                                  title={isFav ? "Unpin favorite" : "Pin favorite to top"}
+                                <div
+                                  className="flex-1 cursor-pointer leading-snug"
+                                  onClick={() => handleTogglePlasterAdviceTag(adviceItem)}
                                 >
-                                  <Icon
-                                    icon={faStar}
-                                    className={`size-3 ${isFav ? "text-amber-500 fill-amber-500" : "text-slate-300"}`}
-                                  />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const current = advice?.trim() ?? "";
-                                    if (current.includes(text)) {
-                                      const next = current
-                                        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
-                                        .trim();
-                                      onAdviceChange(next);
-                                    } else {
-                                      const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                                      onAdviceChange(next);
-                                    }
-                                  }}
-                                  className="flex-1 text-left min-w-0 pr-1 cursor-pointer"
-                                >
-                                  <span className="text-xs text-slate-800 break-words block">{text}</span>
-                                  {isCust && (
-                                    <span className="text-[9px] font-bold text-amber-700 bg-amber-100/80 px-1 py-0.2 rounded inline-block mt-0.5">
-                                      Doctor Custom
-                                    </span>
-                                  )}
-                                </button>
-                                {isCust && (
+                                  {adviceItem}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0 pt-0.5">
                                   <button
                                     type="button"
-                                    onClick={() => removeCustomAdvice(text)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                    title="Delete custom recommendation"
+                                    onClick={() => togglePlasterAdviceFavorite(adviceItem)}
+                                    className={`p-0.5 cursor-pointer ${isFav ? "text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
                                   >
-                                    <Icon icon={faTrashCan} className="size-2.5" />
+                                    <Icon icon={faStar} className="size-2.5" />
                                   </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const current = advice?.trim() ?? "";
-                                    if (current.includes(text)) {
-                                      const next = current
-                                        .replace(new RegExp(`\\n?•?\\s*${escapeRegex(text)}`, "g"), "")
-                                        .trim();
-                                      onAdviceChange(next);
-                                    } else {
-                                      const next = current ? `${current}\n• ${text}` : `• ${text}`;
-                                      onAdviceChange(next);
-                                    }
-                                  }}
-                                  className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold cursor-pointer ${
-                                    isAdded ? "bg-amber-600 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300"
-                                  }`}
-                                >
-                                  {isAdded ? "✓ Added" : "+ Add"}
-                                </button>
+                                  {isCust && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeCustomPlasterAdvice(adviceItem)}
+                                      className="p-0.5 text-slate-300 hover:text-rose-500 cursor-pointer"
+                                    >
+                                      <Icon icon={faTrashCan} className="size-2.5" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             );
-                          })
-                        )}
+                          })}
+                        </div>
+
+                        {/* Add Custom Precaution */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            + Add Precaution Suggestion
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              value={newPlasterAdviceSuggestionInput}
+                              onChange={(e) => setNewPlasterAdviceSuggestionInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && newPlasterAdviceSuggestionInput.trim()) {
+                                  e.preventDefault();
+                                  addCustomPlasterAdvice(newPlasterAdviceSuggestionInput.trim());
+                                  handleTogglePlasterAdviceTag(newPlasterAdviceSuggestionInput.trim());
+                                  setNewPlasterAdviceSuggestionInput("");
+                                }
+                              }}
+                              placeholder="e.g. Do not remove until review on day 7..."
+                              className="flex-1 h-7 px-2 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                if (newPlasterAdviceSuggestionInput.trim()) {
+                                  addCustomPlasterAdvice(newPlasterAdviceSuggestionInput.trim());
+                                  handleTogglePlasterAdviceTag(newPlasterAdviceSuggestionInput.trim());
+                                  setNewPlasterAdviceSuggestionInput("");
+                                }
+                              }}
+                              disabled={!newPlasterAdviceSuggestionInput.trim()}
+                              className="h-7 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                  </div>
+
+                  {plasterAdvice?.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => handlePlasterAdviceChange("")}
+                      className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer"
+                    >
+                      Clear
+                    </button>
                   )}
                 </div>
               </div>
+
+              <Textarea
+                value={plasterAdvice}
+                onChange={(e) => handlePlasterAdviceChange(e.target.value)}
+                placeholder="Doctor's plaster & bandage instructions for patient (e.g. Keep strictly dry, elevate on pillows, non-weight bearing, wiggle toes...)"
+                rows={3}
+                className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
+              />
             </div>
-            <Textarea
-              value={advice}
-              onChange={(e) => onAdviceChange(e.target.value)}
-              placeholder="Enter advice, precautions, lifestyle recommendations..."
-              rows={3}
-              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
-            />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 9: MEDICINES (PRESCRIPTION BUILDER) */}
+      <div id="sec-medicines" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faPills} className="size-3.5 text-purple-600 dark:text-purple-400" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Medicines (Prescriptions)
+            </span>
+            <span className="rounded bg-purple-100 dark:bg-purple-900/60 px-2 py-0.2 text-[10px] font-bold text-purple-700 dark:text-purple-300">
+              {medicines.filter((m) => m.name?.trim()).length} prescribed
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAddMedicineRow}
+              className="inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-2xs cursor-pointer"
+            >
+              <Icon icon={faPlus} className="size-2.5" />
+              <span>Add Medicine</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toggleSection("medicines")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.medicines ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
           </div>
         </div>
 
-        {/* CARD 8: FOLLOW-UP */}
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-xs transition-shadow hover:shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-sky-50 text-sky-800 ring-1 ring-sky-500/20">
-                  <Icon icon={faClock} className="size-3.5" />
-                </span>
+        {!collapsedSections.medicines && (
+          <div className="p-4 space-y-4">
+            {/* EXACT APOLLO SOM EMR ADD MEDICINE FORM */}
+            <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-3">
+              {/* Row 1: Prescription Type, Search Type, Medication Name Input */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                 <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 tracking-tight">
-                      8. Follow-Up Timeframe
-                    </span>
-                    <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded border border-sky-200/60">
-                      पुनः परामर्श / फॉलो-अप
-                    </span>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Prescription Type</label>
+                  <div className="flex items-center bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 p-0.5 text-xs font-bold">
+                    {(["Regular", "Stat", "SOS"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setMedPrescriptionType(t)}
+                        className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer ${
+                          medPrescriptionType === t
+                            ? "bg-purple-600 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Search Type</label>
+                  <div className="flex items-center bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 p-0.5 text-xs font-bold">
+                    {(["Brand", "Generic"] as const).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setMedSearchType(s)}
+                        className={`flex-1 py-1 rounded text-center transition-colors cursor-pointer ${
+                          medSearchType === s
+                            ? "bg-purple-600 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Medication Name *</label>
+                  <MedicineCombobox
+                    name="new-med-input"
+                    value={newMedName}
+                    onChange={(val) => setNewMedName(val)}
+                    onSelectMedicine={(sugg) => {
+                      setNewMedName(sugg.name);
+                      if (sugg.defaults?.dosage) setNewMedDose(sugg.defaults.dosage.split(" ")[0] || "1");
+                      if (sugg.defaults?.frequency) setNewMedFreq(sugg.defaults.frequency);
+                      if (sugg.defaults?.duration) setNewMedDuration(sugg.defaults.duration.split(" ")[0] || "5");
+                    }}
+                    suggestions={drugSuggestions}
+                    loading={drugSuggestionsLoading}
+                    favorites={favorites}
+                    onFavoritesChange={setFavorites}
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Quantity per Dose, Quantity Unit, Frequency, M-A-E-N toggles, Meal Relation */}
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 border-t border-slate-200/80 dark:border-slate-700/80">
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Qty / Dose</label>
+                  <input
+                    type="text"
+                    value={newMedDose}
+                    onChange={(e) => setNewMedDose(e.target.value)}
+                    className="w-full h-8 px-2 text-xs font-bold rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-center"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Quantity Unit</label>
+                  <select
+                    value={newMedUnit}
+                    onChange={(e) => setNewMedUnit(e.target.value)}
+                    className="w-full h-8 px-1.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-semibold"
+                  >
+                    <option value="Tablet(s)">Tablet(s)</option>
+                    <option value="Capsule(s)">Capsule(s)</option>
+                    <option value="Sachet(s)">Sachet(s)</option>
+                    <option value="Spray">Spray</option>
+                    <option value="Puff">Puff</option>
+                    <option value="Injection">Injection</option>
+                    <option value="Ointment">Ointment</option>
+                    <option value="Syrup">Syrup</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Frequency</label>
+                  <select
+                    value={newMedFreq}
+                    onChange={(e) => setNewMedFreq(e.target.value)}
+                    className="w-full h-8 px-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
+                  >
+                    <option value="BD - Morning & Night">BD (Morning & Night)</option>
+                    <option value="OD - Once a day">OD (Once daily)</option>
+                    <option value="TDS - Thrice daily">TDS (Three times daily)</option>
+                    <option value="QID - Four times a day">QID (Four times daily)</option>
+                    <option value="HS - At bedtime">HS (At bedtime)</option>
+                    <option value="SOS - Whenever needed">SOS (As needed)</option>
+                    <option value="Once a week">Once a week</option>
+                  </select>
+                </div>
+
+                {/* Dose time toggles (M, A, E, N) */}
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Time of Day</label>
+                  <div className="flex items-center gap-1 h-8">
+                    <button
+                      type="button"
+                      onClick={() => setMedDoseM((v) => !v)}
+                      className={`size-7 rounded font-bold text-xs transition-colors cursor-pointer ${
+                        medDoseM ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400"
+                      }`}
+                      title="Morning"
+                    >
+                      M
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMedDoseA((v) => !v)}
+                      className={`size-7 rounded font-bold text-xs transition-colors cursor-pointer ${
+                        medDoseA ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400"
+                      }`}
+                      title="Afternoon"
+                    >
+                      A
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMedDoseE((v) => !v)}
+                      className={`size-7 rounded font-bold text-xs transition-colors cursor-pointer ${
+                        medDoseE ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400"
+                      }`}
+                      title="Evening"
+                    >
+                      E
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMedDoseN((v) => !v)}
+                      className={`size-7 rounded font-bold text-xs transition-colors cursor-pointer ${
+                        medDoseN ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400"
+                      }`}
+                      title="Night"
+                    >
+                      N
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Meal Relation</label>
+                  <select
+                    value={newMedMeal}
+                    onChange={(e) => setNewMedMeal(e.target.value)}
+                    className="w-full h-8 px-1.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
+                  >
+                    <option value="After meal">After meal</option>
+                    <option value="Before meal">Before meal</option>
+                    <option value="With food">With food</option>
+                    <option value="Empty stomach">Empty stomach</option>
+                    <option value="At bedtime">At bedtime</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Duration</label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={newMedDuration}
+                      onChange={(e) => setNewMedDuration(e.target.value)}
+                      className="w-12 h-8 px-1 text-xs font-bold rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-center"
+                    />
+                    <select
+                      value={newMedDurationUnit}
+                      onChange={(e) => setNewMedDurationUnit(e.target.value)}
+                      className="flex-1 h-8 px-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    >
+                      <option value="Day(s)">Day(s)</option>
+                      <option value="Week(s)">Week(s)</option>
+                      <option value="Month(s)">Month(s)</option>
+                    </select>
                   </div>
                 </div>
               </div>
-              {followUp?.trim() && (
-                <button
-                  type="button"
-                  onClick={() => onFollowUpChange("")}
-                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 cursor-pointer transition-colors"
-                  title="Clear follow-up"
-                >
-                  <Icon icon={faTrashCan} className="size-2.5" />
-                  <span>Clear</span>
-                </button>
-              )}
+
+              {/* Row 3: Comments, Route & Add Button */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1 border-t border-slate-200/80 dark:border-slate-700/80">
+                <div className="flex-1 min-w-[200px]">
+                  <input
+                    type="text"
+                    value={newMedComments}
+                    onChange={(e) => setNewMedComments(e.target.value)}
+                    placeholder="Instructions / Comments (e.g. FOR PAIN, STOP IF YOU GET NAUSEA, VOMITING)..."
+                    className="w-full h-8 px-2.5 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newMedName.trim()) {
+                        e.preventDefault();
+                        handleAddFromApolloForm();
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={newMedRoute}
+                    onChange={(e) => setNewMedRoute(e.target.value)}
+                    className="h-8 px-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-medium"
+                  >
+                    <option value="Oral">Oral</option>
+                    <option value="Topical">Topical</option>
+                    <option value="Nasal">Nasal</option>
+                    <option value="Ophthalmic">Ophthalmic</option>
+                    <option value="Subcutaneous">Subcutaneous</option>
+                    <option value="Intramuscular">Intramuscular</option>
+                  </select>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddFromApolloForm}
+                    disabled={!newMedName.trim()}
+                    className="h-8 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-xs"
+                  >
+                    + Add Medicine
+                  </Button>
+                </div>
+              </div>
             </div>
-            <Input
-              value={followUp}
-              onChange={(e) => onFollowUpChange(e.target.value)}
-              placeholder="e.g. Review after 7 days..."
-              className="h-10 text-xs font-bold text-slate-900 border-slate-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-50/40 focus:bg-white rounded-lg transition-colors"
-            />
+
+            {/* RAPID 1-CLICK DOSING PRESETS */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase">⚡ 1-Tap Dose:</span>
+              {RAPID_DOSING_PRESETS.map((preset, pIdx) => (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => {
+                    if (medicines.length > 0) {
+                      handleApplyDosingPreset(medicines.length - 1, preset);
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-purple-900 dark:text-purple-300 hover:bg-purple-100 cursor-pointer transition-all shadow-2xs"
+                >
+                  <span>{preset.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* EXACT APOLLO SOM EMR PRESCRIBED MEDICINES TABLE */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[10px] uppercase tracking-wider text-slate-600 dark:text-slate-400 font-bold">
+                  <tr>
+                    <th className="py-2.5 px-3">Medicines, Strength</th>
+                    <th className="py-2.5 px-3">Quantity per Dose, Unit, Frequency, Route, Date</th>
+                    <th className="py-2.5 px-3">Supply Duration, Duration Type, Meal Relation</th>
+                    <th className="py-2.5 px-3">Comments</th>
+                    <th className="py-2.5 px-2 text-center w-12">Fav</th>
+                    <th className="py-2.5 px-3 text-right w-16">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {medicines.filter((m) => m.name?.trim()).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-500">
+                        No medicines prescribed yet. Fill the form above or click &quot;+ Add Medicine&quot; to begin.
+                      </td>
+                    </tr>
+                  ) : (
+                    medicines
+                      .filter((m) => m.name?.trim())
+                      .map((med, idx) => {
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
+                            <td className="py-3 px-3 align-top">
+                              <div className="flex items-start gap-1.5">
+                                <span className="font-bold text-slate-400 mr-0.5">::</span>
+                                <div>
+                                  <div className="font-bold text-slate-900 dark:text-white text-xs">
+                                    {med.name}
+                                  </div>
+                                  <span className="inline-block mt-0.5 rounded bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 text-[9px] font-bold">
+                                    Regular
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 align-top text-slate-700 dark:text-slate-200 text-xs">
+                              {med.dosage || "1, Tablet(s)"}, {med.frequency || "BD - Morning & Night"}, {med.route || "Oral"}
+                            </td>
+                            <td className="py-3 px-3 align-top text-slate-700 dark:text-slate-200 text-xs">
+                              {med.duration || "5, Day(s)"}, After meal
+                            </td>
+                            <td className="py-3 px-3 align-top text-slate-600 dark:text-slate-400 text-xs font-mono">
+                              {med.instructions || "—"}
+                            </td>
+                            <td className="py-3 px-2 text-center align-top">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (favorites.includes(med.name)) {
+                                    setFavorites((f) => f.filter((x) => x !== med.name));
+                                  } else {
+                                    setFavorites((f) => [...f, med.name]);
+                                  }
+                                }}
+                                className="p-1 text-slate-300 hover:text-amber-500 cursor-pointer"
+                              >
+                                <Icon
+                                  icon={faStar}
+                                  className={`size-3 ${favorites.includes(med.name) ? "text-amber-500 fill-amber-500" : ""}`}
+                                />
+                              </button>
+                            </td>
+                            <td className="py-3 px-3 text-right align-top">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveMedicineRow(idx)}
+                                className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                                title="Remove medicine"
+                              >
+                                <Icon icon={faTrashCan} className="size-3" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 10: PROCEDURES PERFORMED */}
+      <div id="sec-procedures" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faStethoscope} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Procedures Performed
+            </span>
           </div>
 
-          {/* Quick follow up chips */}
-          <div className="mt-2.5">
-            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Review In:
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {FAST_FOLLOW_UPS.map((f, i) => {
-                const isSelected = followUp?.trim().toLowerCase() === f.text.toLowerCase();
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => handleSelectFollowUp(f)}
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold cursor-pointer transition-all active:scale-95 whitespace-nowrap ${
-                      isSelected
-                        ? "bg-sky-600 text-white shadow-xs ring-1 ring-sky-600"
-                        : "border border-slate-200 bg-slate-50/80 text-slate-700 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900"
-                    }`}
-                  >
-                    <Icon
-                      icon={isSelected ? faCheck : faPlus}
-                      className={`size-2.5 ${isSelected ? "text-white" : "text-sky-600"}`}
-                    />
-                    <span>{f.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <button
+            type="button"
+            onClick={() => toggleSection("procedures")}
+            className="text-slate-400 hover:text-slate-700 p-1"
+          >
+            <Icon icon={collapsedSections.procedures ? faChevronDown : faChevronUp} className="size-3" />
+          </button>
+        </div>
+
+        {!collapsedSections.procedures && (
+          <div className="p-4">
+            <Textarea
+              value={(clinical as any).proceduresPerformed || ""}
+              onChange={(e) => onClinicalChange({ ...clinical, proceduresPerformed: e.target.value } as any)}
+              placeholder="Enter details of in-clinic procedures performed (e.g. Joint aspiration, local injection, dressing change)..."
+              rows={2}
+              className="w-full text-xs font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 11: ADVICE */}
+      <div id="sec-advice" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faNotesMedical} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Advice
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleOpenMacro("advice", "advice")}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <Icon icon={faFileLines} className="size-2.5 text-indigo-600" />
+              <span>Macro Text</span>
+            </button>
+
+            {advice?.trim() && (
+              <button
+                type="button"
+                onClick={() => onAdviceChange("")}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("advice")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.advice ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
           </div>
         </div>
+
+        {!collapsedSections.advice && (
+          <div className="p-4 space-y-3">
+            {/* Quick Advice Chips */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {FAST_ADVICE_CHIPS.slice(0, 8).map((tag) => (
+                <button
+                  key={tag.label}
+                  type="button"
+                  onClick={() => {
+                    const current = advice?.trim() ?? "";
+                    const next = current ? `${current}\n• ${tag.text}` : `• ${tag.text}`;
+                    onAdviceChange(next);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-50 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                >
+                  <Icon icon={faPlus} className="size-2.5 text-amber-600" />
+                  <span>{tag.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <Textarea
+              value={advice}
+              onChange={(e) => onAdviceChange(e.target.value)}
+              placeholder="e.g. GOUT DIET CHART, WALK 30M MINTS&#10;• Avoid squatting, sitting cross-legged, and frequent stair climbing.&#10;• Apply ice pack for 15 mins twice daily during acute flare...&#10;• Isometric quadriceps exercises once acute pain subsides."
+              rows={4}
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
+            />
+
+            {/* Apollo SOM EMR Drug Interactions Card */}
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 p-2.5 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between">
+              <div>
+                <strong className="text-slate-900 dark:text-white">HiPaR Drug Database</strong>
+                <span className="ml-2 text-[11px]">Get Critical drug interaction alert based on prescribed medications</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                No Critical Interactions
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 12: PLAN */}
+      <div id="sec-plan" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={isPlanChecked}
+              onChange={(e) => setIsPlanChecked(e.target.checked)}
+              className="size-4 text-indigo-600 rounded cursor-pointer"
+            />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Plan
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleOpenMacro("plan", "plan")}
+              className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            >
+              <Icon icon={faFileLines} className="size-2.5 text-indigo-600" />
+              <span>Macro Text</span>
+            </button>
+
+            {currentPlanDetails && (
+              <button
+                type="button"
+                onClick={() => onClinicalChange({ ...clinical, planDetails: "" } as any)}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("plan")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.plan ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
+
+        {!collapsedSections.plan && (
+          <div className="p-4 space-y-2.5">
+            {/* Quick Ortho Treatment Plan Chips */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                "Rest and protection",
+                "Ice application (15 mins)",
+                "Compression and elevation",
+                "Supportive ankle brace",
+                "Isometric quadriceps daily",
+                "Lumbar belt while travelling",
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    const current = currentPlanDetails.trim();
+                    const next = current ? `${current}\n• ${chip}` : `• ${chip}`;
+                    onClinicalChange({ ...clinical, planDetails: next } as any);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-indigo-50 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                >
+                  <Icon icon={faPlus} className="size-2.5 text-indigo-600" />
+                  <span>{chip}</span>
+                </button>
+              ))}
+            </div>
+
+            <Textarea
+              value={currentPlanDetails}
+              onChange={(e) => onClinicalChange({ ...clinical, planDetails: e.target.value } as any)}
+              placeholder="Enter details of treatment plan (e.g. Rest and protection; Ice application; Compression and elevation; Supportive ankle brace if indicated)..."
+              rows={3}
+              className="w-full text-xs font-mono font-medium resize-none leading-relaxed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 13: FOLLOW UP APPOINTMENT */}
+      <div id="sec-followup" className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2.5">
+            <Icon icon={faClock} className="size-3.5 text-slate-600 dark:text-slate-300" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              Follow Up Appointment
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {followUp?.trim() && (
+              <button
+                type="button"
+                onClick={() => onFollowUpChange("")}
+                className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-1.5"
+              >
+                Clear
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => toggleSection("followup")}
+              className="text-slate-400 hover:text-slate-700 p-1"
+            >
+              <Icon icon={collapsedSections.followup ? faChevronDown : faChevronUp} className="size-3" />
+            </button>
+          </div>
+        </div>
+
+        {!collapsedSections.followup && (
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Weeks</label>
+                <select
+                  onChange={(e) => onFollowUpChange(`Review after ${e.target.value} weeks`)}
+                  className="w-full h-8 px-2 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                >
+                  <option value="">Select Weeks</option>
+                  <option value="1">1 Week</option>
+                  <option value="2">2 Weeks</option>
+                  <option value="3">3 Weeks</option>
+                  <option value="4">4 Weeks</option>
+                  <option value="6">6 Weeks</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Search by: Eg: 2d, 2w, 2m</label>
+                <Input
+                  value={followUp}
+                  onChange={(e) => onFollowUpChange(e.target.value)}
+                  placeholder="e.g. Review after 5–7 days..."
+                  className="h-8 text-xs font-bold"
+                />
+              </div>
+            </div>
+
+            {/* Quick Follow-up Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Review In:</span>
+              {FAST_FOLLOW_UPS.map((f, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => onFollowUpChange(f.text)}
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-sky-50 border border-slate-200 dark:border-slate-700 cursor-pointer"
+                >
+                  <Icon icon={faPlus} className="size-2 text-sky-600" />
+                  <span>{f.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* QUICK DRAWER LINKS FOR LABS & DOCUMENTS */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs shadow-2xs">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-700">Need Advanced Records?</span>
+          <span className="font-bold text-slate-700 dark:text-slate-300">Need Advanced Records?</span>
           <span className="text-slate-500">Quickly jump to investigations or certificates:</span>
         </div>
         <div className="flex items-center gap-2">
@@ -3724,7 +3260,7 @@ export function DoctorFastConsultation({
             <button
               type="button"
               onClick={onViewInvestigations}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 hover:border-sky-500 hover:text-sky-700 shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:border-sky-500 shadow-2xs cursor-pointer"
             >
               <Icon icon={faFlaskVial} className="size-3 text-sky-600" />
               <span>Lab Orders & Past X-Rays {investigationHistoryCount > 0 ? `(${investigationHistoryCount})` : ""}</span>
@@ -3734,7 +3270,7 @@ export function DoctorFastConsultation({
             <button
               type="button"
               onClick={onViewDocuments}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-800 hover:border-orange-500 hover:text-orange-700 shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:border-orange-500 shadow-2xs cursor-pointer"
             >
               <Icon icon={faFileLines} className="size-3 text-orange-600" />
               <span>Medical Certificate / Referral</span>
@@ -3742,6 +3278,26 @@ export function DoctorFastConsultation({
           )}
         </div>
       </div>
+
+      {/* Macro Text Modal */}
+      <MacroTextModal
+        isOpen={isMacroModalOpen}
+        category={macroCategory}
+        onClose={() => setIsMacroModalOpen(false)}
+        onSelectMacro={handleInsertMacroText}
+      />
+
+      {/* Custom Templates Modal */}
+      <CustomTemplatesModal
+        isOpen={isTemplatesModalOpen}
+        initialMode={templatesModalMode}
+        currentClinical={clinical}
+        currentMedicines={medicines}
+        currentAdvice={advice}
+        currentFollowUp={followUp}
+        onClose={() => setIsTemplatesModalOpen(false)}
+        onApplyTemplate={handleApplyTemplate}
+      />
     </div>
   );
 }

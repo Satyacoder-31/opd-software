@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   faBolt,
   faBone,
+  faBookmark,
   faCheckCircle,
   faCircleExclamation,
   faCloudArrowUp,
@@ -21,6 +22,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { completeVisit, saveVisitDraft } from "@/actions/consultations";
 import { DoctorFastConsultation } from "@/components/consultation/DoctorFastConsultation";
+import {
+  CustomTemplatesModal,
+  type ClinicalTemplate,
+} from "@/components/consultation/CustomTemplatesModal";
 import {
   ConsultationClinicalSections,
   InvestigationSections,
@@ -115,6 +120,8 @@ export function ConsultationWorkspace({
   const [rxModalLang, setRxModalLang] = useState<"en" | "hi">("en");
   const [rxAutoPrint, setRxAutoPrint] = useState(false);
   const [isSummaryViewOpen, setIsSummaryViewOpen] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [templateModalMode, setTemplateModalMode] = useState<"apply" | "save">("save");
 
   useEffect(() => {
     try {
@@ -278,6 +285,31 @@ export function ConsultationWorkspace({
       prev.advice === nextAdvice ? prev : { ...prev, advice: nextAdvice },
     );
   }, []);
+
+  const handleApplyTemplateWorkspace = useCallback((template: ClinicalTemplate) => {
+    isDirty.current = true;
+    setClinical((prev) => ({
+      ...prev,
+      chiefComplaint: template.chiefComplaint || prev.chiefComplaint || template.name,
+      diagnosis: template.diagnosis || prev.diagnosis || template.name,
+      examination: {
+        ...prev.examination,
+        jointsAndParts: template.examination || prev.examination?.jointsAndParts,
+      },
+      investigationResults: {
+        ...(prev.investigationResults ?? {}),
+        imaging: template.investigations || prev.investigationResults?.imaging || "",
+      },
+      advice: template.advice || advice,
+    }));
+    if (template.advice) setAdvice(template.advice);
+    if (template.followUp) setFollowUp(template.followUp);
+    if (template.medicines && template.medicines.length > 0) {
+      setMedicines(template.medicines.map((m: any) => ({ ...emptyMedicine(), ...m })));
+    }
+    setMessage(`Applied template: "${template.name}"`);
+    setMessageType("success");
+  }, [advice]);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"success" | "error">(
     "success",
@@ -1013,13 +1045,66 @@ export function ConsultationWorkspace({
           </div>
         )}
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 md:px-4">
-          <div className="hidden text-xs text-muted-foreground sm:block">
-            <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+S</kbd>{" "}
-            Save draft &nbsp;·&nbsp;{" "}
-            <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+↵</kbd>{" "}
-            Complete visit
+          <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+            {/* Quick anchors matching Apollo SOM EMR */}
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsSummaryViewOpen(true)}
+                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                title="View Outpatient Summary"
+              >
+                OP Summary
+              </button>
+              <span className="text-slate-300 dark:text-slate-700">·</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById("sec-medicines");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                title="Jump to Prescriptions"
+              >
+                Prescriptions
+              </button>
+              <span className="text-slate-300 dark:text-slate-700">·</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const el =
+                    document.getElementById("sec-advised-investigations") ||
+                    document.getElementById("sec-investigations");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer"
+                title="Jump to Investigations"
+              >
+                Investigation
+              </button>
+            </div>
+            <span className="hidden md:inline text-slate-300 dark:text-slate-700">·</span>
+            <div className="hidden lg:block text-[11px] text-slate-400">
+              <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+S</kbd> Save draft ·{" "}
+              <kbd className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px]">Ctrl+↵</kbd> Complete visit
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 ml-auto">
+            {/* Save as Template (Exact Apollo SOM EMR Action) */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-10 gap-1.5 font-bold text-purple-700 dark:text-purple-300 bg-purple-50/80 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800 hover:bg-purple-100 shadow-2xs cursor-pointer"
+              onClick={() => {
+                setTemplateModalMode("save");
+                setIsTemplateModalOpen(true);
+              }}
+              title="Save current consultation clinical findings and prescriptions as a custom reusable template"
+            >
+              <Icon icon={faBookmark} className="size-3 text-purple-600" />
+              Save as Template
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -1136,6 +1221,18 @@ export function ConsultationWorkspace({
         consultationId={consultationId}
         isOpen={isSummaryViewOpen}
         onClose={() => setIsSummaryViewOpen(false)}
+      />
+
+      {/* Apollo-Style Custom Templates Modal */}
+      <CustomTemplatesModal
+        isOpen={isTemplateModalOpen}
+        initialMode={templateModalMode}
+        currentClinical={clinical}
+        currentMedicines={medicines}
+        currentAdvice={advice}
+        currentFollowUp={followUp}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onApplyTemplate={handleApplyTemplateWorkspace}
       />
     </PageShell>
   );
